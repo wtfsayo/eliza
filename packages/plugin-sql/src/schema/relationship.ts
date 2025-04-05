@@ -3,10 +3,11 @@ import { foreignKey, index, jsonb, pgTable, text, unique, uuid } from 'drizzle-o
 import { agentTable } from './agent';
 import { entityTable } from './entity';
 import { numberTimestamp } from './types';
+import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
+import type { Relationship, UUID } from '@elizaos/core';
 
 /**
  * Defines the relationshipTable containing information about relationships between entities and agents.
- * @type {import('knex').TableBuilder}
  */
 export const relationshipTable = pgTable(
   'relationships',
@@ -45,3 +46,48 @@ export const relationshipTable = pgTable(
     }).onDelete('cascade'),
   ]
 );
+
+// Inferred database model types from the relationship table schema
+export type DrizzleRelationship = InferSelectModel<typeof relationshipTable>;
+export type DrizzleRelationshipInsert = InferInsertModel<typeof relationshipTable>;
+
+/**
+ * Maps a Drizzle Relationship from the database to the Core Relationship type
+ * @param drizzleRelationship The relationship data from the database
+ * @returns A properly typed Relationship object for the core system
+ */
+export function mapToRelationship(drizzleRelationship: DrizzleRelationship): Relationship {
+  return {
+    id: drizzleRelationship.id as UUID,
+    sourceEntityId: drizzleRelationship.sourceEntityId as UUID,
+    targetEntityId: drizzleRelationship.targetEntityId as UUID,
+    agentId: drizzleRelationship.agentId as UUID,
+    tags: drizzleRelationship.tags || [],
+    metadata: drizzleRelationship.metadata || {},
+    createdAt: drizzleRelationship.createdAt?.toString(),
+  };
+}
+
+/**
+ * Maps a Core Relationship (or partial relationship) to a Drizzle database relationship for storage
+ * @param relationship The core relationship to map to database format
+ * @returns A properly typed object for database operations
+ */
+export function mapToDrizzleRelationship(
+  relationship: Partial<Relationship>
+): DrizzleRelationshipInsert {
+  const result: Partial<DrizzleRelationshipInsert> = {};
+
+  // Only copy properties that exist in the relationship
+  if (relationship.id !== undefined) result.id = relationship.id;
+  if (relationship.sourceEntityId !== undefined)
+    result.sourceEntityId = relationship.sourceEntityId;
+  if (relationship.targetEntityId !== undefined)
+    result.targetEntityId = relationship.targetEntityId;
+  if (relationship.agentId !== undefined) result.agentId = relationship.agentId;
+  if (relationship.tags !== undefined) result.tags = relationship.tags;
+  if (relationship.metadata !== undefined) result.metadata = relationship.metadata;
+  // createdAt is managed by the database with default SQL value
+
+  return result as DrizzleRelationshipInsert;
+}

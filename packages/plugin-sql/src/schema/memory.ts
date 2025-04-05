@@ -1,16 +1,7 @@
 import { relations, sql } from 'drizzle-orm';
-import {
-  boolean,
-  check,
-  foreignKey,
-  index,
-  jsonb,
-  pgTable,
-  text,
-  unique,
-  uuid,
-  vector,
-} from 'drizzle-orm/pg-core';
+import { boolean, check, foreignKey, index, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
+import { Memory, UUID, Content, MemoryMetadata } from '@elizaos/core';
 import { agentTable } from './agent';
 import { embeddingTable } from './embedding';
 import { entityTable } from './entity';
@@ -20,11 +11,6 @@ import { numberTimestamp } from './types';
 
 /**
  * Definition of the memory table in the database.
- *
- * @param {string} tableName - The name of the table.
- * @param {object} columns - An object containing the column definitions.
- * @param {function} indexes - A function that defines the indexes for the table.
- * @returns {object} - The memory table object.
  */
 export const memoryTable = pgTable(
   'memories',
@@ -34,7 +20,7 @@ export const memoryTable = pgTable(
     createdAt: numberTimestamp('createdAt')
       .default(sql`now()`)
       .notNull(),
-    content: jsonb('content').notNull(),
+    content: jsonb('content').$type<Content>().notNull(),
     entityId: uuid('entityId').references(() => entityTable.id, {
       onDelete: 'cascade',
     }),
@@ -48,7 +34,10 @@ export const memoryTable = pgTable(
       onDelete: 'set null',
     }),
     unique: boolean('unique').default(true).notNull(),
-    metadata: jsonb('metadata').default({}).notNull(),
+    metadata: jsonb('metadata')
+      .$type<MemoryMetadata>()
+      .default(sql`'{}'::jsonb`)
+      .notNull(),
   },
   (table) => [
     index('idx_memories_type_room').on(table.type, table.roomId),
@@ -103,6 +92,52 @@ export const memoryTable = pgTable(
   ]
 );
 
+// Inferred database model types from the memory table schema
+export type DrizzleMemory = InferSelectModel<typeof memoryTable>;
+export type DrizzleMemoryInsert = InferInsertModel<typeof memoryTable>;
+
 export const memoryRelations = relations(memoryTable, ({ one }) => ({
   embedding: one(embeddingTable),
 }));
+
+/**
+ * Maps a Drizzle memory record to the core Memory type
+ */
+export function mapToMemory(drizzleMemory: DrizzleMemory): Memory {
+  return {
+    id: drizzleMemory.id as UUID,
+    entityId: drizzleMemory.entityId as UUID,
+    agentId: drizzleMemory.agentId as UUID | undefined,
+    roomId: drizzleMemory.roomId as UUID,
+    worldId: drizzleMemory.worldId as UUID | undefined,
+    createdAt: drizzleMemory.createdAt,
+    content: drizzleMemory.content,
+    unique: drizzleMemory.unique,
+    metadata: drizzleMemory.metadata,
+  };
+}
+
+/**
+ * Maps a core Memory object to a Drizzle memory record for database operations
+ */
+export function mapToDrizzleMemory(memory: Partial<Memory>): DrizzleMemoryInsert {
+  const result: Partial<DrizzleMemoryInsert> = {};
+
+  // Copy only properties that exist in the memory object
+  if (memory.id !== undefined) result.id = memory.id;
+  if (memory.createdAt !== undefined) result.createdAt = memory.createdAt;
+  if (memory.content !== undefined) result.content = memory.content;
+  if (memory.entityId !== undefined) result.entityId = memory.entityId;
+  if (memory.agentId !== undefined) result.agentId = memory.agentId;
+  if (memory.roomId !== undefined) result.roomId = memory.roomId;
+  if (memory.worldId !== undefined) result.worldId = memory.worldId;
+  if (memory.unique !== undefined) result.unique = memory.unique;
+  if (memory.metadata !== undefined) result.metadata = memory.metadata;
+
+  // Set type based on metadata if not explicitly set
+  if (memory.metadata?.type) {
+    result.type = memory.metadata.type;
+  }
+
+  return result as DrizzleMemoryInsert;
+}

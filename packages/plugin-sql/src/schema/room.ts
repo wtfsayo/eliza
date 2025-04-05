@@ -1,8 +1,10 @@
 import { sql } from 'drizzle-orm';
 import { jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 import { agentTable } from './agent';
 import { numberTimestamp } from './types';
 import { worldTable } from './world';
+import { ChannelType, Room as CoreRoom, UUID } from '@elizaos/core';
 
 /**
  * Defines a table schema for 'rooms' in the database.
@@ -40,3 +42,39 @@ export const roomTable = pgTable('rooms', {
     .default(sql`now()`)
     .notNull(),
 });
+
+// Inferred database model types from the room table schema
+export type DrizzleRoom = InferSelectModel<typeof roomTable>;
+export type DrizzleRoomInsert = InferInsertModel<typeof roomTable>;
+
+// Type mapping utility to convert between Drizzle and Core types
+export function mapToRoom(drizzleRoom: DrizzleRoom): CoreRoom {
+  return {
+    id: drizzleRoom.id as UUID,
+    agentId: drizzleRoom.agentId as UUID | undefined,
+    source: drizzleRoom.source,
+    type: drizzleRoom.type as ChannelType,
+    channelId: drizzleRoom.channelId || undefined,
+    serverId: drizzleRoom.serverId || undefined,
+    worldId: drizzleRoom.worldId as UUID | undefined,
+    name: drizzleRoom.name || undefined,
+    metadata: drizzleRoom.metadata as Record<string, unknown> | undefined,
+  };
+}
+
+export function mapToDrizzleRoom(room: Partial<CoreRoom>): DrizzleRoomInsert {
+  const result: Partial<DrizzleRoomInsert> = {};
+
+  // Only copy properties that exist in the room
+  if (room.id !== undefined) result.id = room.id;
+  if (room.name !== undefined) result.name = room.name;
+  if (room.agentId !== undefined) result.agentId = room.agentId;
+  if (room.source !== undefined) result.source = room.source;
+  if (room.type !== undefined) result.type = room.type;
+  if (room.channelId !== undefined) result.channelId = room.channelId;
+  if (room.serverId !== undefined) result.serverId = room.serverId;
+  if (room.worldId !== undefined) result.worldId = room.worldId;
+  if (room.metadata !== undefined) result.metadata = room.metadata;
+
+  return result as DrizzleRoomInsert;
+}

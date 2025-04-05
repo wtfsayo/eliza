@@ -1,14 +1,15 @@
 import { sql } from 'drizzle-orm';
 import { foreignKey, index, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
+import { type UUID, type Participant } from '@elizaos/core';
 import { agentTable } from './agent';
 import { entityTable } from './entity';
 import { roomTable } from './room';
 import { numberTimestamp } from './types';
+import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 
 /**
  * Defines the schema for the "participants" table in the database.
- *
- * @type {import('knex').TableBuilder}
+ * Represents a user's participation in a room.
  */
 export const participantTable = pgTable(
   'participants',
@@ -47,3 +48,42 @@ export const participantTable = pgTable(
     }).onDelete('cascade'),
   ]
 );
+
+// Inferred database model types from the participant table schema
+export type DrizzleParticipant = InferSelectModel<typeof participantTable>;
+export type DrizzleParticipantInsert = InferInsertModel<typeof participantTable>;
+
+/**
+ * Maps a DrizzleParticipant to the core Participant interface
+ */
+export function mapToParticipant(
+  drizzleParticipant: DrizzleParticipant,
+  entity?: any
+): Participant {
+  return {
+    id: drizzleParticipant.id as UUID,
+    entity: entity || { id: drizzleParticipant.entityId as UUID },
+  };
+}
+
+/**
+ * Maps a core Participant to a DrizzleParticipantInsert format for database operations
+ */
+export function mapToDrizzleParticipant(
+  participant: Partial<Participant> & {
+    roomId?: UUID;
+    agentId?: UUID;
+    roomState?: 'FOLLOWED' | 'MUTED' | null;
+  }
+): DrizzleParticipantInsert {
+  const result: Partial<DrizzleParticipantInsert> = {};
+
+  // Only copy properties that exist in the participant
+  if (participant.id !== undefined) result.id = participant.id;
+  if (participant.entity?.id !== undefined) result.entityId = participant.entity.id;
+  if (participant.roomId !== undefined) result.roomId = participant.roomId;
+  if (participant.agentId !== undefined) result.agentId = participant.agentId;
+  if (participant.roomState !== undefined) result.roomState = participant.roomState;
+
+  return result as DrizzleParticipantInsert;
+}

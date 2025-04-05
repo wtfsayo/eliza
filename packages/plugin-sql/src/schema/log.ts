@@ -3,6 +3,8 @@ import { foreignKey, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 import { entityTable } from './entity';
 import { roomTable } from './room';
 import { numberTimestamp } from './types';
+import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
+import type { Log, UUID } from '@elizaos/core';
 
 /**
  * Represents a PostgreSQL table for storing logs.
@@ -20,7 +22,7 @@ export const logTable = pgTable(
     entityId: uuid('entityId')
       .notNull()
       .references(() => entityTable.id),
-    body: jsonb('body').notNull(),
+    body: jsonb('body').$type<{ [key: string]: unknown }>().notNull(),
     type: text('type').notNull(),
     roomId: uuid('roomId')
       .notNull()
@@ -39,3 +41,32 @@ export const logTable = pgTable(
     }).onDelete('cascade'),
   ]
 );
+
+// Inferred database model types from the log table schema
+export type DrizzleLog = InferSelectModel<typeof logTable>;
+export type DrizzleLogInsert = InferInsertModel<typeof logTable>;
+
+// Type mapping utility to convert between Drizzle and Core types
+export function mapToLog(drizzleLog: DrizzleLog): Log {
+  return {
+    id: drizzleLog.id as UUID,
+    entityId: drizzleLog.entityId as UUID,
+    roomId: drizzleLog.roomId as UUID,
+    body: drizzleLog.body,
+    type: drizzleLog.type,
+    createdAt: new Date(drizzleLog.createdAt),
+  };
+}
+
+export function mapToDrizzleLog(log: Partial<Log>): DrizzleLogInsert {
+  const result: Partial<DrizzleLogInsert> = {};
+
+  if (log.id !== undefined) result.id = log.id;
+  if (log.entityId !== undefined) result.entityId = log.entityId;
+  if (log.roomId !== undefined) result.roomId = log.roomId;
+  if (log.body !== undefined) result.body = log.body;
+  if (log.type !== undefined) result.type = log.type;
+  if (log.createdAt !== undefined) result.createdAt = log.createdAt.getTime();
+
+  return result as DrizzleLogInsert;
+}

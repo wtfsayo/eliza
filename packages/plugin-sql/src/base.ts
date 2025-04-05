@@ -15,21 +15,9 @@ import {
   logger,
   stringToUuid,
 } from '@elizaos/core';
-import {
-  Column,
-  and,
-  cosineDistance,
-  count,
-  desc,
-  eq,
-  gte,
-  inArray,
-  lte,
-  or,
-  sql,
-  not,
-} from 'drizzle-orm';
+import { and, cosineDistance, count, desc, eq, gte, inArray, lte, or, sql, not } from 'drizzle-orm';
 import { v4 } from 'uuid';
+import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DIMENSION_MAP, type EmbeddingDimensionColumn } from './schema/embedding';
 import {
   agentTable,
@@ -44,8 +32,36 @@ import {
   roomTable,
   taskTable,
   worldTable,
+  mapToAgent,
+  mapToDrizzleAgent,
+  DrizzleCache,
+  Cache,
+  mapToCache,
+  mapToDrizzleCache,
+  mapToComponent,
+  mapToDrizzleComponent,
+  mapToDrizzleEmbedding,
+  mapToEntity,
+  mapToDrizzleEntity,
+  type Embedding,
+  DrizzleParticipant,
+  DrizzleParticipantInsert,
+  mapToParticipant,
+  mapToDrizzleParticipant,
+  mapToRelationship,
+  mapToDrizzleRelationship,
+  mapToRoom,
+  mapToDrizzleRoom,
 } from './schema/index';
 import type { DrizzleOperations } from './types';
+import { DrizzleLogInsert, mapToLog } from './schema/log';
+import {
+  DrizzleMemory,
+  DrizzleMemoryInsert,
+  mapToMemory,
+  mapToDrizzleMemory,
+} from './schema/memory';
+import { randomUUID } from 'crypto';
 
 // Define the metadata type inline since we can't import it
 /**
@@ -110,7 +126,7 @@ export abstract class BaseDrizzleAdapter<
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        return await operation();
+        return operation();
       } catch (error) {
         lastError = error as Error;
 
@@ -140,12 +156,9 @@ export abstract class BaseDrizzleAdapter<
   }
 
   /**
-   * Asynchronously ensures that an agent exists by checking if an agent with the same name already exists in the system.
-   * If the agent does not exist, it will be created with the provided data.
-   *
-   * @param {Partial<Agent>} agent - The partial data of the agent to ensure its existence.
-   * @returns {Promise<void>} - A promise that resolves when the agent is successfully ensured.
-   * @throws {Error} - If the agent name is not provided or if there is an issue creating the agent.
+   * Ensures an agent exists in the database, creating it if it doesn't exist.
+   * @param {Partial<Agent>} agent - The agent to ensure exists.
+   * @returns {Promise<void>}
    */
   async ensureAgentExists(agent: Partial<Agent>): Promise<Agent> {
     if (!agent.name) {
@@ -194,9 +207,10 @@ export abstract class BaseDrizzleAdapter<
   }
 
   /**
-   * Asynchronously retrieves an agent by their ID from the database.
+   * Asynchronously retrieves an agent by ID.
+   *
    * @param {UUID} agentId - The ID of the agent to retrieve.
-   * @returns {Promise<Agent | null>} A promise that resolves to the retrieved agent or null if not found.
+   * @returns {Promise<Agent | null>} - A Promise that resolves to the agent object or null if not found.
    */
   async getAgent(agentId: UUID): Promise<Agent | null> {
     return this.withDatabase(async () => {
@@ -207,7 +221,9 @@ export abstract class BaseDrizzleAdapter<
         .limit(1);
 
       if (result.length === 0) return null;
-      return result[0];
+
+      // Use type mapping utility to convert from Drizzle schema to Core type
+      return mapToAgent(result[0]);
     });
   }
 
@@ -220,7 +236,8 @@ export abstract class BaseDrizzleAdapter<
     return this.withDatabase(async () => {
       const result = await this.db.select().from(agentTable);
 
-      return result;
+      // Map each Drizzle agent to Core agent type
+      return result.map((agent) => mapToAgent(agent));
     });
   }
 
@@ -233,10 +250,11 @@ export abstract class BaseDrizzleAdapter<
   async createAgent(agent: Partial<Agent>): Promise<boolean> {
     return this.withDatabase(async () => {
       try {
+        // Convert from Core type to Drizzle schema type
+        const drizzleAgent = mapToDrizzleAgent(agent);
+
         await this.db.transaction(async (tx) => {
-          await tx.insert(agentTable).values({
-            ...agent,
-          });
+          await tx.insert(agentTable).values(drizzleAgent);
         });
 
         logger.debug('Agent created successfully:', {
@@ -273,10 +291,14 @@ export abstract class BaseDrizzleAdapter<
             agent.settings = await this.mergeAgentSettings(tx, agentId, agent.settings);
           }
 
+          // Convert from Core type to Drizzle schema type with proper typing
+          const drizzleAgent = mapToDrizzleAgent(agent);
+
+          // Use a properly typed update operation
           await tx
             .update(agentTable)
             .set({
-              ...agent,
+              ...drizzleAgent,
               updatedAt: Date.now(),
             })
             .where(eq(agentTable.id, agentId));
@@ -685,10 +707,10 @@ export abstract class BaseDrizzleAdapter<
       if (result.length === 0) return null;
 
       // Group components by entity
-      const entity = result[0].entity;
-      entity.components = result.filter((row) => row.components).map((row) => row.components);
+      const entityData = mapToEntity(result[0].entity);
+      entityData.components = result.filter((row) => row.components).map((row) => row.components);
 
-      return entity;
+      return entityData;
     });
   }
 
@@ -725,19 +747,17 @@ export abstract class BaseDrizzleAdapter<
 
         const entityId = row.entity.id as UUID;
         if (!entitiesByIdMap.has(entityId)) {
-          const entity: Entity = {
-            ...row.entity,
-            components: includeComponents ? [] : undefined,
-          };
+          const entity: Entity = mapToEntity(row.entity);
+          // Initialize components array if including components
+          if (includeComponents) {
+            entity.components = [];
+          }
           entitiesByIdMap.set(entityId, entity);
         }
 
         if (includeComponents && row.components) {
           const entity = entitiesByIdMap.get(entityId);
-          if (entity) {
-            if (!entity.components) {
-              entity.components = [];
-            }
+          if (entity && entity.components) {
             entity.components.push(row.components);
           }
         }
@@ -755,8 +775,11 @@ export abstract class BaseDrizzleAdapter<
   async createEntity(entity: Entity): Promise<boolean> {
     return this.withDatabase(async () => {
       try {
-        return await this.db.transaction(async (tx) => {
-          await tx.insert(entityTable).values(entity);
+        return this.db.transaction(async (tx) => {
+          // Convert from Core type to Drizzle schema type
+          const drizzleEntity = mapToDrizzleEntity(entity);
+
+          await tx.insert(entityTable).values(drizzleEntity);
 
           logger.debug('Entity created successfully:', {
             entity,
@@ -792,7 +815,17 @@ export abstract class BaseDrizzleAdapter<
       const existingEntity = await this.getEntityById(entity.id);
 
       if (!existingEntity) {
-        return await this.createEntity(entity);
+        // Convert from Core type to Drizzle schema type for insert
+        const drizzleEntity = mapToDrizzleEntity(entity);
+
+        // Insert the entity
+        await this.db.insert(entityTable).values(drizzleEntity);
+
+        logger.debug('Entity created via ensureEntityExists:', {
+          entityId: entity.id,
+        });
+
+        return true;
       }
 
       return true;
@@ -812,9 +845,12 @@ export abstract class BaseDrizzleAdapter<
    */
   async updateEntity(entity: Entity): Promise<void> {
     return this.withDatabase(async () => {
+      // Convert from Core type to Drizzle schema type
+      const drizzleEntity = mapToDrizzleEntity(entity);
+
       await this.db
         .update(entityTable)
-        .set(entity)
+        .set(drizzleEntity)
         .where(and(eq(entityTable.id, entity.id as UUID), eq(entityTable.agentId, entity.agentId)));
     });
   }
@@ -840,7 +876,7 @@ export abstract class BaseDrizzleAdapter<
         .select()
         .from(componentTable)
         .where(and(...conditions));
-      return result.length > 0 ? result[0] : null;
+      return result.length > 0 ? mapToComponent(result[0]) : null;
     });
   }
 
@@ -864,18 +900,10 @@ export abstract class BaseDrizzleAdapter<
       }
 
       const result = await this.db
-        .select({
-          id: componentTable.id,
-          entityId: componentTable.entityId,
-          type: componentTable.type,
-          data: componentTable.data,
-          worldId: componentTable.worldId,
-          sourceEntityId: componentTable.sourceEntityId,
-          createdAt: componentTable.createdAt,
-        })
+        .select()
         .from(componentTable)
         .where(and(...conditions));
-      return result;
+      return result.map(mapToComponent);
     });
   }
 
@@ -886,7 +914,8 @@ export abstract class BaseDrizzleAdapter<
    */
   async createComponent(component: Component): Promise<boolean> {
     return this.withDatabase(async () => {
-      await this.db.insert(componentTable).values(component);
+      const drizzleComponent = mapToDrizzleComponent(component);
+      await this.db.insert(componentTable).values(drizzleComponent);
       return true;
     });
   }
@@ -898,9 +927,10 @@ export abstract class BaseDrizzleAdapter<
    */
   async updateComponent(component: Component): Promise<void> {
     return this.withDatabase(async () => {
+      const drizzleComponent = mapToDrizzleComponent(component);
       await this.db
         .update(componentTable)
-        .set(component)
+        .set(drizzleComponent)
         .where(eq(componentTable.id, component.id));
     });
   }
@@ -919,12 +949,14 @@ export abstract class BaseDrizzleAdapter<
   /**
    * Asynchronously retrieves memories from the database based on the provided parameters.
    * @param {Object} params - The parameters for retrieving memories.
-   * @param {UUID} params.roomId - The ID of the room to retrieve memories for.
+   * @param {UUID} [params.entityId] - The ID of the entity to retrieve memories for.
+   * @param {UUID} [params.agentId] - The ID of the agent to retrieve memories for.
+   * @param {UUID} [params.roomId] - The ID of the room to retrieve memories for.
    * @param {number} [params.count] - The maximum number of memories to retrieve.
    * @param {boolean} [params.unique] - Whether to retrieve unique memories only.
-   * @param {string} [params.tableName] - The name of the table to retrieve memories from.
-   * @param {number} [params.start] - The start date to retrieve memories from.
-   * @param {number} [params.end] - The end date to retrieve memories from.
+   * @param {string} params.tableName - The name of the table to retrieve memories from.
+   * @param {number} [params.start] - The start timestamp to filter memories by.
+   * @param {number} [params.end] - The end timestamp to filter memories by.
    * @returns {Promise<Memory[]>} A Promise that resolves to an array of memories.
    */
   async getMemories(params: {
@@ -979,17 +1011,7 @@ export abstract class BaseDrizzleAdapter<
 
       const query = this.db
         .select({
-          memory: {
-            id: memoryTable.id,
-            type: memoryTable.type,
-            createdAt: memoryTable.createdAt,
-            content: memoryTable.content,
-            entityId: memoryTable.entityId,
-            agentId: memoryTable.agentId,
-            roomId: memoryTable.roomId,
-            unique: memoryTable.unique,
-            metadata: memoryTable.metadata,
-          },
+          memory: memoryTable,
           embedding: embeddingTable[this.embeddingDimension],
         })
         .from(memoryTable)
@@ -997,23 +1019,21 @@ export abstract class BaseDrizzleAdapter<
         .where(and(...conditions))
         .orderBy(desc(memoryTable.createdAt));
 
-      const rows = params.count ? await query.limit(params.count) : await query;
+      const rows = count ? await query.limit(params.count) : await query;
 
-      return rows.map((row) => ({
-        id: row.memory.id as UUID,
-        type: row.memory.type,
-        createdAt: row.memory.createdAt,
-        content:
-          typeof row.memory.content === 'string'
-            ? JSON.parse(row.memory.content)
-            : row.memory.content,
-        entityId: row.memory.entityId as UUID,
-        agentId: row.memory.agentId as UUID,
-        roomId: row.memory.roomId as UUID,
-        unique: row.memory.unique,
-        metadata: row.memory.metadata,
-        embedding: row.embedding ? Array.from(row.embedding) : undefined,
-      }));
+      return rows.map((row) => {
+        const drizzleMemory: DrizzleMemory = row.memory;
+
+        // Use the mapping function to convert to core Memory type
+        const memory = mapToMemory(drizzleMemory);
+
+        // Add embedding if available
+        if (row.embedding) {
+          memory.embedding = Array.from(row.embedding);
+        }
+
+        return memory;
+      });
     });
   }
 
@@ -1042,32 +1062,27 @@ export abstract class BaseDrizzleAdapter<
 
       const query = this.db
         .select({
-          id: memoryTable.id,
-          type: memoryTable.type,
-          createdAt: memoryTable.createdAt,
-          content: memoryTable.content,
-          entityId: memoryTable.entityId,
-          agentId: memoryTable.agentId,
-          roomId: memoryTable.roomId,
-          unique: memoryTable.unique,
-          metadata: memoryTable.metadata,
+          memory: memoryTable,
+          embedding: embeddingTable[this.embeddingDimension],
         })
         .from(memoryTable)
+        .leftJoin(embeddingTable, eq(embeddingTable.memoryId, memoryTable.id))
         .where(and(...conditions))
         .orderBy(desc(memoryTable.createdAt));
 
       const rows = params.limit ? await query.limit(params.limit) : await query;
 
-      return rows.map((row) => ({
-        id: row.id as UUID,
-        createdAt: row.createdAt,
-        content: typeof row.content === 'string' ? JSON.parse(row.content) : row.content,
-        entityId: row.entityId as UUID,
-        agentId: row.agentId as UUID,
-        roomId: row.roomId as UUID,
-        unique: row.unique,
-        metadata: row.metadata,
-      })) as Memory[];
+      return rows.map((row) => {
+        // Use mapping function to convert to core Memory type
+        const memory = mapToMemory(row.memory);
+
+        // Add embedding if available
+        if (row.embedding) {
+          memory.embedding = Array.from(row.embedding);
+        }
+
+        return memory;
+      });
     });
   }
 
@@ -1091,27 +1106,23 @@ export abstract class BaseDrizzleAdapter<
       if (result.length === 0) return null;
 
       const row = result[0];
-      return {
-        id: row.memory.id as UUID,
-        createdAt: row.memory.createdAt,
-        content:
-          typeof row.memory.content === 'string'
-            ? JSON.parse(row.memory.content)
-            : row.memory.content,
-        entityId: row.memory.entityId as UUID,
-        agentId: row.memory.agentId as UUID,
-        roomId: row.memory.roomId as UUID,
-        unique: row.memory.unique,
-        embedding: row.embedding ?? undefined,
-      };
+
+      // Use the mapping function to convert to core Memory type
+      const memory = mapToMemory(row.memory);
+
+      // Add embedding if available
+      if (row.embedding) {
+        memory.embedding = Array.from(row.embedding);
+      }
+
+      return memory;
     });
   }
 
   /**
    * Asynchronously retrieves memories from the database based on the provided parameters.
-   * @param {Object} params - The parameters for retrieving memories.
-   * @param {UUID[]} params.memoryIds - The IDs of the memories to retrieve.
-   * @param {string} [params.tableName] - The name of the table to retrieve memories from.
+   * @param {UUID[]} memoryIds - The IDs of the memories to retrieve.
+   * @param {string} [tableName] - The name of the table to retrieve memories from.
    * @returns {Promise<Memory[]>} A Promise that resolves to an array of memories.
    */
   async getMemoriesByIds(memoryIds: UUID[], tableName?: string): Promise<Memory[]> {
@@ -1134,20 +1145,17 @@ export abstract class BaseDrizzleAdapter<
         .where(and(...conditions))
         .orderBy(desc(memoryTable.createdAt));
 
-      return rows.map((row) => ({
-        id: row.memory.id as UUID,
-        createdAt: row.memory.createdAt,
-        content:
-          typeof row.memory.content === 'string'
-            ? JSON.parse(row.memory.content)
-            : row.memory.content,
-        entityId: row.memory.entityId as UUID,
-        agentId: row.memory.agentId as UUID,
-        roomId: row.memory.roomId as UUID,
-        unique: row.memory.unique,
-        metadata: row.memory.metadata,
-        embedding: row.embedding ?? undefined,
-      }));
+      return rows.map((row) => {
+        // Use mapping function to convert to core Memory type
+        const memory = mapToMemory(row.memory);
+
+        // Add embedding if available
+        if (row.embedding) {
+          memory.embedding = Array.from(row.embedding);
+        }
+
+        return memory;
+      });
     });
   }
 
@@ -1255,13 +1263,15 @@ export abstract class BaseDrizzleAdapter<
   }): Promise<void> {
     return this.withDatabase(async () => {
       try {
+        const logEntry: DrizzleLogInsert = {
+          body: params.body,
+          entityId: params.entityId,
+          roomId: params.roomId,
+          type: params.type,
+        };
+
         await this.db.transaction(async (tx) => {
-          await tx.insert(logTable).values({
-            body: sql`${params.body}::jsonb`,
-            entityId: params.entityId,
-            roomId: params.roomId,
-            type: params.type,
-          });
+          await tx.insert(logTable).values(logEntry);
         });
       } catch (error) {
         logger.error('Failed to create log entry:', {
@@ -1307,7 +1317,9 @@ export abstract class BaseDrizzleAdapter<
         .orderBy(desc(logTable.createdAt))
         .limit(count ?? 10)
         .offset(offset ?? 0);
-      return result;
+
+      // Map the Drizzle results to the Core Log type
+      return result.map(mapToLog);
     });
   }
 
@@ -1347,7 +1359,7 @@ export abstract class BaseDrizzleAdapter<
     worldId?: UUID;
     entityId?: UUID;
   }): Promise<Memory[]> {
-    return await this.searchMemoriesByEmbedding(params.embedding, {
+    return this.searchMemoriesByEmbedding(params.embedding, {
       match_threshold: params.match_threshold,
       count: params.count,
       // Pass direct scope fields down
@@ -1427,23 +1439,18 @@ export abstract class BaseDrizzleAdapter<
         .orderBy(desc(similarity))
         .limit(params.count ?? 10);
 
-      return results.map((row) => ({
-        id: row.memory.id as UUID,
-        type: row.memory.type,
-        createdAt: row.memory.createdAt,
-        content:
-          typeof row.memory.content === 'string'
-            ? JSON.parse(row.memory.content)
-            : row.memory.content,
-        entityId: row.memory.entityId as UUID,
-        agentId: row.memory.agentId as UUID,
-        roomId: row.memory.roomId as UUID,
-        worldId: row.memory.worldId as UUID | undefined, // Include worldId
-        unique: row.memory.unique,
-        metadata: row.memory.metadata,
-        embedding: row.embedding ?? undefined,
-        similarity: row.similarity,
-      }));
+      return results.map((row) => {
+        // Use mapping function to convert to core Memory type
+        const memory = mapToMemory(row.memory);
+
+        // Add embedding and similarity score
+        if (row.embedding) {
+          memory.embedding = Array.from(row.embedding);
+        }
+        memory.similarity = row.similarity;
+
+        return memory;
+      });
     });
   }
 
@@ -1487,39 +1494,46 @@ export abstract class BaseDrizzleAdapter<
       isUnique = similarMemories.length === 0;
     }
 
+    // Prepare the memory object with proper types and defaults
+    const memoryData: Partial<Memory> = {
+      ...memory,
+      id: memoryId,
+      unique: memory.unique ?? isUnique,
+    };
+
+    // Convert to database format using the mapping function
+    const drizzleMemory = mapToDrizzleMemory(memoryData);
+
+    // Store content and metadata as properly formatted JSON
     const contentToInsert =
       typeof memory.content === 'string' ? JSON.parse(memory.content) : memory.content;
 
     await this.db.transaction(async (tx) => {
-      await tx.insert(memoryTable).values([
-        {
-          id: memoryId,
-          type: tableName,
-          content: sql`${contentToInsert}::jsonb`,
-          metadata: sql`${memory.metadata || {}}::jsonb`,
-          entityId: memory.entityId,
-          roomId: memory.roomId,
-          worldId: memory.worldId, // Include worldId
-          agentId: memory.agentId,
-          unique: memory.unique ?? isUnique,
-          createdAt: memory.createdAt,
-        },
-      ]);
+      await tx.insert(memoryTable).values({
+        ...drizzleMemory,
+        // TODO: see if we can improve this.
+        content: sql`${contentToInsert}::jsonb`,
+        metadata: sql`${memory.metadata || {}}::jsonb`,
+      });
 
       if (memory.embedding && Array.isArray(memory.embedding)) {
-        const embeddingValues: Record<string, unknown> = {
-          id: v4(),
-          memoryId: memoryId,
-          createdAt: memory.createdAt,
-        };
-
         const cleanVector = memory.embedding.map((n) =>
           Number.isFinite(n) ? Number(n.toFixed(6)) : 0
         );
 
-        embeddingValues[this.embeddingDimension] = cleanVector;
+        // Create embedding using the proper type system
+        const embeddingData: Partial<Embedding> = {
+          id: v4() as UUID,
+          memoryId: memoryId,
+          createdAt: memory.createdAt ?? Date.now(),
+        };
 
-        await tx.insert(embeddingTable).values([embeddingValues]);
+        // Set the vector in the appropriate dimension field
+        embeddingData[this.embeddingDimension] = cleanVector;
+
+        // Convert to database format and insert
+        const drizzleEmbedding = mapToDrizzleEmbedding(embeddingData);
+        await tx.insert(embeddingTable).values([drizzleEmbedding]);
       }
     });
 
@@ -1542,26 +1556,31 @@ export abstract class BaseDrizzleAdapter<
         });
 
         await this.db.transaction(async (tx) => {
-          // Update memory content if provided
-          if (memory.content) {
-            const contentToUpdate =
-              typeof memory.content === 'string' ? JSON.parse(memory.content) : memory.content;
+          // Update memory content and metadata
+          if (memory.content || memory.metadata) {
+            // We need to handle SQL expressions separately from the Drizzle type system
+            // because we're using raw SQL for the jsonb fields
 
-            await tx
-              .update(memoryTable)
-              .set({
-                content: sql`${contentToUpdate}::jsonb`,
-                ...(memory.metadata && { metadata: sql`${memory.metadata}::jsonb` }),
-              })
-              .where(eq(memoryTable.id, memory.id));
-          } else if (memory.metadata) {
-            // Update only metadata if content is not provided
-            await tx
-              .update(memoryTable)
-              .set({
-                metadata: sql`${memory.metadata}::jsonb`,
-              })
-              .where(eq(memoryTable.id, memory.id));
+            if (memory.content) {
+              const contentToUpdate =
+                typeof memory.content === 'string' ? JSON.parse(memory.content) : memory.content;
+
+              await tx
+                .update(memoryTable)
+                .set({
+                  content: sql`${contentToUpdate}::jsonb`,
+                })
+                .where(eq(memoryTable.id, memory.id));
+            }
+
+            if (memory.metadata) {
+              await tx
+                .update(memoryTable)
+                .set({
+                  metadata: sql`${memory.metadata}::jsonb`,
+                })
+                .where(eq(memoryTable.id, memory.id));
+            }
           }
 
           // Update embedding if provided
@@ -1579,8 +1598,11 @@ export abstract class BaseDrizzleAdapter<
 
             if (existingEmbedding.length > 0) {
               // Update existing embedding
-              const updateValues: Record<string, unknown> = {};
-              updateValues[this.embeddingDimension] = cleanVector;
+              const embeddingData: Partial<Embedding> = {};
+              embeddingData[this.embeddingDimension] = cleanVector;
+
+              // Convert to database format
+              const updateValues = mapToDrizzleEmbedding(embeddingData);
 
               await tx
                 .update(embeddingTable)
@@ -1588,14 +1610,16 @@ export abstract class BaseDrizzleAdapter<
                 .where(eq(embeddingTable.memoryId, memory.id));
             } else {
               // Create new embedding
-              const embeddingValues: Record<string, unknown> = {
-                id: v4(),
+              const embeddingData: Partial<Embedding> = {
+                id: v4() as UUID,
                 memoryId: memory.id,
                 createdAt: Date.now(),
               };
-              embeddingValues[this.embeddingDimension] = cleanVector;
+              embeddingData[this.embeddingDimension] = cleanVector;
 
-              await tx.insert(embeddingTable).values([embeddingValues]);
+              // Convert to database format
+              const drizzleEmbedding = mapToDrizzleEmbedding(embeddingData);
+              await tx.insert(embeddingTable).values([drizzleEmbedding]);
             }
           }
         });
@@ -1751,22 +1775,20 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<Room | null>} A Promise that resolves to the room if found, null otherwise.
    */
   async getRoom(roomId: UUID): Promise<Room | null> {
-    return this.withDatabase(async () => {
-      const result = await this.db
-        .select({
-          id: roomTable.id,
-          channelId: roomTable.channelId,
-          agentId: roomTable.agentId,
-          serverId: roomTable.serverId,
-          worldId: roomTable.worldId,
-          type: roomTable.type,
-          source: roomTable.source,
-        })
-        .from(roomTable)
-        .where(and(eq(roomTable.id, roomId), eq(roomTable.agentId, this.agentId)))
-        .limit(1);
-      if (result.length === 0) return null;
-      return result[0];
+    return this.withRetry(async () => {
+      return this.withDatabase(async () => {
+        const roomEntry = await this.db
+          .select()
+          .from(roomTable)
+          .where(eq(roomTable.id, roomId))
+          .limit(1);
+
+        if (!roomEntry.length) {
+          return null;
+        }
+
+        return mapToRoom(roomEntry[0]);
+      });
     });
   }
 
@@ -1776,9 +1798,12 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<Room[]>} A Promise that resolves to an array of rooms.
    */
   async getRooms(worldId: UUID): Promise<Room[]> {
-    return this.withDatabase(async () => {
-      const result = await this.db.select().from(roomTable).where(eq(roomTable.worldId, worldId));
-      return result;
+    return this.withRetry(async () => {
+      return this.withDatabase(async () => {
+        const rooms = await this.db.select().from(roomTable).where(eq(roomTable.worldId, worldId));
+
+        return rooms.map(mapToRoom);
+      });
     });
   }
 
@@ -1788,11 +1813,13 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<void>} A Promise that resolves when the room is updated.
    */
   async updateRoom(room: Room): Promise<void> {
-    return this.withDatabase(async () => {
-      await this.db
-        .update(roomTable)
-        .set({ ...room, agentId: this.agentId })
-        .where(eq(roomTable.id, room.id));
+    return this.withRetry(async () => {
+      return this.withDatabase(async () => {
+        await this.db
+          .update(roomTable)
+          .set(mapToDrizzleRoom(room))
+          .where(eq(roomTable.id, room.id));
+      });
     });
   }
 
@@ -1838,10 +1865,9 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<void>} A Promise that resolves when the room is deleted.
    */
   async deleteRoom(roomId: UUID): Promise<void> {
-    if (!roomId) throw new Error('Room ID is required');
-    return this.withDatabase(async () => {
-      await this.db.transaction(async (tx) => {
-        await tx.delete(roomTable).where(eq(roomTable.id, roomId));
+    return this.withRetry(async () => {
+      return this.withDatabase(async () => {
+        await this.db.delete(roomTable).where(eq(roomTable.id, roomId));
       });
     });
   }
@@ -1852,7 +1878,7 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<UUID[]>} A Promise that resolves to an array of room IDs.
    */
   async getRoomsForParticipant(entityId: UUID): Promise<UUID[]> {
-    return this.withDatabase(async () => {
+    return this.withRetry(async () => {
       const result = await this.db
         .select({ roomId: participantTable.roomId })
         .from(participantTable)
@@ -1869,7 +1895,7 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<UUID[]>} A Promise that resolves to an array of room IDs.
    */
   async getRoomsForParticipants(entityIds: UUID[]): Promise<UUID[]> {
-    return this.withDatabase(async () => {
+    return this.withRetry(async () => {
       const result = await this.db
         .selectDistinct({ roomId: participantTable.roomId })
         .from(participantTable)
@@ -1884,30 +1910,39 @@ export abstract class BaseDrizzleAdapter<
 
   /**
    * Asynchronously adds a participant to a room in the database based on the provided parameters.
-   * @param {UUID} entityId - The ID of the entity to add to the room.
-   * @param {UUID} roomId - The ID of the room to add the entity to.
+   * @param {UUID} entityId - The ID of the entity to add as a participant.
+   * @param {UUID} roomId - The ID of the room to add the participant to.
    * @returns {Promise<boolean>} A Promise that resolves to a boolean indicating whether the participant was added successfully.
    */
   async addParticipant(entityId: UUID, roomId: UUID): Promise<boolean> {
-    return this.withDatabase(async () => {
+    return this.withRetry(async () => {
       try {
+        const participantId = v4() as UUID;
+
         await this.db
           .insert(participantTable)
-          .values({
-            entityId,
-            roomId,
-            agentId: this.agentId,
-          })
+          .values(
+            mapToDrizzleParticipant({
+              id: participantId,
+              entity: {
+                id: entityId,
+                names: [], // Minimal Entity to satisfy type checker
+                agentId: this.agentId,
+              },
+              roomId,
+              agentId: this.agentId,
+            })
+          )
           .onConflictDoNothing();
+
         return true;
       } catch (error) {
         logger.error('Error adding participant', {
           error: error instanceof Error ? error.message : String(error),
           entityId,
           roomId,
-          agentId: this.agentId,
         });
-        return false;
+        throw error;
       }
     });
   }
@@ -1919,22 +1954,17 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<boolean>} A Promise that resolves to a boolean indicating whether the participant was removed successfully.
    */
   async removeParticipant(entityId: UUID, roomId: UUID): Promise<boolean> {
-    return this.withDatabase(async () => {
+    return this.withRetry(async () => {
       try {
-        const result = await this.db.transaction(async (tx) => {
-          return await tx
-            .delete(participantTable)
-            .where(
-              and(eq(participantTable.entityId, entityId), eq(participantTable.roomId, roomId))
-            )
-            .returning();
-        });
+        const result = await this.db
+          .delete(participantTable)
+          .where(and(eq(participantTable.entityId, entityId), eq(participantTable.roomId, roomId)))
+          .returning();
 
         const removed = result.length > 0;
         logger.debug(`Participant ${removed ? 'removed' : 'not found'}:`, {
           entityId,
           roomId,
-          removed,
         });
 
         return removed;
@@ -1955,8 +1985,8 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<Participant[]>} A Promise that resolves to an array of participants.
    */
   async getParticipantsForEntity(entityId: UUID): Promise<Participant[]> {
-    return this.withDatabase(async () => {
-      const result = await this.db
+    return this.withRetry(async () => {
+      const participants = await this.db
         .select({
           id: participantTable.id,
           entityId: participantTable.entityId,
@@ -1965,26 +1995,22 @@ export abstract class BaseDrizzleAdapter<
         .from(participantTable)
         .where(eq(participantTable.entityId, entityId));
 
-      const entity = await this.getEntityById(entityId);
-
-      if (!entity) {
-        return [];
-      }
-
-      return result.map((row) => ({
-        id: row.id as UUID,
-        entity: entity,
-      }));
+      return Promise.all(
+        participants.map(async (participant) => {
+          const entity = await this.getEntityById(participant.entityId as UUID);
+          return mapToParticipant(participant as DrizzleParticipant, entity);
+        })
+      );
     });
   }
 
   /**
    * Asynchronously retrieves all participants for a room from the database based on the provided parameters.
    * @param {UUID} roomId - The ID of the room to retrieve participants for.
-   * @returns {Promise<UUID[]>} A Promise that resolves to an array of entity IDs.
+   * @returns {Promise<UUID[]>} A Promise that resolves to an array of entity IDs participating in the room.
    */
   async getParticipantsForRoom(roomId: UUID): Promise<UUID[]> {
-    return this.withDatabase(async () => {
+    return this.withRetry(async () => {
       const result = await this.db
         .select({ entityId: participantTable.entityId })
         .from(participantTable)
@@ -2004,7 +2030,7 @@ export abstract class BaseDrizzleAdapter<
     roomId: UUID,
     entityId: UUID
   ): Promise<'FOLLOWED' | 'MUTED' | null> {
-    return this.withDatabase(async () => {
+    return this.withRetry(async () => {
       const result = await this.db
         .select({ roomState: participantTable.roomState })
         .from(participantTable)
@@ -2014,10 +2040,13 @@ export abstract class BaseDrizzleAdapter<
             eq(participantTable.entityId, entityId),
             eq(participantTable.agentId, this.agentId)
           )
-        )
-        .limit(1);
+        );
 
-      return (result[0]?.roomState as 'FOLLOWED' | 'MUTED' | null) ?? null;
+      if (result.length === 0) {
+        return null;
+      }
+
+      return (result[0].roomState as 'FOLLOWED' | 'MUTED') || null;
     });
   }
 
@@ -2033,26 +2062,33 @@ export abstract class BaseDrizzleAdapter<
     entityId: UUID,
     state: 'FOLLOWED' | 'MUTED' | null
   ): Promise<void> {
-    return this.withDatabase(async () => {
+    return this.withRetry(async () => {
       try {
-        await this.db.transaction(async (tx) => {
-          await tx
-            .update(participantTable)
-            .set({ roomState: state })
-            .where(
-              and(
-                eq(participantTable.roomId, roomId),
-                eq(participantTable.entityId, entityId),
-                eq(participantTable.agentId, this.agentId)
-              )
-            );
-        });
+        await this.db
+          .update(participantTable)
+          .set(
+            mapToDrizzleParticipant({
+              entity: {
+                id: entityId,
+                names: [], // Minimal Entity to satisfy type checker
+                agentId: this.agentId,
+              },
+              roomState: state,
+            })
+          )
+          .where(
+            and(
+              eq(participantTable.roomId, roomId),
+              eq(participantTable.entityId, entityId),
+              eq(participantTable.agentId, this.agentId)
+            )
+          );
       } catch (error) {
         logger.error('Failed to set participant user state:', {
-          roomId,
-          entityId,
-          state,
           error: error instanceof Error ? error.message : String(error),
+          entityId,
+          roomId,
+          state,
         });
         throw error;
       }
@@ -2075,22 +2111,22 @@ export abstract class BaseDrizzleAdapter<
     metadata?: { [key: string]: unknown };
   }): Promise<boolean> {
     return this.withDatabase(async () => {
-      const id = v4();
-      const saveParams = {
-        id,
+      const relationshipData = mapToDrizzleRelationship({
+        id: v4() as UUID,
         sourceEntityId: params.sourceEntityId,
         targetEntityId: params.targetEntityId,
         agentId: this.agentId,
         tags: params.tags || [],
         metadata: params.metadata || {},
-      };
+      });
+
       try {
-        await this.db.insert(relationshipTable).values(saveParams);
+        await this.db.insert(relationshipTable).values(relationshipData);
         return true;
       } catch (error) {
         logger.error('Error creating relationship:', {
           error: error instanceof Error ? error.message : String(error),
-          saveParams,
+          relationshipData,
         });
         return false;
       }
@@ -2105,11 +2141,12 @@ export abstract class BaseDrizzleAdapter<
   async updateRelationship(relationship: Relationship): Promise<void> {
     return this.withDatabase(async () => {
       try {
+        const relationshipData = mapToDrizzleRelationship(relationship);
         await this.db
           .update(relationshipTable)
           .set({
-            tags: relationship.tags || [],
-            metadata: relationship.metadata || {},
+            tags: relationshipData.tags,
+            metadata: relationshipData.metadata,
           })
           .where(eq(relationshipTable.id, relationship.id));
       } catch (error) {
@@ -2151,15 +2188,7 @@ export abstract class BaseDrizzleAdapter<
           return null;
         }
 
-        return {
-          id: result[0].id,
-          sourceEntityId: result[0].sourceEntityId,
-          targetEntityId: result[0].targetEntityId,
-          agentId: result[0].agentId,
-          tags: result[0].tags || [],
-          metadata: result[0].metadata || {},
-          createdAt: result[0].createdAt?.toString(),
-        };
+        return mapToRelationship(result[0]);
       } catch (error) {
         logger.error('Error getting relationship:', {
           error: error instanceof Error ? error.message : String(error),
@@ -2204,16 +2233,7 @@ export abstract class BaseDrizzleAdapter<
         }
 
         const results = await query;
-
-        return results.map((result) => ({
-          id: result.id,
-          sourceEntityId: result.sourceEntityId,
-          targetEntityId: result.targetEntityId,
-          agentId: result.agentId,
-          tags: result.tags || [],
-          metadata: result.metadata || {},
-          createdAt: result.createdAt?.toString(),
-        }));
+        return results.map(mapToRelationship);
       } catch (error) {
         logger.error('Error getting relationships:', {
           error: error instanceof Error ? error.message : String(error),
@@ -2237,7 +2257,12 @@ export abstract class BaseDrizzleAdapter<
           .from(cacheTable)
           .where(and(eq(cacheTable.agentId, this.agentId), eq(cacheTable.key, key)));
 
-        return result[0]?.value as T | undefined;
+        // Return undefined if no cache entry exists
+        if (!result.length) return undefined;
+
+        // Map the raw database result to our type-safe Cache model
+        const cacheEntry = mapToCache(result[0] as DrizzleCache);
+        return cacheEntry.value as T;
       } catch (error) {
         logger.error('Error fetching cache', {
           error: error instanceof Error ? error.message : String(error),
@@ -2258,14 +2283,20 @@ export abstract class BaseDrizzleAdapter<
   async setCache<T>(key: string, value: T): Promise<boolean> {
     return this.withDatabase(async () => {
       try {
+        // Create a properly typed cache entry
+        const cacheEntry: Partial<Cache> = {
+          key: key,
+          agentId: this.agentId,
+          value: value,
+        };
+
+        // Map to Drizzle-compatible insert type
+        const drizzleCache = mapToDrizzleCache(cacheEntry);
+
         await this.db.transaction(async (tx) => {
           await tx
             .insert(cacheTable)
-            .values({
-              key: key,
-              agentId: this.agentId,
-              value: value,
-            })
+            .values(drizzleCache)
             .onConflictDoUpdate({
               target: [cacheTable.key, cacheTable.agentId],
               set: {

@@ -3,6 +3,8 @@ import { check, foreignKey, index, pgTable, uuid, vector } from 'drizzle-orm/pg-
 import { VECTOR_DIMS } from '@elizaos/core';
 import { memoryTable } from './memory';
 import { numberTimestamp } from './types';
+import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
+import type { UUID } from '@elizaos/core';
 
 export const DIMENSION_MAP = {
   [VECTOR_DIMS.SMALL]: 'dim384',
@@ -59,3 +61,58 @@ export type EmbeddingDimensionColumn =
  * Retrieve the type of a specific column in the EmbeddingTable based on the EmbeddingDimensionColumn key.
  */
 export type EmbeddingTableColumn = (typeof embeddingTable._.columns)[EmbeddingDimensionColumn];
+
+// Inferred database model types from the embedding table schema
+export type DrizzleEmbedding = InferSelectModel<typeof embeddingTable>;
+export type DrizzleEmbeddingInsert = InferInsertModel<typeof embeddingTable>;
+
+/**
+ * Represents an embedding in the application
+ */
+export interface Embedding {
+  id: UUID;
+  memoryId: UUID;
+  createdAt: number;
+  dim384?: number[];
+  dim512?: number[];
+  dim768?: number[];
+  dim1024?: number[];
+  dim1536?: number[];
+  dim3072?: number[];
+}
+
+/**
+ * Maps a database embedding to the application embedding model
+ */
+export function mapToEmbedding(drizzleEmbedding: DrizzleEmbedding): Embedding {
+  return {
+    id: drizzleEmbedding.id as UUID,
+    memoryId: drizzleEmbedding.memoryId as UUID,
+    createdAt: drizzleEmbedding.createdAt,
+    dim384: drizzleEmbedding.dim384 || undefined,
+    dim512: drizzleEmbedding.dim512 || undefined,
+    dim768: drizzleEmbedding.dim768 || undefined,
+    dim1024: drizzleEmbedding.dim1024 || undefined,
+    dim1536: drizzleEmbedding.dim1536 || undefined,
+    dim3072: drizzleEmbedding.dim3072 || undefined,
+  };
+}
+
+/**
+ * Maps an application embedding to its database representation
+ */
+export function mapToDrizzleEmbedding(embedding: Partial<Embedding>): DrizzleEmbeddingInsert {
+  const result: Partial<DrizzleEmbeddingInsert> = {};
+
+  if (embedding.id !== undefined) result.id = embedding.id;
+  if (embedding.memoryId !== undefined) result.memoryId = embedding.memoryId;
+  if (embedding.createdAt !== undefined) result.createdAt = embedding.createdAt;
+  if (embedding.dim384 !== undefined) result.dim384 = embedding.dim384;
+  if (embedding.dim512 !== undefined) result.dim512 = embedding.dim512;
+  if (embedding.dim768 !== undefined) result.dim768 = embedding.dim768;
+  if (embedding.dim1024 !== undefined) result.dim1024 = embedding.dim1024;
+  if (embedding.dim1536 !== undefined) result.dim1536 = embedding.dim1536;
+  if (embedding.dim3072 !== undefined) result.dim3072 = embedding.dim3072;
+
+  return result as DrizzleEmbeddingInsert;
+}
