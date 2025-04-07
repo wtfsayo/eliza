@@ -11,7 +11,7 @@ import {
   type World,
   createUniqueUuid,
   logger,
-} from '@elizaos/core';
+} from '@elizaos/core-plugin-v2';
 import spaceJoin from './actions/spaceJoin';
 import { ClientBase } from './base';
 import { TWITTER_SERVICE_NAME } from './constants';
