@@ -14,14 +14,18 @@ export async function getActorDetails({
 }: {
   runtime: IAgentRuntime;
   roomId: UUID;
-}) {}
+}) {
+  // WRITE ME
+}
 
 /**
  * Format actors into a string
  * @param actors - list of actors
  * @returns string
  */
-export function formatActors({ actors }: { actors: Actor[] }) {}
+export function formatActors({ actors }: { actors: Actor[] }) {
+  // WRITE ME
+}
 
 /**
  * Format messages into a string
