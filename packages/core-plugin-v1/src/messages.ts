@@ -1,7 +1,7 @@
 import {
   formatMessages as coreFormatMessages,
   formatTimestamp as coreFormatTimestamp,
-} from '@elizaos/core';
+} from '@elizaos/core-plugin-v2';
 
 import type { IAgentRuntime, Actor, Content, Memory, UUID } from './types.ts';
 
