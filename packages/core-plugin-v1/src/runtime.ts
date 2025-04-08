@@ -1,4 +1,4 @@
-import {} from '@elizaos/core';
+import { AgentRuntime as coreAgentRuntime } from '@elizaos/core-plugin-v2';
 import {
   type Character,
   type Goal,
@@ -30,9 +30,12 @@ import {
 } from './types.ts';
 
 export class AgentRuntime implements IAgentRuntime {
+  private _runtime;
   registerMemoryManager(manager: IMemoryManager): void {}
   getMemoryManager(tableName: string): IMemoryManager | null {}
-  getService<T extends Service>(service: ServiceType): T | null {}
+  getService<T extends Service>(service: ServiceType): T | null {
+    return;
+  }
   async registerService(service: Service): Promise<void> {}
 
   /**
@@ -72,7 +75,9 @@ export class AgentRuntime implements IAgentRuntime {
     cacheManager?: ICacheManager;
     logging?: boolean;
     // verifiableInferenceAdapter?: IVerifiableInferenceAdapter;
-  }) {}
+  }) {
+    this._runtime = new coreAgentRuntime(opts);
+  }
 
   //private async initializeDatabase() {}
 
