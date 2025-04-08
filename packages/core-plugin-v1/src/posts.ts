@@ -1,4 +1,5 @@
 import type { Actor, Memory } from './types.ts';
+import { formatPosts as coreFormatPosts } from '@elizaos/core';
 
 export const formatPosts = ({
   messages,
@@ -9,5 +10,5 @@ export const formatPosts = ({
   actors: Actor[];
   conversationHeader?: boolean;
 }) => {
-  // does V2 have this function?
+  return coreFormatPosts(messages, actors, conversationHeader);
 };
