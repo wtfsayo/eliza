@@ -29,14 +29,22 @@ import {
   type ClientInstance,
 } from './types.ts';
 
+import { formatMessages } from './messages.ts';
+
 export class AgentRuntime implements IAgentRuntime {
   private _runtime;
-  registerMemoryManager(manager: IMemoryManager): void {}
-  getMemoryManager(tableName: string): IMemoryManager | null {}
-  getService<T extends Service>(service: ServiceType): T | null {
-    return;
+  registerMemoryManager(manager: IMemoryManager): void {
+    // WRITE ME
   }
-  async registerService(service: Service): Promise<void> {}
+  getMemoryManager(tableName: string): IMemoryManager | null {
+    // WRITE ME
+  }
+  getService<T extends Service>(service: ServiceType): T | null {
+    return this._runtime.getService(service);
+  }
+  async registerService(service: Service): Promise<void> {
+    return this._runtime.registerService(service);
+  }
 
   /**
    * Creates an instance of AgentRuntime.
@@ -81,41 +89,57 @@ export class AgentRuntime implements IAgentRuntime {
 
   //private async initializeDatabase() {}
 
-  async initialize() {}
+  async initialize() {
+    return this._runtime.initialize();
+  }
 
-  async stop() {}
+  async stop() {
+    return this._runtime.stop();
+  }
 
-  getSetting(key: string) {}
+  getSetting(key: string) {
+    return this._runtime.getSetting(key);
+  }
 
   /**
    * Get the number of messages that are kept in the conversation buffer.
    * @returns The number of recent messages to be kept in memory.
    */
-  getConversationLength() {}
+  getConversationLength() {
+    return this._runtime.getConversationLength();
+  }
 
   /**
    * Register an action for the agent to perform.
    * @param action The action to register.
    */
-  registerAction(action: Action) {}
+  registerAction(action: Action) {
+    return this._runtime.registerAction(action);
+  }
 
   /**
    * Register an evaluator to assess and guide the agent's responses.
    * @param evaluator The evaluator to register.
    */
-  registerEvaluator(evaluator: Evaluator) {}
+  registerEvaluator(evaluator: Evaluator) {
+    return this._runtime.registerEvaluator(evaluator);
+  }
 
   /**
    * Register a context provider to provide context for message generation.
    * @param provider The context provider to register.
    */
-  registerContextProvider(provider: Provider) {}
+  registerContextProvider(provider: Provider) {
+    return this._runtime.registerContextProvider(provider);
+  }
 
   /**
    * Register an adapter for the agent to use.
    * @param adapter The adapter to register.
    */
-  registerAdapter(adapter: Adapter) {}
+  registerAdapter(adapter: Adapter) {
+    // WRITE ME, maybe...
+  }
 
   /**
    * Process the actions of a message.
@@ -127,7 +151,9 @@ export class AgentRuntime implements IAgentRuntime {
     responses: Memory[],
     state?: State,
     callback?: HandlerCallback
-  ): Promise<void> {}
+  ): Promise<void> {
+    return this._runtime.processActions(message, responses, state, callback);
+  }
 
   /**
    * Evaluate the message and state using the registered evaluators.
@@ -137,14 +163,19 @@ export class AgentRuntime implements IAgentRuntime {
    * @param callback The handler callback
    * @returns The results of the evaluation.
    */
-  async evaluate(message: Memory, state: State, didRespond?: boolean, callback?: HandlerCallback) {}
+  async evaluate(message: Memory, state: State, didRespond?: boolean, callback?: HandlerCallback) {
+    // v2 now takes responses: Memory[]
+    return this._runtime.evaluate(message, state, didRespond, callback);
+  }
 
   /**
    * Ensure the existence of a participant in the room. If the participant does not exist, they are added to the room.
    * @param userId - The user ID to ensure the existence of.
    * @throws An error if the participant cannot be added.
    */
-  async ensureParticipantExists(userId: UUID, roomId: UUID) {}
+  async ensureParticipantExists(userId: UUID, roomId: UUID) {
+    // WRITE ME
+  }
 
   /**
    * Ensure the existence of a user in the database. If the user does not exist, they are added to the database.
@@ -160,7 +191,9 @@ export class AgentRuntime implements IAgentRuntime {
     source?: string | null
   ) {}
 
-  async ensureParticipantInRoom(userId: UUID, roomId: UUID) {}
+  async ensureParticipantInRoom(userId: UUID, roomId: UUID) {
+    return this._runtime.ensureParticipantInRoom(userId, roomId);
+  }
 
   async ensureConnection(
     userId: UUID,
@@ -168,23 +201,97 @@ export class AgentRuntime implements IAgentRuntime {
     userName?: string,
     userScreenName?: string,
     source?: string
-  ) {}
+  ) {
+    return this._runtime.ensureConnection(userId, roomId, userName, userScreenname, source);
+  }
 
   /**
    * Ensure the existence of a room between the agent and a user. If no room exists, a new room is created and the user
    * and agent are added as participants. The room ID is returned.
-   * @param userId - The user ID to create a room with.
+   * @param roomId - The room ID to create a room with.
    * @returns The room ID of the room between the agent and the user.
    * @throws An error if the room cannot be created.
    */
-  async ensureRoomExists(roomId: UUID) {}
+  async ensureRoomExists(roomId: UUID) {
+    return this._runtime.ensureRoomExists({
+      id: roomId,
+      name: 'Unknown',
+      source: 'Unknown',
+      type: 'Unknown',
+      chanenlId: roomId,
+      serverId: 0,
+      worldId: 0,
+      metadata: {},
+    });
+  }
 
   /**
    * Compose the state of the agent into an object that can be passed or used for response generation.
    * @param message The message to compose the state from.
    * @returns The state of the agent.
    */
-  async composeState(message: Memory, additionalKeys: { [key: string]: unknown } = {}) {}
+  async composeState(message: Memory, additionalKeys: { [key: string]: unknown } = {}) {
+    return this._runtime.composeState(message, [], []);
+  }
 
-  async updateRecentMessageState(state: State): Promise<State> {}
+  async updateRecentMessageState(state: State): Promise<State> {
+    const conversationLength = this.getConversationLength();
+
+    // get memories
+    this._runtime.getMemories({
+      roomId: state.roomId,
+      count: conversationLength,
+      unique: false,
+    });
+
+    // use v1 formatMessage
+    const recentMessages = formatMessages({
+      actors: state.actorsData ?? [],
+      messages: recentMessagesData.map((memory: Memory) => {
+        const newMemory = { ...memory };
+        delete newMemory.embedding;
+        return newMemory;
+      }),
+    });
+
+    let allAttachments = [];
+
+    if (recentMessagesData && Array.isArray(recentMessagesData)) {
+      const lastMessageWithAttachment = recentMessagesData.find(
+        (msg) => msg.content.attachments && msg.content.attachments.length > 0
+      );
+
+      if (lastMessageWithAttachment) {
+        const lastMessageTime = lastMessageWithAttachment?.createdAt ?? Date.now();
+        const oneHourBeforeLastMessage = lastMessageTime - 60 * 60 * 1000; // 1 hour before last message
+
+        allAttachments = recentMessagesData
+          .filter((msg) => {
+            const msgTime = msg.createdAt ?? Date.now();
+            return msgTime >= oneHourBeforeLastMessage;
+          })
+          .flatMap((msg) => msg.content.attachments || []);
+      }
+    }
+
+    const formattedAttachments = allAttachments
+      .map(
+        (attachment) =>
+          `ID: ${attachment.id}
+Name: ${attachment.title}
+URL: ${attachment.url}
+Type: ${attachment.source}
+Description: ${attachment.description}
+Text: ${attachment.text}
+    `
+      )
+      .join('\n');
+
+    return {
+      ...state,
+      recentMessages: addHeader('# Conversation Messages', recentMessages),
+      recentMessagesData,
+      attachments: formattedAttachments,
+    } as State;
+  }
 }
