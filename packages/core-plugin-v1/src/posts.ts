@@ -1,5 +1,5 @@
 import type { Actor, Memory } from './types.ts';
-import { formatPosts as coreFormatPosts } from '@elizaos/core';
+import { formatPosts as coreFormatPosts } from '@elizaos/core-plugin-v2';
 
 export const formatPosts = ({
   messages,
