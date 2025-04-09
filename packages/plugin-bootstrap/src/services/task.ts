@@ -219,7 +219,7 @@ export class TaskService extends Service {
 
         if (task.metadata.updatedAt === task.metadata.createdAt) {
           if (task.tags?.includes('immediate')) {
-            logger.debug('immediately running task', task.name);
+            console.log('immediately running task', task.name);
             await this.executeTask(task);
             continue;
           }
