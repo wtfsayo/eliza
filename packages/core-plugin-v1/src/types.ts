@@ -289,19 +289,19 @@ export interface State {
   agentId?: UUID;
 
   /** Agent's biography */
-  bio: string;
+  bio?: string;
 
   /** Agent's background lore */
-  lore: string;
+  lore?: string;
 
   /** Message handling directions */
-  messageDirections: string;
+  messageDirections?: string;
 
   /** Post handling directions */
-  postDirections: string;
+  postDirections?: string;
 
   /** Current room/conversation ID */
-  roomId: UUID;
+  roomId?: UUID;
 
   /** Optional agent name */
   agentName?: string;
@@ -310,7 +310,7 @@ export interface State {
   senderName?: string;
 
   /** String representation of conversation actors */
-  actors: string;
+  actors?: string;
 
   /** Optional array of actor objects */
   actorsData?: Actor[];
@@ -322,10 +322,10 @@ export interface State {
   goalsData?: Goal[];
 
   /** Recent message history as string */
-  recentMessages: string;
+  recentMessages?: string;
 
   /** Recent message objects */
-  recentMessagesData: Memory[];
+  recentMessagesData?: Memory[];
 
   /** Optional valid action names */
   actionNames?: string;
@@ -360,6 +360,9 @@ export interface State {
   knowledgeData?: KnowledgeItem[];
   /** Optional knowledge data */
   ragKnowledgeData?: RAGKnowledgeItem[];
+
+  /** Optional text content */
+  text?: string;
 
   /** Additional dynamic properties */
   [key: string]: unknown;
@@ -503,6 +506,21 @@ export interface Evaluator {
  * Provider for external data/services
  */
 export interface Provider {
+  /** Provider name */
+  name?: string;
+
+  /** Description of the provider */
+  description?: string;
+
+  /** Whether the provider is dynamic */
+  dynamic?: boolean;
+
+  /** Position of the provider in the provider list */
+  position?: number;
+
+  /** Whether the provider is private */
+  private?: boolean;
+
   /** Data retrieval function */
   get: (runtime: IAgentRuntime, message: Memory, state?: State) => Promise<any>;
 }
