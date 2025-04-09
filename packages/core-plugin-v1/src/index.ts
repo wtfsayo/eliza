@@ -69,3 +69,28 @@ export * from './runtime.ts';
 // - database
 // - knowledge / memory
 // - relationships
+
+// Export main runtime compatibility class
+export { CompatAgentRuntime } from './runtime';
+
+// Export types
+export * from './types';
+
+// Export translators
+export { translateV1MemoryToV2, translateV2MemoryToV1 } from './translators/memory-translator.ts';
+export {
+  translateV1GoalToV2Task,
+  translateV2TaskToV1Goal,
+} from './translators/goal-task-translator.ts';
+export {
+  translateV1RAGToV2Knowledge,
+  translateV2MemoryToV1RAG,
+} from './translators/rag-translator.ts';
+
+// Export proxies
+export { createMemoryManagerProxy, addEmbeddingToMemory } from './proxies/memory-manager-proxy';
+export { createDbAdapterProxy } from './proxies/db-adapter-proxy';
+export { createRagKnowledgeManagerProxy } from './proxies/rag-knowledge-manager-proxy';
+
+// Export utilities
+export { generateUuidFromString } from './utils/uuid';
