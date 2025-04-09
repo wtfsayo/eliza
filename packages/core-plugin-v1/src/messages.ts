@@ -34,7 +34,7 @@ export function formatActors({ actors }: { actors: Actor[] }) {
  * @returns string
  */
 export const formatMessages = ({ messages, actors }: { messages: Memory[]; actors: Actor[] }) => {
-  return coreFormatMessages(message, actors);
+  return coreFormatMessages(messages, actors);
 };
 
 export const formatTimestamp = (messageDate: number) => {

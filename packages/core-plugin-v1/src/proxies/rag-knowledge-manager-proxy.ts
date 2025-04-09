@@ -7,7 +7,7 @@ import {
   translateV2MemoryToV1RAG,
   translateV1RAGToV2Knowledge,
 } from '../translators/rag-translator';
-import { generateUuidFromString } from '../utils/uuid';
+import { generateUuidFromString } from '../uuid';
 import type { CompatAgentRuntime } from '../runtime';
 import { Memory as V2Memory, MemoryType } from '@elizaos/core-plugin-v2/src/types';
 
@@ -16,9 +16,6 @@ import { Memory as V2Memory, MemoryType } from '@elizaos/core-plugin-v2/src/type
  * and translates calls to V2 runtime methods.
  */
 export function createRagKnowledgeManagerProxy(runtime: CompatAgentRuntime): IRAGKnowledgeManager {
-  // Get V2 runtime reference
-  const v2Runtime = runtime.getV2Runtime();
-
   const proxy: IRAGKnowledgeManager = {
     runtime,
     tableName: 'knowledge', // V1 manager had tableName property
@@ -45,7 +42,7 @@ export function createRagKnowledgeManagerProxy(runtime: CompatAgentRuntime): IRA
         // Handle ID-only lookup if needed
         if (params.id && !params.query && !params.conversationContext) {
           // Use V2's getMemoryById which is more direct than a search
-          const v2Memory = await v2Runtime.getMemoryById(params.id);
+          const v2Memory = await runtime._v2Runtime.getMemoryById(params.id);
           if (!v2Memory) return [];
           return [translateV2MemoryToV1RAG(v2Memory, v1AgentId)];
         }
@@ -63,8 +60,8 @@ export function createRagKnowledgeManagerProxy(runtime: CompatAgentRuntime): IRA
         // Create a temporary V2 memory object to use as context for V2's knowledge retrieval
         const tempV2Memory: V2Memory = {
           entityId: v1AgentId as any,
-          agentId: v2Runtime.agentId,
-          roomId: v2Runtime.agentId, // Use agent's self-room for context
+          agentId: runtime._v2Runtime.agentId,
+          roomId: runtime._v2Runtime.agentId, // Use agent's self-room for context
           content: { text: queryText },
           metadata: {
             type: MemoryType.MESSAGE,
@@ -73,7 +70,7 @@ export function createRagKnowledgeManagerProxy(runtime: CompatAgentRuntime): IRA
         };
 
         // Call V2's getKnowledge method
-        const v2KnowledgeItems = await v2Runtime.getKnowledge(tempV2Memory);
+        const v2KnowledgeItems = await runtime._v2Runtime.getKnowledge(tempV2Memory);
 
         // Translate results to V1 format
         const v1Items = v2KnowledgeItems.map((item) =>
@@ -104,7 +101,7 @@ export function createRagKnowledgeManagerProxy(runtime: CompatAgentRuntime): IRA
         const v2KnowledgeItem = translateV1RAGToV2Knowledge(item);
 
         // Use V2's addKnowledge method which handles chunking
-        await v2Runtime.addKnowledge(v2KnowledgeItem, {
+        await runtime._v2Runtime.addKnowledge(v2KnowledgeItem, {
           targetTokens: 1500, // Default chunking options
           overlap: 200,
           modelContextSize: 4096,
@@ -132,13 +129,13 @@ export function createRagKnowledgeManagerProxy(runtime: CompatAgentRuntime): IRA
 
       try {
         // First delete the main document memory
-        await v2Runtime.deleteMemory(id);
+        await runtime._v2Runtime.deleteMemory(id);
 
         // Search for any associated fragments and delete them too
         // This is a best-effort approach as V2 might handle this internally
-        const v2Fragments = await v2Runtime.searchMemories({
+        const v2Fragments = await runtime._v2Runtime.searchMemories({
           tableName: 'knowledge',
-          roomId: v2Runtime.agentId,
+          roomId: runtime._v2Runtime.agentId,
           embedding: [], // Empty embedding forces metadata search only
           match_threshold: 0.1, // Low threshold
         });
@@ -154,7 +151,9 @@ export function createRagKnowledgeManagerProxy(runtime: CompatAgentRuntime): IRA
           );
 
           // Delete each fragment
-          await Promise.all(relatedFragments.map((frag) => v2Runtime.deleteMemory(frag.id!)));
+          await Promise.all(
+            relatedFragments.map((frag) => runtime._v2Runtime.deleteMemory(frag.id!))
+          );
         }
       } catch (error) {
         console.error(`[Compat Layer] Error in RAG removeKnowledge:`, error);
@@ -183,7 +182,7 @@ export function createRagKnowledgeManagerProxy(runtime: CompatAgentRuntime): IRA
         const embedding = Array.from(params.embedding);
 
         // Call V2's searchMemories method
-        const v2Memories = await v2Runtime.searchMemories({
+        const v2Memories = await runtime._v2Runtime.searchMemories({
           tableName: 'knowledge', // Target the knowledge fragments table
           roomId: runtime.agentId as any, // Use agent's self-room
           embedding: embedding,
@@ -223,10 +222,10 @@ export function createRagKnowledgeManagerProxy(runtime: CompatAgentRuntime): IRA
         console.log(`[Compat Layer] Clearing knowledge tables for agent ${agentRoomId}`);
 
         // Clear the documents table
-        await v2Runtime.deleteAllMemories(agentRoomId as any, 'documents');
+        await runtime._v2Runtime.deleteAllMemories(agentRoomId as any, 'documents');
 
         // Clear the knowledge fragments table
-        await v2Runtime.deleteAllMemories(agentRoomId as any, 'knowledge');
+        await runtime._v2Runtime.deleteAllMemories(agentRoomId as any, 'knowledge');
       } catch (error) {
         console.error(`[Compat Layer] Error in RAG clearKnowledge:`, error);
         throw error;

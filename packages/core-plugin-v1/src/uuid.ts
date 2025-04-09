@@ -1,5 +1,8 @@
 import { UUID as UUIDv1 } from './types';
-import { validateUuid, stringToUuid } from '@elizaos/core-plugin-v2';
+import {
+  stringToUuid as coreStringToUuid,
+  validateUuid as coreValidateUuid,
+} from '@elizaos/core/src/uuid';
 
 /**
  * Represents a UUID string in the format "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -24,12 +27,25 @@ export function asUUID(id: string): UUID {
 }
 
 /**
- * Generates a UUID from a string input
- * Wraps V2's stringToUuid function
- *
- * @param input The string to convert to a UUID
- * @returns A UUID generated from the input string
+ * Simple UUID generation function to replace the imported stringToUuid
+ * Creates a UUID (v1 compatible) from an input string
  */
 export function generateUuidFromString(input: string): UUID {
-  return stringToUuid(input);
+  return coreStringToUuid(input) as UUID;
+}
+
+/**
+ * Validate if the given value is a valid UUID.
+ * Wrapper around core validateUuid function
+ */
+export function validateUuid(value: unknown): UUID | null {
+  return coreValidateUuid(value) as UUID | null;
+}
+
+/**
+ * Convert a string to a UUID
+ * Wrapper around core stringToUuid function
+ */
+export function stringToUuid(target: string | number): UUID {
+  return coreStringToUuid(target) as UUID;
 }

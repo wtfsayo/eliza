@@ -1,7 +1,6 @@
 import { IMemoryManager as V1IMemoryManager, Memory as V1Memory, UUID as V1UUID } from '../types';
 import { translateV1MemoryToV2, translateV2MemoryToV1 } from '../translators/memory-translator';
 import type { CompatAgentRuntime } from '../runtime';
-import { IAgentRuntime as V2IAgentRuntime } from '@elizaos/core-plugin-v2';
 
 /**
  * Creates a proxy object that implements the V1 IMemoryManager interface
@@ -18,16 +17,23 @@ export function createMemoryManagerProxy(
 
     // Methods that delegate to the CompatAgentRuntime methods
     getMemories: async (opts) =>
-      runtime.getMemories({ ...opts, tableName, agentId: runtime.agentId }),
-    getMemoryById: async (id) => runtime.getMemoryById(id),
+      runtime.databaseAdapter.getMemories({ ...opts, tableName, agentId: runtime.agentId }),
+    getMemoryById: async (id) => runtime.databaseAdapter.getMemoryById(id),
     getMemoriesByRoomIds: async (params) =>
-      runtime.getMemoriesByRoomIds({ ...params, tableName, agentId: runtime.agentId }),
+      runtime.databaseAdapter.getMemoriesByRoomIds({
+        ...params,
+        tableName,
+        agentId: runtime.agentId,
+      }),
     searchMemoriesByEmbedding: async (embedding, opts) =>
-      runtime.searchMemoriesByEmbedding(embedding, { ...opts, tableName }),
-    createMemory: async (memory, unique) => runtime.createMemory(memory, tableName, unique),
-    removeMemory: async (memoryId) => runtime.removeMemory(memoryId, tableName),
-    removeAllMemories: async (roomId) => runtime.removeAllMemories(roomId, tableName),
-    countMemories: async (roomId, unique) => runtime.countMemories(roomId, unique, tableName),
+      runtime.databaseAdapter.searchMemoriesByEmbedding(embedding, { ...opts, tableName }),
+    createMemory: async (memory, unique) =>
+      runtime.databaseAdapter.createMemory(memory, tableName, unique),
+    removeMemory: async (memoryId) => runtime.databaseAdapter.removeMemory(memoryId, tableName),
+    removeAllMemories: async (roomId) =>
+      runtime.databaseAdapter.removeAllMemories(roomId, tableName),
+    countMemories: async (roomId, unique) =>
+      runtime.databaseAdapter.countMemories(roomId, unique, tableName),
 
     // Methods unique to V1 IMemoryManager
     addEmbeddingToMemory: async (memory: V1Memory): Promise<V1Memory> => {
@@ -46,7 +52,7 @@ export function createMemoryManagerProxy(
       );
       try {
         // Call the main compat method which calls V2
-        return await runtime.getCachedEmbeddings({
+        return await runtime.databaseAdapter.getCachedEmbeddings({
           query_table_name: tableName,
           query_input: content,
           query_threshold: 2, // Default threshold
@@ -71,11 +77,10 @@ export function createMemoryManagerProxy(
  * This method is used by the V1 MemoryManager's addEmbeddingToMemory method.
  */
 export async function addEmbeddingToMemory(
-  runtime: CompatAgentRuntime,
-  memory: V1Memory
+  memory: V1Memory,
+  runtime: CompatAgentRuntime
 ): Promise<V1Memory> {
   console.log(`[Compat Layer] Adding embedding to memory in table: ${memory.roomId}`);
-  const v2Runtime = runtime.getV2Runtime();
 
   try {
     // Translate V1 Memory to V2
@@ -85,11 +90,11 @@ export async function addEmbeddingToMemory(
     try {
       // Check if the V2 implementation is valid (not returning a deleteComponent by mistake)
       if (
-        v2Runtime.addEmbeddingToMemory &&
-        v2Runtime.addEmbeddingToMemory.toString().indexOf('deleteComponent') === -1
+        runtime._v2Runtime.addEmbeddingToMemory &&
+        runtime._v2Runtime.addEmbeddingToMemory.toString().indexOf('deleteComponent') === -1
       ) {
         // Use the V2 implementation
-        const v2MemoryWithEmbedding = await v2Runtime.addEmbeddingToMemory(v2Memory);
+        const v2MemoryWithEmbedding = await runtime._v2Runtime.addEmbeddingToMemory(v2Memory);
         return translateV2MemoryToV1(v2MemoryWithEmbedding);
       }
     } catch (e) {
@@ -105,7 +110,7 @@ export async function addEmbeddingToMemory(
         const contentText = v2Memory.content.text || '';
         if (contentText.trim().length > 0) {
           // Use V2's text embedding model
-          const embedding = await v2Runtime.useModel('TEXT_EMBEDDING', {
+          const embedding = await runtime._v2Runtime.useModel('TEXT_EMBEDDING', {
             text: contentText,
           });
 
