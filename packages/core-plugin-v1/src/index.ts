@@ -29,3 +29,32 @@ export { default as knowledge } from "./knowledge.ts";
 export * from "./ragknowledge.ts";
 export * from "./utils.ts";
 */
+
+// This is the entrypoint for the core-plugin-v1 package
+// It exports everything needed for v1 plugin compatibility
+
+// Core types
+export * from './types.ts';
+
+// Adapters created for v1 -> v2 compatibility
+// Export the adapter functions but not the interfaces to avoid conflicts
+export { fromV2State, toV2State, State } from './state.ts';
+
+export { asUUID } from './uuid.ts';
+
+export { fromV2ActionExample, toV2ActionExample, ActionExample } from './actionExample.ts';
+
+export { fromV2Provider, toV2Provider, Provider } from './provider.ts';
+
+export { createTemplateFunction, processTemplate, TemplateType } from './templates.ts';
+
+// Existing exports
+export * from './messages.ts';
+export * from './posts.ts';
+export * from './runtime.ts';
+
+// TODO: Implement the remaining adapters:
+// - action/handler
+// - database
+// - knowledge / memory
+// - relationships
