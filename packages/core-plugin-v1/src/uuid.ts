@@ -1,4 +1,5 @@
 import { UUID as UUIDv1 } from './types';
+import { validateUuid, stringToUuid } from '@elizaos/core-plugin-v2';
 
 /**
  * Represents a UUID string in the format "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
@@ -8,16 +9,27 @@ export type UUID = UUIDv1;
 
 /**
  * Helper function to safely cast a string to strongly typed UUID
- * This is a v1 compatible wrapper for v2 asUUID function
- * Implemented locally to avoid external dependencies
+ * Wraps V2's validateUuid function
  *
  * @param id The string UUID to validate and cast
- * @returns The same UUID with branded type information, normalized to lowercase
+ * @returns The same UUID with branded type information
+ * @throws Error if the UUID format is invalid
  */
 export function asUUID(id: string): UUID {
-  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+  const validUuid = validateUuid(id);
+  if (!validUuid) {
     throw new Error(`Invalid UUID format: ${id}`);
   }
-  // Normalize to lowercase for consistency
   return id.toLowerCase() as UUID;
+}
+
+/**
+ * Generates a UUID from a string input
+ * Wraps V2's stringToUuid function
+ *
+ * @param input The string to convert to a UUID
+ * @returns A UUID generated from the input string
+ */
+export function generateUuidFromString(input: string): UUID {
+  return stringToUuid(input);
 }

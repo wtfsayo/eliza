@@ -1,12 +1,5 @@
 import { UUID, State as StateFromTypes } from './types';
-
-// Define equivalent to StateV2 here to avoid external dependencies
-interface StateV2 {
-  values: { [key: string]: any };
-  data: { [key: string]: any };
-  text: string;
-  [key: string]: any;
-}
+import { State as StateV2 } from '@elizaos/core-plugin-v2';
 
 /**
  * Represents the state of a conversation or context
@@ -29,6 +22,7 @@ const DEFAULT_STATE: Partial<State> = {
 
 /**
  * Converts v2 State to v1 compatible State
+ * Uses the V2 State interface from core-plugin-v2
  */
 export function fromV2State(stateV2: StateV2): State {
   // Create a new state object starting with default values
@@ -51,6 +45,7 @@ export function fromV2State(stateV2: StateV2): State {
 
 /**
  * Converts v1 State to v2 State
+ * Creates a state object conforming to V2 State interface
  */
 export function toV2State(state: State): StateV2 {
   // Create a base v2 state structure

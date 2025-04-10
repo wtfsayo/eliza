@@ -1,8 +1,10 @@
 import { State } from './state';
+import { TemplateType as TemplateTypeV2 } from '@elizaos/core-plugin-v2';
 
 /**
  * Template type definition for v1 compatibility
  * A template can be either a string or a function that takes state and returns a string
+ * This aligns with V2's TemplateType
  */
 export type TemplateType = string | ((options: { state: State }) => string);
 

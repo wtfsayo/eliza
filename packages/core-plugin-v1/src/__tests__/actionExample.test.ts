@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Content } from '../types';
+import { Content as ContentV2, ActionExample as ActionExampleV2 } from '@elizaos/core-plugin-v2';
 import {
   ActionExample,
-  ActionExampleV2,
-  CommonContent,
   convertContentToV1,
   convertContentToV2,
   fromV2ActionExample,
@@ -16,7 +15,7 @@ describe('ActionExample Module', () => {
     user: 'TestUser',
     content: {
       text: 'Hello world',
-      actions: ['ACTION1', 'ACTION2'],
+      action: 'ACTION1',
     } as Content,
   };
 
@@ -25,37 +24,36 @@ describe('ActionExample Module', () => {
     name: 'TestUser',
     content: {
       text: 'Hello world',
-      actions: ['ACTION1', 'ACTION2'],
-    },
+      actions: ['ACTION1'],
+    } as ContentV2,
   };
 
   describe('convertContentToV1', () => {
     it('should convert V2 content to V1 content', () => {
-      const v2Content: CommonContent = {
+      const v2Content: ContentV2 = {
         text: 'Test content',
         actions: ['ACTION1'],
         metadata: { timestamp: 12345 },
-      };
+      } as ContentV2;
 
       const result = convertContentToV1(v2Content);
 
       expect(result.text).toBe('Test content');
-      expect(result.actions).toEqual(['ACTION1']);
+      expect(result.action).toBe('ACTION1');
       // Type assertion to access the metadata property
       expect((result as any).metadata.timestamp).toBe(12345);
     });
 
-    it('should handle null actions array', () => {
-      const v2Content: CommonContent = {
+    it('should handle empty actions array', () => {
+      const v2Content: ContentV2 = {
         text: 'Test content',
-        // @ts-ignore - testing missing actions
-        actions: null,
-      };
+        actions: [],
+      } as ContentV2;
 
       const result = convertContentToV1(v2Content);
 
       expect(result.text).toBe('Test content');
-      expect(result.actions).toEqual([]);
+      expect(result.action).toBeUndefined();
     });
 
     it('should handle null or undefined content', () => {
@@ -73,7 +71,7 @@ describe('ActionExample Module', () => {
     it('should convert V1 content to V2 content', () => {
       const v1Content = {
         text: 'Test content',
-        actions: ['ACTION1'],
+        action: 'ACTION1',
         thought: 'Private thought',
       } as Content;
 
@@ -85,11 +83,10 @@ describe('ActionExample Module', () => {
       expect((result as any).thought).toBe('Private thought');
     });
 
-    it('should handle null actions array', () => {
+    it('should handle undefined action field', () => {
       const v1Content = {
         text: 'Test content',
-        // @ts-ignore - testing missing actions
-        actions: null,
+        action: undefined,
       } as Content;
 
       const result = convertContentToV2(v1Content);
@@ -113,9 +110,9 @@ describe('ActionExample Module', () => {
     it('should convert v2 ActionExample to v1 ActionExample', () => {
       const result = fromV2ActionExample(v2Example);
 
-      expect(result).toEqual(v1Example);
       expect(result.user).toBe(v2Example.name);
-      expect(result.content).toEqual(v2Example.content);
+      expect(result.content.text).toBe(v2Example.content.text);
+      expect(result.content.action).toBe(v2Example.content.actions[0]);
     });
 
     it('should handle v2 example with minimal content', () => {
@@ -123,14 +120,14 @@ describe('ActionExample Module', () => {
         name: 'TestUser',
         content: {
           text: 'Minimal example',
-        },
+        } as ContentV2,
       };
 
       const result = fromV2ActionExample(minimalV2Example);
 
       expect(result.user).toBe('TestUser');
       expect(result.content.text).toBe('Minimal example');
-      expect(result.content.actions).toEqual([]);
+      expect(result.content.action).toBeUndefined();
     });
 
     it('should handle empty strings and arrays', () => {
@@ -139,14 +136,14 @@ describe('ActionExample Module', () => {
         content: {
           text: '',
           actions: [],
-        },
+        } as ContentV2,
       };
 
       const result = fromV2ActionExample(emptyV2Example);
 
       expect(result.user).toBe('');
       expect(result.content.text).toBe('');
-      expect(result.content.actions).toEqual([]);
+      expect(result.content.action).toBeUndefined();
     });
 
     it('should handle null or undefined example', () => {
@@ -166,9 +163,9 @@ describe('ActionExample Module', () => {
     it('should convert v1 ActionExample to v2 ActionExample', () => {
       const result = toV2ActionExample(v1Example);
 
-      expect(result).toEqual(v2Example);
       expect(result.name).toBe(v1Example.user);
-      expect(result.content).toEqual(v1Example.content);
+      expect(result.content.text).toBe(v1Example.content.text);
+      expect(result.content.actions).toEqual([v1Example.content.action]);
     });
 
     it('should handle v1 example with minimal content', () => {
@@ -191,7 +188,7 @@ describe('ActionExample Module', () => {
         user: 'ComplexUser',
         content: {
           text: 'Complex example',
-          actions: ['ACTION1'],
+          action: 'ACTION1',
           metadata: {
             timestamp: 123456789,
             source: 'test',

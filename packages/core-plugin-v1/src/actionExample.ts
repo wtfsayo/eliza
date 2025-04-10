@@ -1,26 +1,5 @@
 import { Content, ActionExample as ActionExampleFromTypes } from './types';
-
-/**
- * Common content interface that's compatible with both V1 and V2 content types
- * This provides a safer type boundary between the two versions
- */
-export interface CommonContent {
-  text: string;
-  actions?: string[];
-  [key: string]: unknown;
-}
-
-/**
- * Define equivalent of ActionExampleV2 here to avoid external dependencies
- * This provides the expected shape of V2 examples
- */
-export interface ActionExampleV2 {
-  /** User associated with the example */
-  name: string;
-
-  /** Content of the example */
-  content: CommonContent;
-}
+import { ActionExample as ActionExampleV2, Content as ContentV2 } from '@elizaos/core-plugin-v2';
 
 /**
  * Example content with associated user for demonstration purposes
@@ -35,17 +14,19 @@ export type ActionExample = ActionExampleFromTypes;
  * @param content V2 content object
  * @returns Content compatible with V1
  */
-export function convertContentToV1(content: CommonContent): Content {
+export function convertContentToV1(content: ContentV2): Content {
   if (!content) {
     return { text: '' } as Content;
   }
 
   return {
     text: content.text || '',
-    actions: Array.isArray(content.actions) ? [...content.actions] : [],
+    // V2 uses 'actions' array, V1 might use 'action' string
+    action:
+      Array.isArray(content.actions) && content.actions.length > 0 ? content.actions[0] : undefined,
     // Copy all other properties
     ...Object.entries(content)
-      .filter(([key]) => !['text', 'actions'].includes(key))
+      .filter(([key]) => !['text', 'actions', 'action'].includes(key))
       .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {}),
   } as Content;
 }
@@ -57,19 +38,20 @@ export function convertContentToV1(content: CommonContent): Content {
  * @param content V1 Content object
  * @returns Content compatible with V2
  */
-export function convertContentToV2(content: Content): CommonContent {
+export function convertContentToV2(content: Content): ContentV2 {
   if (!content) {
-    return { text: '' };
+    return { text: '' } as ContentV2;
   }
 
   return {
     text: content.text || '',
-    actions: Array.isArray(content.actions) ? [...content.actions] : [],
+    // V1 uses 'action' string, V2 uses 'actions' array
+    actions: content.action ? [content.action] : [],
     // Copy all other properties
     ...Object.entries(content)
-      .filter(([key]) => !['text', 'actions'].includes(key))
+      .filter(([key]) => !['text', 'action'].includes(key))
       .reduce((obj, [key, value]) => ({ ...obj, [key]: value }), {}),
-  };
+  } as ContentV2;
 }
 
 /**
@@ -98,7 +80,7 @@ export function fromV2ActionExample(exampleV2: ActionExampleV2): ActionExample {
  */
 export function toV2ActionExample(example: ActionExample): ActionExampleV2 {
   if (!example) {
-    return { name: '', content: { text: '' } };
+    return { name: '', content: { text: '' } as ContentV2 };
   }
 
   // Convert v1 format to v2 format
