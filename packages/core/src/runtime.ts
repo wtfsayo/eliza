@@ -281,13 +281,9 @@ export class AgentRuntime implements IAgentRuntime {
     }
 
     if (plugin.services) {
-      for (const service of plugin.services) {
-        if (this.isInitialized) {
-          await this.registerService(service);
-        } else {
-          this.servicesInitQueue.add(service);
-        }
-      }
+      plugin.services.forEach((service) => {
+        this.servicesInitQueue.add(service);
+      });
     }
   }
 
@@ -324,6 +320,11 @@ export class AgentRuntime implements IAgentRuntime {
         registeredPluginNames.add(plugin.name);
         pluginRegistrationPromises.push(await this.registerPlugin(plugin));
       }
+    }
+
+    if (!this.adapter) {
+      console.error('Could not find the adapter plugin. Please include the adapter plugin.');
+      throw new Error('Adapter plugin is missing.');
     }
 
     await this.adapter.init();
