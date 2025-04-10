@@ -12,7 +12,6 @@ import {
   IRAGKnowledgeManager,
   Memory as V1Memory,
   ModelProviderName,
-  ModelClass,
   Provider,
   Service as V1Service,
   ServiceType as V1ServiceType,
@@ -27,8 +26,8 @@ import { createMemoryManagerProxy, addEmbeddingToMemory } from './proxies/memory
 import { createDbAdapterProxy } from './proxies/db-adapter-proxy';
 import { createRagKnowledgeManagerProxy } from './proxies/rag-knowledge-manager-proxy';
 import { generateUuidFromString } from './uuid';
-import { createV1ServiceAdapter } from './proxies/service-adapter-factory';
-import { mapModelClassToModelType } from './models/model-compat'; // Keep only the helper
+import { ServiceAdapterFactory } from './adapters/service-adapter-factory';
+import { determineServiceType, ServiceCompatManager } from './adapters/service-adapter';
 
 /**
  * A compatibility runtime that adapts a V2 runtime to the V1 interface.
@@ -67,6 +66,7 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
   public readonly loreManager: V1IMemoryManager;
   public readonly ragKnowledgeManager: IRAGKnowledgeManager;
   public readonly cacheManager: ICacheManager;
+  public readonly serviceManager: ServiceCompatManager;
 
   // Private map to store custom memory managers
   private _memoryManagers?: Map<string, V1IMemoryManager>;
@@ -108,82 +108,12 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
 
     // Initialize knowledge manager
     this.ragKnowledgeManager = this._createRagKnowledgeManagerProxy();
+
+    // Initialize service manager
+    this.serviceManager = new ServiceCompatManager(this);
   }
 
   // --- Internal Compatibility Methods for Core AI Tasks ---
-
-  /**
-   * Internal implementation of text generation using V2's useModel
-   */
-  async _compatGenerateText(params: {
-    context: string;
-    modelClass?: ModelClass;
-    temperature?: number;
-    maxTokens?: number;
-    stop?: string[];
-    frequencyPenalty?: number;
-    presencePenalty?: number;
-  }): Promise<string> {
-    try {
-      const v2ModelType = mapModelClassToModelType(params.modelClass || ModelClass.LARGE);
-      // Use V2 model API via the internal V2 runtime instance
-      const result = await this._v2Runtime.useModel(v2ModelType, {
-        prompt: params.context,
-        temperature: params.temperature ?? 0.5, // Use ?? for defaults
-        stopSequences: params.stop || [],
-        frequencyPenalty: params.frequencyPenalty ?? 0.0,
-        presencePenalty: params.presencePenalty ?? 0.0,
-        maxTokens: params.maxTokens ?? 1500,
-      });
-      return result as string; // Assuming V2 returns string
-    } catch (error) {
-      console.error('[V1 Compat] Error in _compatGenerateText:', error);
-      throw error; // Re-throw for V1 plugin to handle
-    }
-  }
-
-  /**
-   * Internal implementation of embedding generation using V2's useModel
-   */
-  async _compatGenerateEmbedding(params: { input: string }): Promise<number[]> {
-    try {
-      // Use V2 embedding model
-      const result = await this._v2Runtime.useModel(V2ModelType.TEXT_EMBEDDING, {
-        text: params.input,
-      });
-      return result as number[]; // Assuming V2 returns number[]
-    } catch (error) {
-      console.error('[V1 Compat] Error in _compatGenerateEmbedding:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Internal implementation of image generation using V2's useModel
-   */
-  async _compatGenerateImage(params: {
-    prompt: string;
-    count?: number;
-    size?: string;
-  }): Promise<Array<{ url: string }>> {
-    const count = params.count || 1;
-    const size = params.size || '1024x1024'; // Default size
-
-    try {
-      // Use V2 image generation model
-      const result = await this._v2Runtime.useModel(V2ModelType.IMAGE, {
-        prompt: params.prompt,
-        count: count,
-        size: size,
-      });
-
-      // Ensure result is in the expected format
-      return result as Array<{ url: string }>;
-    } catch (error) {
-      console.error('[V1 Compat] Error in _compatGenerateImage:', error);
-      throw error;
-    }
-  }
 
   /**
    * Internal implementation of image description using V2's useModel
@@ -339,6 +269,11 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
 
   // Core methods
   async initialize(): Promise<void> {
+    console.log(`[Compat Layer] Initializing compatibility runtime for agent ${this.agentId}`);
+
+    // Register standard service adapters
+    ServiceAdapterFactory.registerStandardAdapters(this);
+
     // Call database initialization
     await this.initializeDatabase();
 
@@ -731,33 +666,15 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
    * @returns The service or null if not found
    */
   getService<T extends V1Service>(serviceType: V1ServiceType): T | null {
-    // Check if we have a cached service instance or proxy for this service type
+    console.log(`[Compat Layer] getService called for service type: ${serviceType}`);
+
+    // First check if the service is already registered directly in the services map
     if (this.services.has(serviceType)) {
-      console.log(`[Compat Layer] Returning cached service for ${serviceType}`);
       return this.services.get(serviceType) as T;
     }
 
-    console.log(
-      `[Compat Layer] No cached service for ${serviceType}. Attempting to create adapter/proxy.`
-    );
-
-    // Delegate to the factory function to create appropriate service adapter
-    const serviceAdapter = createV1ServiceAdapter(
-      serviceType,
-      this, // Pass the CompatAgentRuntime (needed for V1 context/methods)
-      this._v2Runtime // Pass the V2 Runtime (needed for V2 calls)
-    );
-
-    // Cache and return if an adapter/proxy was created
-    if (serviceAdapter) {
-      console.log(`[Compat Layer] Created and caching adapter/proxy for ${serviceType}`);
-      this.services.set(serviceType, serviceAdapter);
-      return serviceAdapter as T;
-    }
-
-    // Return null if no adapter/proxy could be created
-    console.log(`[Compat Layer] No adapter/proxy mapping found for ${serviceType}.`);
-    return null;
+    // If not found, use the ServiceAdapterFactory to get or create an adapter
+    return this.serviceManager.getService<T>(serviceType);
   }
 
   /**
@@ -765,19 +682,65 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
    * @param service The V1 service to register
    */
   async registerService(service: V1Service): Promise<void> {
-    const serviceType = service.serviceType;
-    console.log(`[Compat Layer] Registering service: ${serviceType}`);
-
-    if (this.services.has(serviceType)) {
-      console.warn(`[Compat Layer] Service ${serviceType} already registered. Replacing.`);
+    if (!service) {
+      console.error(`[Compat Layer] Cannot register null or undefined service`);
+      throw new Error('Service cannot be null or undefined');
     }
 
-    // Store the service in our V1 service map
-    this.services.set(serviceType, service);
+    try {
+      // Try to determine the service type from the service instance
+      const serviceType = determineServiceType(service);
 
-    // Initialize the service with this runtime
-    await service.initialize(this);
+      console.log(`[Compat Layer] Registering service: ${serviceType}`);
 
-    console.log(`[Compat Layer] Service ${serviceType} registered successfully`);
+      if (this.services.has(serviceType)) {
+        console.warn(
+          `[Compat Layer] Service ${serviceType} is already registered. Skipping registration.`
+        );
+        return;
+      }
+
+      // Initialize the service with this runtime
+      if (typeof service.initialize === 'function') {
+        await service.initialize(this);
+      }
+
+      // Add the service to the services map
+      this.services.set(serviceType, service);
+
+      // Register with the ServiceAdapterFactory to handle V1/V2 compatibility
+      await ServiceAdapterFactory.registerAdapter(this, service);
+
+      console.log(`[Compat Layer] Service ${serviceType} registered successfully`);
+    } catch (error) {
+      console.error(`[Compat Layer] Error registering service:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Stop a service by type
+   * @param serviceType The service type to stop
+   */
+  async stopService(serviceType: V1ServiceType): Promise<void> {
+    console.log(`[Compat Layer] Stopping service: ${serviceType}`);
+
+    try {
+      const service = this.getService(serviceType);
+      if (service) {
+        // Check if the service has a stop method
+        if (typeof (service as any).stop === 'function') {
+          await (service as any).stop();
+          console.log(`[Compat Layer] Service ${serviceType} stopped successfully`);
+        } else {
+          console.log(`[Compat Layer] Service ${serviceType} has no stop method`);
+        }
+      } else {
+        console.warn(`[Compat Layer] Service ${serviceType} not found, cannot stop`);
+      }
+    } catch (error) {
+      console.error(`[Compat Layer] Error stopping service ${serviceType}:`, error);
+      throw error;
+    }
   }
 }
