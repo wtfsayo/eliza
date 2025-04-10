@@ -18,8 +18,9 @@ import {
   State,
   UUID as V1UUID,
 } from './types';
-import { UUID } from '@elizaos/core-plugin-v2/src/types';
-import { ModelType as V2ModelType } from '@elizaos/core-plugin-v2'; // Import V2 ModelType
+import { UUID, Memory, State as StateV2 } from '@elizaos/core-plugin-v2/src/types';
+import { fromV2State, toV2State } from './state';
+import { fromV2Provider, toV2Provider } from './providers';
 
 // Import the proxies from their new locations
 import { createMemoryManagerProxy, addEmbeddingToMemory } from './proxies/memory-manager-proxy';
@@ -139,40 +140,111 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
 
     const { userId, roomId } = message;
 
-    // Get actors from the room
-    const actorsData = await this.databaseAdapter.getActorDetails({ roomId });
+    // First, get the V2 state from the underlying V2 runtime
+    const v2StateResult = await this._v2Runtime.composeState(message as unknown as Memory);
 
-    // Get recent messages
-    const recentMessagesData = await this.messageManager.getMemories({
-      roomId,
-      count: this.getConversationLength(),
-      unique: false,
+    // Create a base V2 state structure that our translator can understand
+    const v2State: StateV2 = {
+      values: {},
+      data: {},
+      text: '',
+      ...v2StateResult,
+    };
+
+    // Use our translator to get a basic V1 state
+    const baseState = fromV2State(v2State);
+
+    // Fetch any additional data that's not already in the V2 state
+    const [actorsData, goalsData] = await Promise.all([
+      // Only fetch if not already in the state
+      !baseState.actorsData?.length
+        ? this.databaseAdapter.getActorDetails({ roomId })
+        : baseState.actorsData,
+      !baseState.goalsData?.length
+        ? this.databaseAdapter.getGoals({
+            agentId: this.agentId,
+            roomId,
+            onlyInProgress: false,
+            count: 10,
+          })
+        : baseState.goalsData,
+    ]);
+
+    // Process context providers
+    const providersResult = await Promise.all(
+      this.providers.map(async (provider) => {
+        try {
+          // Call the provider's get method
+          return await provider.get(this, message, baseState);
+        } catch (error) {
+          console.error(
+            `[Compat Layer] Error executing provider ${provider.name || 'unknown'}:`,
+            error
+          );
+          return null;
+        }
+      })
+    );
+
+    // Filter out null/undefined/empty values and format results
+    const validResults = providersResult.filter(
+      (result) =>
+        result !== null &&
+        result !== undefined &&
+        (typeof result === 'string' ? result.trim().length > 0 : true)
+    );
+
+    // Convert non-string results to strings if needed
+    const providers = validResults
+      .map((result) => (typeof result === 'string' ? result : JSON.stringify(result)))
+      .join('\n\n');
+
+    // Process actions and evaluators
+    const actionPromises = this.actions.map(async (action: Action) => {
+      const result = await action.validate(this, message, baseState);
+      if (result) {
+        return action;
+      }
+      return null;
     });
 
-    // Get goals for the room
-    const goalsData = await this.databaseAdapter.getGoals({
-      agentId: this.agentId,
-      roomId,
-      onlyInProgress: false,
-      count: 10,
+    const evaluatorPromises = this.evaluators.map(async (evaluator) => {
+      const result = await evaluator.validate(this, message, baseState);
+      if (result) {
+        return evaluator;
+      }
+      return null;
     });
 
-    const senderName = actorsData?.find((actor) => actor.id === userId)?.name || 'Unknown';
-    const agentName =
-      actorsData?.find((actor) => actor.id === this.agentId)?.name || this.character.name;
+    const [resolvedEvaluators, resolvedActions] = await Promise.all([
+      Promise.all(evaluatorPromises),
+      Promise.all(actionPromises),
+    ]);
 
-    // Simplified state object - would need to be more comprehensive in production
+    const evaluatorsData = resolvedEvaluators.filter(Boolean) as Evaluator[];
+    const actionsData = resolvedActions.filter(Boolean) as Action[];
+
+    // Add all the computed data to our state
     const state: State = {
-      userId,
-      agentId: this.agentId,
-      agentName,
-      senderName,
-      roomId,
-      actorsData,
-      recentMessagesData,
-      goalsData,
+      ...baseState,
+
+      // Update any fetched data
+      actorsData: baseState.actorsData?.length ? baseState.actorsData : actorsData,
+      goalsData: baseState.goalsData?.length ? baseState.goalsData : goalsData,
+      actionsData,
+      evaluatorsData,
+
+      // Add additional keys
       ...additionalKeys,
     };
+
+    // Add the provider content
+    if (providers && providers.length > 0) {
+      state.providers = this._addHeader(
+        `# Additional Information About ${state.agentName || this.character?.name || 'Agent'} and The World`,
+        providers
+      );
+    }
 
     return state;
   }
@@ -190,18 +262,85 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
       return state;
     }
 
-    // Get latest messages
+    // Get conversation length setting
+    const conversationLength = this.getConversationLength();
+
+    // Fetch the latest messages
     const recentMessagesData = await this.messageManager.getMemories({
       roomId: state.roomId,
-      count: this.getConversationLength(),
+      count: conversationLength,
       unique: false,
     });
 
-    // Return updated state with new messages
-    return {
-      ...state,
-      recentMessagesData,
-    };
+    // First convert to V2, then update values, then convert back to V1
+    const stateV2 = toV2State(state);
+
+    // Update the messages data in the V2 state
+    stateV2.data.recentMessagesData = recentMessagesData.map((memory: V1Memory) => {
+      const newMemory = { ...memory };
+      if ('embedding' in newMemory) {
+        delete newMemory.embedding;
+      }
+      return newMemory;
+    });
+
+    // Format messages for display
+    const formattedMessages = this._formatMessages(
+      stateV2.data.recentMessagesData,
+      state.actorsData || []
+    );
+    stateV2.values.recentMessages = formattedMessages;
+
+    // Format posts for display
+    const formattedPosts = this._formatPosts(
+      stateV2.data.recentMessagesData,
+      state.actorsData || []
+    );
+    stateV2.values.recentPosts = formattedPosts;
+
+    // Handle attachments with time window logic
+    let allAttachments = [];
+    if (recentMessagesData && Array.isArray(recentMessagesData)) {
+      // Find the last message with an attachment
+      const lastMessageWithAttachment = recentMessagesData.find(
+        (msg) => msg.content.attachments && msg.content.attachments.length > 0
+      );
+
+      if (lastMessageWithAttachment) {
+        // Create a time window (1 hour before the last message with attachment)
+        const lastMessageTime = lastMessageWithAttachment?.createdAt ?? Date.now();
+        const oneHourBeforeLastMessage = lastMessageTime - 60 * 60 * 1000; // 1 hour before last message
+
+        // Get all attachments within the time window
+        allAttachments = recentMessagesData
+          .filter((msg) => {
+            const msgTime = msg.createdAt ?? Date.now();
+            return msgTime >= oneHourBeforeLastMessage;
+          })
+          .flatMap((msg) => msg.content.attachments || []);
+      }
+    }
+
+    // Format attachments
+    const formattedAttachments = allAttachments
+      .map(
+        (attachment) =>
+          `ID: ${attachment.id}
+Name: ${attachment.title}
+URL: ${attachment.url}
+Type: ${attachment.source}
+Description: ${attachment.description}
+Text: ${attachment.text}`
+      )
+      .join('\n\n');
+
+    // Add the formatted attachments to the V2 state
+    stateV2.values.attachments = formattedAttachments
+      ? this._addHeader('# Attachments', formattedAttachments)
+      : '';
+
+    // Convert back to V1 state
+    return fromV2State(stateV2);
   }
 
   // Memory methods
@@ -253,144 +392,29 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
       }
     }
 
+    // Import V2 providers from the V2 runtime if any exist
+    if (this._v2Runtime.providers && this._v2Runtime.providers.length > 0) {
+      for (const v2Provider of this._v2Runtime.providers) {
+        try {
+          // Check if we already have an equivalent provider
+          const existingProvider = this.providers.find((p) => p.name === v2Provider.name);
+          if (!existingProvider) {
+            // Convert V2 provider to V1 provider
+            const v1Provider = fromV2Provider(v2Provider);
+            console.log(`[Compat Layer] Imported V2 provider: ${v1Provider.name}`);
+            this.registerContextProvider(v1Provider);
+          }
+        } catch (error) {
+          console.error(`[Compat Layer] Error importing V2 provider ${v2Provider.name}:`, error);
+        }
+      }
+    }
+
     // Initialize character knowledge if present
     if (this.character && this.character.knowledge && this.character.knowledge.length > 0) {
       console.log(`[Compat Layer] Initializing knowledge for ${this.character.name}`);
-
-      try {
-        // Check if RAG knowledge is enabled
-        const useRagKnowledge = !!this.character.settings?.ragKnowledge;
-        console.log(`[Compat Layer] RAG Knowledge enabled: ${useRagKnowledge}`);
-
-        if (useRagKnowledge) {
-          // Process RAG knowledge - string content will be processed directly
-          const stringKnowledge = this.character.knowledge.filter(
-            (item): item is string => typeof item === 'string'
-          );
-
-          // Process path knowledge items
-          const pathKnowledge = this.character.knowledge.filter(
-            (item): item is { path: string; shared?: boolean } =>
-              typeof item === 'object' && item !== null && 'path' in item
-          );
-
-          // Process directory knowledge items
-          const directoryKnowledge = this.character.knowledge.filter(
-            (item): item is { directory: string; shared?: boolean } =>
-              typeof item === 'object' && item !== null && 'directory' in item
-          );
-
-          // Log the counts
-          console.log(
-            `[Compat Layer] Found ${directoryKnowledge.length} directories, ${pathKnowledge.length} paths, and ${stringKnowledge.length} strings`
-          );
-
-          // Process directory knowledge first if any
-          if (directoryKnowledge.length > 0) {
-            console.log(`[Compat Layer] Processing directory knowledge sources`);
-            for (const dir of directoryKnowledge) {
-              try {
-                // Directory processing in V1 is complex - for compatibility we'll log and skip
-                // unless implementing the full directory crawler is necessary
-                console.log(
-                  `[Compat Layer] Directory processing requested for: ${dir.directory} (shared: ${!!dir.shared})`
-                );
-                console.log(
-                  `[Compat Layer] Directory processing is not fully implemented in compat layer`
-                );
-                // V1 implementation would crawl the directory for md/txt/pdf files and process them
-              } catch (error) {
-                console.error(
-                  `[Compat Layer] Error processing directory knowledge: ${error.message}`
-                );
-              }
-            }
-          }
-
-          // Process path knowledge
-          if (pathKnowledge.length > 0) {
-            console.log(`[Compat Layer] Processing path knowledge sources`);
-            for (const item of pathKnowledge) {
-              try {
-                console.log(
-                  `[Compat Layer] Processing file: ${item.path} (shared: ${!!item.shared})`
-                );
-                // In V1, this would read the file and process it
-                // For compatibility, we'll note that file reading should happen elsewhere
-                // and let the content handling plugins deal with it
-              } catch (error) {
-                console.error(`[Compat Layer] Error processing file knowledge: ${error.message}`);
-              }
-            }
-          }
-
-          // Process string knowledge
-          if (stringKnowledge.length > 0) {
-            console.log(
-              `[Compat Layer] Processing ${stringKnowledge.length} string knowledge items`
-            );
-            for (const text of stringKnowledge) {
-              try {
-                const id = this.ragKnowledgeManager.generateScopedId(text.substring(0, 50), false);
-                await this.ragKnowledgeManager.createKnowledge({
-                  id: id,
-                  agentId: this.agentId,
-                  content: {
-                    text: text,
-                    metadata: {
-                      type: 'direct',
-                    },
-                  },
-                });
-              } catch (error) {
-                console.error(`[Compat Layer] Error processing string knowledge: ${error.message}`);
-              }
-            }
-          }
-
-          // Run cleanup for deleted files
-          await this.ragKnowledgeManager.cleanupDeletedKnowledgeFiles();
-        } else {
-          // Non-RAG knowledge processing
-          // In V1, this would use knowledge.set for each string
-          console.log(`[Compat Layer] Processing non-RAG knowledge`);
-
-          // Filter for just string knowledge
-          const stringKnowledge = this.character.knowledge.filter(
-            (item): item is string => typeof item === 'string'
-          );
-
-          for (const text of stringKnowledge) {
-            try {
-              // Generate a document ID (V1 would use stringToUuid)
-              const id = generateUuidFromString(text.substring(0, 50));
-
-              // Create a V2 document memory (V1 would use this.documentsManager)
-              await this._v2Runtime.createMemory(
-                {
-                  id: id,
-                  entityId: this.agentId as any,
-                  agentId: this.agentId as any,
-                  roomId: this.agentId as any,
-                  content: { text },
-                  metadata: {
-                    type: 'document',
-                    timestamp: Date.now(),
-                  },
-                },
-                'documents'
-              );
-            } catch (error) {
-              console.error(`[Compat Layer] Error processing non-RAG knowledge: ${error.message}`);
-            }
-          }
-        }
-
-        console.log(`[Compat Layer] Knowledge initialization complete`);
-      } catch (error) {
-        console.error(`[Compat Layer] Error during knowledge initialization:`, error);
-      }
     }
+    // We don't need character ragknowledge here as it's handled by v2 runtime.
   }
 
   getConversationLength(): number {
@@ -681,5 +705,145 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
       console.error(`[Compat Layer] Error registering service:`, error);
       throw error;
     }
+  }
+
+  /**
+   * Register a context provider to provide context for message generation.
+   * @param provider The context provider to register.
+   */
+  private registerContextProvider(provider: Provider): void {
+    console.log(`[Compat Layer] Registering context provider: ${provider.name}`);
+
+    // Add to V1 providers list
+    this.providers.push(provider);
+
+    // Convert to V2 provider and register with V2 runtime if not already there
+    try {
+      const v2Provider = toV2Provider(provider);
+      const existingV2Provider = this._v2Runtime.providers.find((p) => p.name === v2Provider.name);
+
+      if (!existingV2Provider) {
+        this._v2Runtime.registerProvider(v2Provider);
+        console.log(`[Compat Layer] Registered V1 provider ${provider.name} with V2 runtime`);
+      }
+    } catch (error) {
+      console.error(
+        `[Compat Layer] Error registering V1 provider ${provider.name} with V2 runtime:`,
+        error
+      );
+    }
+  }
+
+  /**
+   * Helper method for adding a header to content (moved from private method in fromV2State)
+   */
+  _addHeader(header: string, content: string): string {
+    if (!content || content.trim().length === 0) return '';
+    return `${header}\n\n${content}`;
+  }
+
+  /**
+   * Format actors for display (moved from private method in fromV2State)
+   */
+  _formatActors(actors: any[]): string {
+    return actors
+      .map((actor) => `${actor.name}: ${actor.description || 'No description available.'}`)
+      .join('\n\n');
+  }
+
+  /**
+   * Format messages for display (moved from private method in fromV2State)
+   */
+  _formatMessages(messages: V1Memory[], actors: any[]): string {
+    return messages
+      .map((msg) => {
+        const actor = actors.find((a) => a.id === msg.userId);
+        const name = actor ? actor.name : 'Unknown';
+        return `${name}: ${msg.content.text}`;
+      })
+      .join('\n');
+  }
+
+  /**
+   * Format posts for display (moved from private method in fromV2State)
+   */
+  _formatPosts(messages: V1Memory[], actors: any[]): string {
+    return messages
+      .map((msg) => {
+        const actor = actors.find((a) => a.id === msg.userId);
+        const name = actor ? actor.name : 'Unknown';
+        return `${name} posted:\n${msg.content.text}`;
+      })
+      .join('\n\n');
+  }
+
+  /**
+   * Format goals as a string (moved from private method in fromV2State)
+   */
+  _formatGoalsAsString(goals: any[]): string {
+    return goals
+      .map((goal) => `Goal: ${goal.title}\nStatus: ${goal.status}\nDetails: ${goal.description}`)
+      .join('\n\n');
+  }
+
+  /**
+   * Format knowledge (moved from private method in fromV2State)
+   */
+  _formatKnowledge(knowledge: any[]): string {
+    return knowledge
+      .map((item) => {
+        const text = item.content.text;
+        return text.trim().replace(/\n{3,}/g, '\n\n');
+      })
+      .join('\n\n');
+  }
+
+  /**
+   * Format action names (moved from private method in fromV2State)
+   */
+  _formatActionNames(actions: Action[]): string {
+    return actions.map((action) => action.name).join(', ');
+  }
+
+  /**
+   * Format actions (moved from private method in fromV2State)
+   */
+  _formatActions(actions: Action[]): string {
+    return actions.map((action) => `${action.name}: ${action.description}`).join('\n\n');
+  }
+
+  /**
+   * Compose action examples (moved from private method in fromV2State)
+   */
+  _composeActionExamples(actions: Action[], count: number = 10): string {
+    return actions
+      .slice(0, count)
+      .map((action) => `Example: ${action.name}\nDescription: ${action.description}`)
+      .join('\n\n');
+  }
+
+  /**
+   * Format evaluators (moved from private method in fromV2State)
+   */
+  _formatEvaluators(evaluators: Evaluator[]): string {
+    return evaluators
+      .map((evaluator) => `${evaluator.name}: ${evaluator.description}`)
+      .join('\n\n');
+  }
+
+  /**
+   * Format evaluator names (moved from private method in fromV2State)
+   */
+  _formatEvaluatorNames(evaluators: Evaluator[]): string {
+    return evaluators.map((evaluator) => evaluator.name).join(', ');
+  }
+
+  /**
+   * Format evaluator examples (moved from private method in fromV2State)
+   */
+  _formatEvaluatorExamples(evaluators: Evaluator[]): string {
+    return evaluators
+      .map((evaluator) => `${evaluator.name}: ${evaluator.description}`)
+      .join('\n\n');
   }
 }

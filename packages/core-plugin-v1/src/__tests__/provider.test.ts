@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Provider } from '../provider';
+import { Provider } from '../providers';
 import { State } from '../state';
 import { fromV2State } from '../state';
-import { fromV2Provider, toV2Provider } from '../provider';
+import { fromV2Provider, toV2Provider } from '../providers';
 import { ProviderResult } from '@elizaos/core-plugin-v2';
 
 // Define ProviderV2 interface for testing

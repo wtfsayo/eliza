@@ -2,7 +2,7 @@ import { UUID as UUIDv1 } from './types';
 import {
   stringToUuid as coreStringToUuid,
   validateUuid as coreValidateUuid,
-} from '@elizaos/core/src/uuid';
+} from '@elizaos/core-plugin-v2';
 
 /**
  * Represents a UUID string in the format "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

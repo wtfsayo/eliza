@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { asUUID } from '../uuid';
 import { State, fromV2State, toV2State } from '../state';
-import { Provider, fromV2Provider, toV2Provider } from '../provider';
+import { Provider, fromV2Provider, toV2Provider } from '../providers';
 import { ActionExample, fromV2ActionExample, toV2ActionExample } from '../actionExample';
 import { TemplateType, processTemplate } from '../templates';
 

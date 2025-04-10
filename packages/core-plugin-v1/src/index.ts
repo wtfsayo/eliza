@@ -50,7 +50,7 @@ export {
   convertContentToV2,
 } from './actionExample.ts';
 
-export { fromV2Provider, toV2Provider, Provider } from './provider.ts';
+export { fromV2Provider, toV2Provider, Provider } from './providers.ts';
 
 export {
   createTemplateFunction,
