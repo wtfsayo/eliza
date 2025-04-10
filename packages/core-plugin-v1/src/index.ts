@@ -37,16 +37,27 @@ export * from "./utils.ts";
 export * from './types.ts';
 
 // Adapters created for v1 -> v2 compatibility
-// Export the adapter functions but not the interfaces to avoid conflicts
+// Export only the adapter functions and V1 types to avoid conflicts
 export { fromV2State, toV2State, State } from './state.ts';
 
-export { asUUID } from './uuid.ts';
+export { asUUID, generateUuidFromString } from './uuid.ts';
 
-export { fromV2ActionExample, toV2ActionExample, ActionExample } from './actionExample.ts';
+export {
+  fromV2ActionExample,
+  toV2ActionExample,
+  ActionExample,
+  convertContentToV1,
+  convertContentToV2,
+} from './actionExample.ts';
 
 export { fromV2Provider, toV2Provider, Provider } from './provider.ts';
 
-export { createTemplateFunction, processTemplate, TemplateType } from './templates.ts';
+export {
+  createTemplateFunction,
+  processTemplate,
+  getTemplateValues,
+  TemplateType,
+} from './templates.ts';
 
 // Existing exports
 export * from './messages.ts';

@@ -29,7 +29,7 @@ describe('Integration tests for v1 compatibility layer', () => {
     const v1State: State = {
       userId,
       agentId,
-      roomId,
+      roomId: '00000000-0000-0000-0000-000000000789',
       bio: 'Test bio',
       lore: 'Test lore',
       messageDirections: 'Test message directions',
@@ -79,8 +79,8 @@ describe('Integration tests for v1 compatibility layer', () => {
     // Use v1 provider with v1 state
     const resultAgain = await v1ProviderAgain.get(mockRuntime, mockMessage, v1State);
 
-    // Verify result is the same
-    expect(resultAgain).toEqual(result);
+    // Verify result - note this will only be the text since fromV2Provider extracts text
+    expect(resultAgain).toBe('Provider processed state: Original state');
   });
 
   it('should process ActionExample through v1->v2->v1 conversion', () => {

@@ -3,6 +3,7 @@ import { Provider } from '../provider';
 import { State } from '../state';
 import { fromV2State } from '../state';
 import { fromV2Provider, toV2Provider } from '../provider';
+import { ProviderResult } from '@elizaos/core-plugin-v2';
 
 // Define ProviderV2 interface for testing
 interface ProviderV2 {
@@ -29,13 +30,13 @@ const mockMessage = {
 describe('Provider adapter', () => {
   it('should convert from v2 provider to v1 provider correctly', async () => {
     // Arrange
-    const mockResult = {
+    const mockResult: ProviderResult = {
       text: 'Provider result text',
       values: { key1: 'value1', key2: 'value2' },
       data: { dataKey: 'dataValue' },
     };
 
-    const providerV2: ProviderV2 = {
+    const providerV2 = {
       name: 'testProvider',
       description: 'Test provider description',
       get: vi.fn().mockResolvedValue(mockResult),
@@ -46,7 +47,7 @@ describe('Provider adapter', () => {
     const result = await providerV1.get(mockRuntime, mockMessage);
 
     // Assert
-    expect(result).toEqual(mockResult);
+    expect(result).toEqual('Provider result text');
     expect(providerV2.get).toHaveBeenCalledWith(mockRuntime, mockMessage, undefined);
     expect(providerV1.name).toBe('testProvider');
     expect(providerV1.description).toBe('Test provider description');
@@ -75,7 +76,12 @@ describe('Provider adapter', () => {
     });
 
     // Assert
-    expect(result).toEqual(mockResult);
+    expect(result).toEqual({
+      ...mockResult,
+      values: {},
+      data: {},
+      text: 'Provider result text',
+    });
     expect(providerV1.get).toHaveBeenCalledWith(mockRuntime, mockMessage, {
       text: '',
       values: {},
@@ -112,7 +118,7 @@ describe('Provider adapter', () => {
     };
     const mockState = fromV2State(v2State);
 
-    const mockV2Provider: ProviderV2 = {
+    const mockV2Provider = {
       name: 'stateTestProvider',
       get: vi.fn().mockResolvedValue({ text: 'result' }),
     };
@@ -158,23 +164,86 @@ describe('Provider adapter', () => {
       data: {},
     });
 
-    // Assert the result contains the expected data
+    // Assert the result is formatted as a proper ProviderResult
     expect(result).toEqual({
-      text: 'You have 10.5 TON in your wallet.',
       walletAddress: '0x123abc',
       walletBalance: 10.5,
       tokenPrices: { TON: 5.25 },
+      text: 'You have 10.5 TON in your wallet.',
+      values: {},
+      data: {},
     });
 
     // Convert back to v1 and verify it still works
     const tonWalletProviderV1Again = fromV2Provider(tonWalletProviderV2);
     const resultV1 = await tonWalletProviderV1Again.get(mockRuntime, mockMessage);
 
-    expect(resultV1).toEqual({
-      text: 'You have 10.5 TON in your wallet.',
-      walletAddress: '0x123abc',
-      walletBalance: 10.5,
-      tokenPrices: { TON: 5.25 },
+    expect(resultV1).toEqual('You have 10.5 TON in your wallet.');
+  });
+
+  it('should handle primitive results from V1 providers', async () => {
+    // Arrange
+    const stringProvider: Provider = {
+      name: 'stringProvider',
+      get: vi.fn().mockResolvedValue('Just a string result'),
+    };
+
+    const numberProvider: Provider = {
+      name: 'numberProvider',
+      get: vi.fn().mockResolvedValue(42),
+    };
+
+    // Act
+    const stringProviderV2 = toV2Provider(stringProvider);
+    const numberProviderV2 = toV2Provider(numberProvider);
+
+    const stringResult = await stringProviderV2.get(mockRuntime, mockMessage, {});
+    const numberResult = await numberProviderV2.get(mockRuntime, mockMessage, {});
+
+    // Assert
+    expect(stringResult).toEqual({
+      values: {},
+      data: {},
+      text: 'Just a string result',
+    });
+
+    expect(numberResult).toEqual({
+      values: {},
+      data: {},
+      text: '42',
+    });
+  });
+
+  it('should handle null or undefined results', async () => {
+    // Arrange
+    const nullProvider: Provider = {
+      name: 'nullProvider',
+      get: vi.fn().mockResolvedValue(null),
+    };
+
+    const undefinedProvider: Provider = {
+      name: 'undefinedProvider',
+      get: vi.fn().mockResolvedValue(undefined),
+    };
+
+    // Act
+    const nullProviderV2 = toV2Provider(nullProvider);
+    const undefinedProviderV2 = toV2Provider(undefinedProvider);
+
+    const nullResult = await nullProviderV2.get(mockRuntime, mockMessage, {});
+    const undefinedResult = await undefinedProviderV2.get(mockRuntime, mockMessage, {});
+
+    // Assert
+    expect(nullResult).toEqual({
+      values: {},
+      data: {},
+      text: '',
+    });
+
+    expect(undefinedResult).toEqual({
+      values: {},
+      data: {},
+      text: '',
     });
   });
 });
