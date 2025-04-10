@@ -18,9 +18,10 @@ import {
   State,
   UUID as V1UUID,
 } from './types';
-import { UUID, Memory, State as StateV2 } from '@elizaos/core-plugin-v2/src/types';
+import { UUID, State as StateV2 } from '@elizaos/core-plugin-v2';
 import { fromV2State, toV2State } from './state';
 import { fromV2Provider, toV2Provider } from './providers';
+import { formatPosts } from './posts';
 
 // Import the proxies from their new locations
 import { createMemoryManagerProxy, addEmbeddingToMemory } from './proxies/memory-manager-proxy';
@@ -29,6 +30,8 @@ import { createRagKnowledgeManagerProxy } from './proxies/rag-knowledge-manager-
 import { generateUuidFromString } from './uuid';
 import { ServiceAdapterFactory } from './adapters/service-adapter-factory';
 import { determineServiceType, ServiceCompatManager } from './adapters/service-adapter';
+import { formatMessages } from './messages';
+import { translateV1MemoryToV2 } from './translators/memory-translator';
 
 /**
  * A compatibility runtime that adapts a V2 runtime to the V1 interface.
@@ -140,8 +143,10 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
 
     const { userId, roomId } = message;
 
+    const asV2Memory = translateV1MemoryToV2(message);
+
     // First, get the V2 state from the underlying V2 runtime
-    const v2StateResult = await this._v2Runtime.composeState(message as unknown as Memory);
+    const v2StateResult = await this._v2Runtime.composeState(asV2Memory);
 
     // Create a base V2 state structure that our translator can understand
     const v2State: StateV2 = {
@@ -285,17 +290,17 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
     });
 
     // Format messages for display
-    const formattedMessages = this._formatMessages(
-      stateV2.data.recentMessagesData,
-      state.actorsData || []
-    );
+    const formattedMessages = formatMessages({
+      messages: stateV2.data.recentMessagesData,
+      actors: state.actorsData || [],
+    });
     stateV2.values.recentMessages = formattedMessages;
 
     // Format posts for display
-    const formattedPosts = this._formatPosts(
-      stateV2.data.recentMessagesData,
-      state.actorsData || []
-    );
+    const formattedPosts = formatPosts({
+      messages: stateV2.data.recentMessagesData,
+      actors: state.actorsData || [],
+    });
     stateV2.values.recentPosts = formattedPosts;
 
     // Handle attachments with time window logic
@@ -740,110 +745,5 @@ Text: ${attachment.text}`
   _addHeader(header: string, content: string): string {
     if (!content || content.trim().length === 0) return '';
     return `${header}\n\n${content}`;
-  }
-
-  /**
-   * Format actors for display (moved from private method in fromV2State)
-   */
-  _formatActors(actors: any[]): string {
-    return actors
-      .map((actor) => `${actor.name}: ${actor.description || 'No description available.'}`)
-      .join('\n\n');
-  }
-
-  /**
-   * Format messages for display (moved from private method in fromV2State)
-   */
-  _formatMessages(messages: V1Memory[], actors: any[]): string {
-    return messages
-      .map((msg) => {
-        const actor = actors.find((a) => a.id === msg.userId);
-        const name = actor ? actor.name : 'Unknown';
-        return `${name}: ${msg.content.text}`;
-      })
-      .join('\n');
-  }
-
-  /**
-   * Format posts for display (moved from private method in fromV2State)
-   */
-  _formatPosts(messages: V1Memory[], actors: any[]): string {
-    return messages
-      .map((msg) => {
-        const actor = actors.find((a) => a.id === msg.userId);
-        const name = actor ? actor.name : 'Unknown';
-        return `${name} posted:\n${msg.content.text}`;
-      })
-      .join('\n\n');
-  }
-
-  /**
-   * Format goals as a string (moved from private method in fromV2State)
-   */
-  _formatGoalsAsString(goals: any[]): string {
-    return goals
-      .map((goal) => `Goal: ${goal.title}\nStatus: ${goal.status}\nDetails: ${goal.description}`)
-      .join('\n\n');
-  }
-
-  /**
-   * Format knowledge (moved from private method in fromV2State)
-   */
-  _formatKnowledge(knowledge: any[]): string {
-    return knowledge
-      .map((item) => {
-        const text = item.content.text;
-        return text.trim().replace(/\n{3,}/g, '\n\n');
-      })
-      .join('\n\n');
-  }
-
-  /**
-   * Format action names (moved from private method in fromV2State)
-   */
-  _formatActionNames(actions: Action[]): string {
-    return actions.map((action) => action.name).join(', ');
-  }
-
-  /**
-   * Format actions (moved from private method in fromV2State)
-   */
-  _formatActions(actions: Action[]): string {
-    return actions.map((action) => `${action.name}: ${action.description}`).join('\n\n');
-  }
-
-  /**
-   * Compose action examples (moved from private method in fromV2State)
-   */
-  _composeActionExamples(actions: Action[], count: number = 10): string {
-    return actions
-      .slice(0, count)
-      .map((action) => `Example: ${action.name}\nDescription: ${action.description}`)
-      .join('\n\n');
-  }
-
-  /**
-   * Format evaluators (moved from private method in fromV2State)
-   */
-  _formatEvaluators(evaluators: Evaluator[]): string {
-    return evaluators
-      .map((evaluator) => `${evaluator.name}: ${evaluator.description}`)
-      .join('\n\n');
-  }
-
-  /**
-   * Format evaluator names (moved from private method in fromV2State)
-   */
-  _formatEvaluatorNames(evaluators: Evaluator[]): string {
-    return evaluators.map((evaluator) => evaluator.name).join(', ');
-  }
-
-  /**
-   * Format evaluator examples (moved from private method in fromV2State)
-   */
-  _formatEvaluatorExamples(evaluators: Evaluator[]): string {
-    return evaluators
-      .map((evaluator) => `${evaluator.name}: ${evaluator.description}`)
-      .join('\n\n');
   }
 }

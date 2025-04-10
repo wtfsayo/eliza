@@ -3,7 +3,7 @@ import {
   formatTimestamp as coreFormatTimestamp,
 } from '@elizaos/core-plugin-v2';
 
-import type { IAgentRuntime, Actor, Content, Memory, UUID } from './types.ts';
+import type { IAgentRuntime, Actor, Memory, UUID } from './types.ts';
 
 /**
  * Get details for a list of actors.
@@ -21,10 +21,13 @@ export async function getActorDetails({
 /**
  * Format actors into a string
  * @param actors - list of actors
+ * @deprecated
  * @returns string
  */
 export function formatActors({ actors }: { actors: Actor[] }) {
-  // WRITE ME
+  return actors
+    .map((actor) => `${actor.name}: ${actor.details?.summary || 'No summary available.'}`)
+    .join('\n\n');
 }
 
 /**
