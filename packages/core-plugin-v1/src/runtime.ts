@@ -113,41 +113,6 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
     this.serviceManager = new ServiceCompatManager(this);
   }
 
-  // --- Internal Compatibility Methods for Core AI Tasks ---
-
-  /**
-   * Internal implementation of image description using V2's useModel
-   */
-  async _compatDescribeImage(imageUrl: string): Promise<{ title: string; description: string }> {
-    try {
-      const result = await this._v2Runtime.useModel(V2ModelType.IMAGE_DESCRIPTION, {
-        imageUrl,
-      });
-      // Assuming V2 returns the correct format
-      return result || { title: 'Image', description: 'No description available' };
-    } catch (error) {
-      console.error(`[Compat Layer] Error in _compatDescribeImage:`, error);
-      // Provide a default V1-compatible error response
-      return { title: 'Error', description: 'Failed to describe image' };
-    }
-  }
-
-  /**
-   * Internal implementation of speech generation using V2's useModel
-   */
-  async _compatGenerateSpeech(text: string): Promise<any> {
-    // V1 return type was 'any'
-    try {
-      return await this._v2Runtime.useModel(V2ModelType.TEXT_TO_SPEECH, {
-        text: text,
-      });
-      // V2 likely returns Buffer or stream, which matches V1's 'any' expectation
-    } catch (error) {
-      console.error(`[Compat Layer] Error in _compatGenerateSpeech:`, error);
-      throw error;
-    }
-  }
-
   // Helper methods for creating proxies now using imported functions
   private _createManagerProxy(tableName: string): V1IMemoryManager {
     return createMemoryManagerProxy(this, tableName);
@@ -714,32 +679,6 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
       console.log(`[Compat Layer] Service ${serviceType} registered successfully`);
     } catch (error) {
       console.error(`[Compat Layer] Error registering service:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Stop a service by type
-   * @param serviceType The service type to stop
-   */
-  async stopService(serviceType: V1ServiceType): Promise<void> {
-    console.log(`[Compat Layer] Stopping service: ${serviceType}`);
-
-    try {
-      const service = this.getService(serviceType);
-      if (service) {
-        // Check if the service has a stop method
-        if (typeof (service as any).stop === 'function') {
-          await (service as any).stop();
-          console.log(`[Compat Layer] Service ${serviceType} stopped successfully`);
-        } else {
-          console.log(`[Compat Layer] Service ${serviceType} has no stop method`);
-        }
-      } else {
-        console.warn(`[Compat Layer] Service ${serviceType} not found, cannot stop`);
-      }
-    } catch (error) {
-      console.error(`[Compat Layer] Error stopping service ${serviceType}:`, error);
       throw error;
     }
   }
