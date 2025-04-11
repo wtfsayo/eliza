@@ -32,6 +32,7 @@ import { ServiceAdapterFactory } from './adapters/service-adapter-factory';
 import { determineServiceType, ServiceCompatManager } from './adapters/service-adapter';
 import { formatMessages } from './messages';
 import { translateV1MemoryToV2 } from './translators/memory-translator';
+import { addHeader } from './context';
 
 /**
  * A compatibility runtime that adapts a V2 runtime to the V1 interface.
@@ -245,7 +246,7 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
 
     // Add the provider content
     if (providers && providers.length > 0) {
-      state.providers = this._addHeader(
+      state.providers = addHeader(
         `# Additional Information About ${state.agentName || this.character?.name || 'Agent'} and The World`,
         providers
       );
@@ -341,7 +342,7 @@ Text: ${attachment.text}`
 
     // Add the formatted attachments to the V2 state
     stateV2.values.attachments = formattedAttachments
-      ? this._addHeader('# Attachments', formattedAttachments)
+      ? addHeader('# Attachments', formattedAttachments)
       : '';
 
     // Convert back to V1 state
@@ -737,13 +738,5 @@ Text: ${attachment.text}`
         error
       );
     }
-  }
-
-  /**
-   * Helper method for adding a header to content (moved from private method in fromV2State)
-   */
-  _addHeader(header: string, content: string): string {
-    if (!content || content.trim().length === 0) return '';
-    return `${header}\n\n${content}`;
   }
 }
