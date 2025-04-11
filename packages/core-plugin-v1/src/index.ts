@@ -1,22 +1,17 @@
-export * from './context.ts';
-export * from './generation.ts';
-export * from './messages.ts';
-//export * from "./models.ts";
-export * from './posts.ts';
-//export * from "./providers.ts";
-//export * from "./relationships.ts";
-export * from './runtime.ts';
-export * from './types.ts';
-/*
-export * from "./settings.ts";
-export * from "./logger.ts";
-export * from "./parsing.ts";
-export * from "./environment.ts";
-export * from "./cache.ts";
-export { default as knowledge } from "./knowledge.ts";
-export * from "./ragknowledge.ts";
-export * from "./utils.ts";
-*/
+/**
+ * Core Plugin V1 Compatibility Layer
+ *
+ * This package provides a compatibility layer for V1 plugins to work with the V2 runtime.
+ * It translates between V1 and V2 types and handles any necessary adaptations.
+ */
+
+// Export types and core functionality from V1
+export * from './types';
+export * from './context';
+export * from './generation';
+export * from './messages';
+export * from './posts';
+export * from './runtime';
 
 // TODO: Implement the remaining adapters:
 // - action/handler

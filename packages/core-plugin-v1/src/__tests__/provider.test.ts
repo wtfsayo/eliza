@@ -1,19 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Provider } from '../providers';
-import { State } from '../state';
-import { fromV2State } from '../state';
-import { fromV2Provider, toV2Provider } from '../providers';
+import { Provider } from '../types';
+import { translateV2StateToV1 } from '../translators/state-translator';
+import {
+  translateV1ProviderToV2,
+  translateV2ProviderToV1,
+} from '../translators/provider-translator';
 import { ProviderResult } from '@elizaos/core-plugin-v2';
-
-// Define ProviderV2 interface for testing
-interface ProviderV2 {
-  name: string;
-  description?: string;
-  dynamic?: boolean;
-  position?: number;
-  private?: boolean;
-  get: (runtime: any, message: any, state: any) => Promise<any>;
-}
 
 // Mock runtime and memory for testing
 const mockRuntime = {
@@ -43,7 +35,7 @@ describe('Provider adapter', () => {
     };
 
     // Act
-    const providerV1 = fromV2Provider(providerV2);
+    const providerV1 = translateV2ProviderToV1(providerV2);
     const result = await providerV1.get(mockRuntime, mockMessage);
 
     // Assert
@@ -68,7 +60,7 @@ describe('Provider adapter', () => {
     };
 
     // Act
-    const providerV2 = toV2Provider(providerV1);
+    const providerV2 = translateV1ProviderToV2(providerV1);
     const result = await providerV2.get(mockRuntime, mockMessage, {
       text: '',
       values: {},
@@ -98,7 +90,7 @@ describe('Provider adapter', () => {
     };
 
     // Act
-    const providerV2 = toV2Provider(unnamedProvider);
+    const providerV2 = translateV1ProviderToV2(unnamedProvider);
 
     // Assert
     expect(providerV2.name).toBe('unnamed-provider');
@@ -116,7 +108,7 @@ describe('Provider adapter', () => {
       data: {},
       text: '',
     };
-    const mockState = fromV2State(v2State);
+    const mockState = translateV2StateToV1(v2State);
 
     const mockV2Provider = {
       name: 'stateTestProvider',
@@ -124,7 +116,7 @@ describe('Provider adapter', () => {
     };
 
     // Act
-    const v1Provider = fromV2Provider(mockV2Provider);
+    const v1Provider = translateV2ProviderToV1(mockV2Provider);
     await v1Provider.get(mockRuntime, mockMessage, mockState);
 
     // Assert
@@ -155,7 +147,7 @@ describe('Provider adapter', () => {
     };
 
     // Convert to v2
-    const tonWalletProviderV2 = toV2Provider(mockTonWalletProviderV1);
+    const tonWalletProviderV2 = translateV1ProviderToV2(mockTonWalletProviderV1);
 
     // Use the v2 provider
     const result = await tonWalletProviderV2.get(mockRuntime, mockMessage, {
@@ -175,7 +167,7 @@ describe('Provider adapter', () => {
     });
 
     // Convert back to v1 and verify it still works
-    const tonWalletProviderV1Again = fromV2Provider(tonWalletProviderV2);
+    const tonWalletProviderV1Again = translateV2ProviderToV1(tonWalletProviderV2);
     const resultV1 = await tonWalletProviderV1Again.get(mockRuntime, mockMessage);
 
     expect(resultV1).toEqual('You have 10.5 TON in your wallet.');
@@ -194,8 +186,8 @@ describe('Provider adapter', () => {
     };
 
     // Act
-    const stringProviderV2 = toV2Provider(stringProvider);
-    const numberProviderV2 = toV2Provider(numberProvider);
+    const stringProviderV2 = translateV1ProviderToV2(stringProvider);
+    const numberProviderV2 = translateV1ProviderToV2(numberProvider);
 
     const stringResult = await stringProviderV2.get(mockRuntime, mockMessage, {});
     const numberResult = await numberProviderV2.get(mockRuntime, mockMessage, {});
@@ -227,8 +219,8 @@ describe('Provider adapter', () => {
     };
 
     // Act
-    const nullProviderV2 = toV2Provider(nullProvider);
-    const undefinedProviderV2 = toV2Provider(undefinedProvider);
+    const nullProviderV2 = translateV1ProviderToV2(nullProvider);
+    const undefinedProviderV2 = translateV1ProviderToV2(undefinedProvider);
 
     const nullResult = await nullProviderV2.get(mockRuntime, mockMessage, {});
     const undefinedResult = await undefinedProviderV2.get(mockRuntime, mockMessage, {});

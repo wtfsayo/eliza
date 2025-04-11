@@ -1,16 +1,19 @@
-import { UUID, State as StateFromTypes } from './types';
-import { State as StateV2 } from '@elizaos/core-plugin-v2';
-
 /**
- * Represents the state of a conversation or context
- * This is a v1 compatibility wrapper for v2 State
+ * State translator module for converting between V1 and V2 state formats
+ * This enables compatibility between V1 plugins and the V2 runtime
  */
-export type State = StateFromTypes;
+
+import { State as V1State, Action as V1Action } from '../types';
+import { State as V2State, Action as V2Action } from '@elizaos/core-plugin-v2';
+import {
+  translateV1ActionExampleToV2,
+  translateV2ActionExampleToV1,
+} from './action-example-translator';
 
 /**
  * Default empty state with required properties
  */
-const DEFAULT_STATE: Partial<State> = {
+const DEFAULT_STATE: Partial<V1State> = {
   bio: '',
   lore: '',
   messageDirections: '',
@@ -38,15 +41,19 @@ const DEFAULT_STATE: Partial<State> = {
   recentMessageInteractions: '',
   recentPostInteractions: '',
   attachments: '',
+  adjective: '',
+  topic: '',
+  topics: '',
 };
 
 /**
- * Converts v2 State to v1 compatible State
- * Uses the V2 State interface from core-plugin-v2
+ * Converts a V2 State to a V1 State
+ * @param stateV2 The V2 State to convert
+ * @returns A V1-compatible State object
  */
-export function fromV2State(stateV2: StateV2): State {
+export function translateV2StateToV1(stateV2: V2State): V1State {
   // Create a new state object starting with default values
-  const state: State = {
+  const state: V1State = {
     ...DEFAULT_STATE,
     ...stateV2.values,
     ...stateV2.data,
@@ -82,7 +89,18 @@ export function fromV2State(stateV2: StateV2): State {
 
   if (stateV2.data?.actionsData) {
     state.actionsData = Array.isArray(stateV2.data.actionsData)
-      ? [...stateV2.data.actionsData]
+      ? stateV2.data.actionsData.map((action: V2Action) => {
+          // Transform action examples to V1 format if they exist
+          if (action.examples) {
+            return {
+              ...action,
+              examples: action.examples.map((exampleGroup) =>
+                exampleGroup.map((example) => translateV2ActionExampleToV1(example))
+              ),
+            } as V1Action;
+          }
+          return action as unknown as V1Action;
+        })
       : [];
   }
 
@@ -90,6 +108,25 @@ export function fromV2State(stateV2: StateV2): State {
     state.recentInteractionsData = Array.isArray(stateV2.data.recentInteractionsData)
       ? [...stateV2.data.recentInteractionsData]
       : [];
+  }
+
+  // Handle character-related fields that might be in values
+  const characterFields = [
+    'bio',
+    'lore',
+    'adjective',
+    'topic',
+    'topics',
+    'messageDirections',
+    'postDirections',
+    'characterPostExamples',
+    'characterMessageExamples',
+  ];
+
+  for (const field of characterFields) {
+    if (stateV2.values[field] !== undefined) {
+      state[field] = stateV2.values[field];
+    }
   }
 
   // Add any other properties from the v2 state
@@ -103,15 +140,16 @@ export function fromV2State(stateV2: StateV2): State {
 }
 
 /**
- * Converts v1 State to v2 State
- * Creates a state object conforming to V2 State interface
+ * Converts a V1 State to a V2 State
+ * @param stateV1 The V1 State to convert
+ * @returns A V2-compatible State object
  */
-export function toV2State(state: State): StateV2 {
+export function translateV1StateToV2(stateV1: V1State): V2State {
   // Create a base v2 state structure
-  const stateV2: StateV2 = {
+  const stateV2: V2State = {
     values: {},
     data: {},
-    text: state.text || '',
+    text: stateV1.text || '',
   };
 
   // Map primitive values to values object
@@ -142,6 +180,9 @@ export function toV2State(state: State): StateV2 {
     'roomId',
     'agentName',
     'senderName',
+    'adjective',
+    'topic',
+    'topics',
   ];
 
   // Map complex data to data object
@@ -153,31 +194,48 @@ export function toV2State(state: State): StateV2 {
     'ragKnowledgeData',
     'actionsData',
     'recentInteractionsData',
+    'evaluatorsData',
   ];
 
   // Process primitive values
   for (const field of primitiveFields) {
-    if (field in state && state[field] !== undefined) {
-      stateV2.values[field] = state[field];
+    if (field in stateV1 && stateV1[field] !== undefined) {
+      stateV2.values[field] = stateV1[field];
     }
   }
 
   // Process data objects
   for (const field of dataFields) {
-    if (field in state && state[field] !== undefined) {
-      stateV2.data[field] = Array.isArray(state[field]) ? [...state[field]] : state[field];
+    if (field in stateV1 && stateV1[field] !== undefined) {
+      if (field === 'actionsData' && Array.isArray(stateV1[field])) {
+        // Handle actionsData transformation
+        stateV2.data[field] = stateV1[field].map((action: V1Action) => {
+          // Transform action examples to V2 format if they exist
+          if (action.examples) {
+            return {
+              ...action,
+              examples: action.examples.map((exampleGroup) =>
+                exampleGroup.map((example) => translateV1ActionExampleToV2(example))
+              ),
+            } as V2Action;
+          }
+          return action as unknown as V2Action;
+        });
+      } else {
+        stateV2.data[field] = Array.isArray(stateV1[field]) ? [...stateV1[field]] : stateV1[field];
+      }
     }
   }
 
   // Add any other properties from v1 state as-is to preserve them
-  for (const key in state) {
+  for (const key in stateV1) {
     if (
       !primitiveFields.includes(key) &&
       !dataFields.includes(key) &&
       key !== 'text' &&
       !key.startsWith('_')
     ) {
-      stateV2[key] = state[key];
+      stateV2[key] = stateV1[key];
     }
   }
 

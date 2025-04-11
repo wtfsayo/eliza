@@ -1,3 +1,8 @@
+import {
+  UUID,
+  State as StateV2,
+  HandlerCallback as V2HandlerCallback,
+} from '@elizaos/core-plugin-v2';
 import { IAgentRuntime as V2IAgentRuntime } from '@elizaos/core-plugin-v2';
 import {
   Action,
@@ -18,10 +23,15 @@ import {
   State,
   UUID as V1UUID,
 } from './types';
-import { UUID, State as StateV2 } from '@elizaos/core-plugin-v2';
-import { fromV2State, toV2State } from './state';
-import { fromV2Provider, toV2Provider } from './providers';
+import { translateV1StateToV2, translateV2StateToV1 } from './translators/state-translator';
 import { formatPosts } from './posts';
+import { translateV1MemoryToV2 } from './translators/memory-translator';
+import { translateV1ActionToV2 as toV2Action } from './translators/action-translator';
+import {
+  translateV1ProviderToV2 as toV2Provider,
+  translateV2ProviderToV1 as fromV2Provider,
+} from './translators/provider-translator';
+import { translateV1EvaluatorToV2 as toV2Evaluator } from './translators/evaluator-translator';
 
 // Import the proxies from their new locations
 import { createMemoryManagerProxy, addEmbeddingToMemory } from './proxies/memory-manager-proxy';
@@ -30,9 +40,11 @@ import { createRagKnowledgeManagerProxy } from './proxies/rag-knowledge-manager-
 import { generateUuidFromString } from './uuid';
 import { ServiceAdapterFactory } from './adapters/service-adapter-factory';
 import { determineServiceType, ServiceCompatManager } from './adapters/service-adapter';
-import { formatMessages } from './messages';
-import { translateV1MemoryToV2 } from './translators/memory-translator';
+import { formatMessages, formatActors } from './messages';
 import { addHeader } from './context';
+import { formatActions, formatActionNames, composeActionExamples } from './actions';
+import { formatEvaluators, formatEvaluatorNames, formatEvaluatorExamples } from './evaluators';
+import { formatGoalsAsString } from './goals';
 
 /**
  * A compatibility runtime that adapts a V2 runtime to the V1 interface.
@@ -144,6 +156,7 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
 
     const { userId, roomId } = message;
 
+    // Convert V1 memory to V2 format
     const asV2Memory = translateV1MemoryToV2(message);
 
     // First, get the V2 state from the underlying V2 runtime
@@ -158,9 +171,9 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
     };
 
     // Use our translator to get a basic V1 state
-    const baseState = fromV2State(v2State);
+    const baseState = translateV2StateToV1(v2State);
 
-    // Fetch any additional data that's not already in the V2 state
+    // Fetch any additional data that's not already in the state
     const [actorsData, goalsData] = await Promise.all([
       // Only fetch if not already in the state
       !baseState.actorsData?.length
@@ -175,6 +188,34 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
           })
         : baseState.goalsData,
     ]);
+
+    // Get conversation length setting
+    const conversationLength = this.getConversationLength();
+
+    // Fetch the latest messages if not already in the state
+    const recentMessagesData = !baseState.recentMessagesData?.length
+      ? await this.messageManager.getMemories({
+          roomId: roomId,
+          count: conversationLength,
+          unique: false,
+        })
+      : baseState.recentMessagesData;
+
+    // Format messages for display if not already in the state
+    const recentMessages = !baseState.recentMessages
+      ? formatMessages({
+          messages: recentMessagesData,
+          actors: actorsData || [],
+        })
+      : baseState.recentMessages;
+
+    // Format posts for display if not already in the state
+    const recentPosts = !baseState.recentPosts
+      ? formatPosts({
+          messages: recentMessagesData,
+          actors: actorsData || [],
+        })
+      : baseState.recentPosts;
 
     // Process context providers
     const providersResult = await Promise.all(
@@ -205,6 +246,42 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
       .map((result) => (typeof result === 'string' ? result : JSON.stringify(result)))
       .join('\n\n');
 
+    // Handle attachments with time window logic
+    let allAttachments = [];
+    if (recentMessagesData && Array.isArray(recentMessagesData)) {
+      // Find the last message with an attachment
+      const lastMessageWithAttachment = recentMessagesData.find(
+        (msg) => msg.content.attachments && msg.content.attachments.length > 0
+      );
+
+      if (lastMessageWithAttachment) {
+        // Create a time window (1 hour before the last message with attachment)
+        const lastMessageTime = lastMessageWithAttachment?.createdAt ?? Date.now();
+        const oneHourBeforeLastMessage = lastMessageTime - 60 * 60 * 1000; // 1 hour before last message
+
+        // Get all attachments within the time window
+        allAttachments = recentMessagesData
+          .filter((msg) => {
+            const msgTime = msg.createdAt ?? Date.now();
+            return msgTime >= oneHourBeforeLastMessage;
+          })
+          .flatMap((msg) => msg.content.attachments || []);
+      }
+    }
+
+    // Format attachments
+    const formattedAttachments = allAttachments
+      .map(
+        (attachment) =>
+          `ID: ${attachment.id}
+Name: ${attachment.title}
+URL: ${attachment.url}
+Type: ${attachment.source}
+Description: ${attachment.description}
+Text: ${attachment.text}`
+      )
+      .join('\n\n');
+
     // Process actions and evaluators
     const actionPromises = this.actions.map(async (action: Action) => {
       const result = await action.validate(this, message, baseState);
@@ -230,6 +307,37 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
     const evaluatorsData = resolvedEvaluators.filter(Boolean) as Evaluator[];
     const actionsData = resolvedActions.filter(Boolean) as Action[];
 
+    // Format actions and evaluators
+    const formattedActionNames = formatActionNames(actionsData);
+    const formattedActions =
+      actionsData.length > 0 ? addHeader('# Available Actions', formatActions(actionsData)) : '';
+    const formattedActionExamples =
+      actionsData.length > 0
+        ? addHeader('# Action Examples', composeActionExamples(actionsData, 10))
+        : '';
+
+    const formattedEvaluatorNames = formatEvaluatorNames(evaluatorsData);
+    const formattedEvaluators =
+      evaluatorsData.length > 0
+        ? addHeader('# Available Evaluators', formatEvaluators(evaluatorsData))
+        : '';
+    const formattedEvaluatorExamples =
+      evaluatorsData.length > 0
+        ? addHeader('# Evaluator Examples', formatEvaluatorExamples(evaluatorsData))
+        : '';
+
+    // Format goals and actors if needed
+    const formattedGoals =
+      goalsData.length > 0
+        ? addHeader(
+            '# Goals\n{{agentName}} should prioritize accomplishing the objectives that are in progress.',
+            formatGoalsAsString({ goals: goalsData })
+          )
+        : '';
+
+    const formattedActors =
+      actorsData.length > 0 ? addHeader('# Actors', formatActors({ actors: actorsData })) : '';
+
     // Add all the computed data to our state
     const state: State = {
       ...baseState,
@@ -237,19 +345,37 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
       // Update any fetched data
       actorsData: baseState.actorsData?.length ? baseState.actorsData : actorsData,
       goalsData: baseState.goalsData?.length ? baseState.goalsData : goalsData,
+      recentMessagesData,
+      recentMessages: recentMessages,
+      recentPosts: recentPosts,
       actionsData,
       evaluatorsData,
+
+      // Add formatted content
+      actionNames: baseState.actionNames || `Possible response actions: ${formattedActionNames}`,
+      actions: baseState.actions || formattedActions,
+      actionExamples: baseState.actionExamples || formattedActionExamples,
+      evaluators: baseState.evaluators || formattedEvaluators,
+      evaluatorNames: baseState.evaluatorNames || formattedEvaluatorNames,
+      evaluatorExamples: baseState.evaluatorExamples || formattedEvaluatorExamples,
+      goals: baseState.goals || formattedGoals,
+      actors: baseState.actors || formattedActors,
 
       // Add additional keys
       ...additionalKeys,
     };
 
-    // Add the provider content
-    if (providers && providers.length > 0) {
+    // Add the provider content if not already present
+    if (providers && providers.length > 0 && !state.providers) {
       state.providers = addHeader(
         `# Additional Information About ${state.agentName || this.character?.name || 'Agent'} and The World`,
         providers
       );
+    }
+
+    // Add attachments if not already present
+    if (formattedAttachments && formattedAttachments.length > 0 && !state.attachments) {
+      state.attachments = addHeader('# Attachments', formattedAttachments);
     }
 
     return state;
@@ -279,7 +405,7 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
     });
 
     // First convert to V2, then update values, then convert back to V1
-    const stateV2 = toV2State(state);
+    const stateV2 = translateV1StateToV2(state);
 
     // Update the messages data in the V2 state
     stateV2.data.recentMessagesData = recentMessagesData.map((memory: V1Memory) => {
@@ -346,7 +472,7 @@ Text: ${attachment.text}`
       : '';
 
     // Convert back to V1 state
-    return fromV2State(stateV2);
+    return translateV2StateToV1(stateV2);
   }
 
   // Memory methods
@@ -437,7 +563,30 @@ Text: ${attachment.text}`
     state?: State,
     callback?: HandlerCallback
   ): Promise<void> {
-    return this._v2Runtime.processActions(message, responses, state, callback);
+    console.log(`[Compat Layer] processActions called for message ${message.id}`);
+
+    // Convert V1 message to V2 format
+    const messageV2 = translateV1MemoryToV2(message);
+
+    // Convert V1 responses to V2 format
+    const responsesV2 = responses.map((response) => translateV1MemoryToV2(response));
+
+    // Convert V1 state to V2 format if provided
+    const stateV2 = state ? translateV2StateToV1(state) : undefined;
+
+    // Create a wrapper for the callback if provided
+    let callbackV2: V2HandlerCallback | undefined;
+    if (callback) {
+      callbackV2 = async (responseV2, files?) => {
+        // Call the V1 callback with V1 formatted response
+        const result = await callback(responseV2, files);
+        // Convert resulting memories back to V2 format
+        return result.map((memory) => translateV1MemoryToV2(memory));
+      };
+    }
+
+    // Call the V2 runtime's processActions with translated parameters
+    return this._v2Runtime.processActions(messageV2, responsesV2, stateV2, callbackV2);
   }
 
   async evaluate(
@@ -446,7 +595,45 @@ Text: ${attachment.text}`
     didRespond?: boolean,
     callback?: HandlerCallback
   ): Promise<string[] | null> {
-    return this._v2Runtime.evaluate(message, state, didRespond, callback);
+    console.log(`[Compat Layer] evaluate called for message ${message.id}`);
+
+    // Convert V1 message to V2 format
+    const messageV2 = translateV1MemoryToV2(message);
+
+    // Convert V1 state to V2 format if provided
+    const stateV2 = state ? translateV2StateToV1(state) : undefined;
+
+    // Create a wrapper for the callback if provided
+    let callbackV2: V2HandlerCallback | undefined;
+    if (callback) {
+      callbackV2 = async (responseV2, files?) => {
+        // Call the V1 callback with V1 formatted response
+        const result = await callback(responseV2, files);
+        // Convert resulting memories back to V2 format
+        return result.map((memory) => translateV1MemoryToV2(memory));
+      };
+    }
+
+    // Call the V2 runtime's evaluate method with translated parameters
+    const evaluatorResults = await this._v2Runtime.evaluate(
+      messageV2,
+      stateV2,
+      didRespond,
+      callbackV2
+    );
+
+    // The V2 evaluate method might return an array of evaluator objects or null
+    if (Array.isArray(evaluatorResults)) {
+      // If this is an array of strings, return it directly
+      if (evaluatorResults.length > 0 && typeof evaluatorResults[0] === 'string') {
+        return evaluatorResults as string[];
+      }
+
+      // Otherwise, return the evaluator names
+      return evaluatorResults.map((e) => e.name);
+    }
+
+    return null;
   }
 
   // Ensure the existence of methods that were originally on V1 AgentRuntime
@@ -615,7 +802,26 @@ Text: ${attachment.text}`
   }
 
   registerAction(action: Action): void {
+    console.log(`[Compat Layer] Registering action: ${action.name}`);
+
+    // Add to V1 actions list
     this.actions.push(action);
+
+    // Convert to V2 action and register with V2 runtime if not already there
+    try {
+      const v2Action = toV2Action(action);
+      const existingV2Action = this._v2Runtime.actions.find((a) => a.name === v2Action.name);
+
+      if (!existingV2Action) {
+        this._v2Runtime.registerAction(v2Action);
+        console.log(`[Compat Layer] Registered V1 action ${action.name} with V2 runtime`);
+      }
+    } catch (error) {
+      console.error(
+        `[Compat Layer] Error registering V1 action ${action.name} with V2 runtime:`,
+        error
+      );
+    }
   }
 
   registerMemoryManager(manager: V1IMemoryManager): void {
@@ -735,6 +941,35 @@ Text: ${attachment.text}`
     } catch (error) {
       console.error(
         `[Compat Layer] Error registering V1 provider ${provider.name} with V2 runtime:`,
+        error
+      );
+    }
+  }
+
+  /**
+   * Register an evaluator with the compatibility runtime
+   * @param evaluator The V1 evaluator to register
+   */
+  registerEvaluator(evaluator: Evaluator): void {
+    console.log(`[Compat Layer] Registering evaluator: ${evaluator.name}`);
+
+    // Add to V1 evaluators list
+    this.evaluators.push(evaluator);
+
+    // Convert to V2 evaluator and register with V2 runtime if not already there
+    try {
+      const v2Evaluator = toV2Evaluator(evaluator);
+      const existingV2Evaluator = this._v2Runtime.evaluators.find(
+        (e) => e.name === v2Evaluator.name
+      );
+
+      if (!existingV2Evaluator) {
+        this._v2Runtime.registerEvaluator(v2Evaluator);
+        console.log(`[Compat Layer] Registered V1 evaluator ${evaluator.name} with V2 runtime`);
+      }
+    } catch (error) {
+      console.error(
+        `[Compat Layer] Error registering V1 evaluator ${evaluator.name} with V2 runtime:`,
         error
       );
     }

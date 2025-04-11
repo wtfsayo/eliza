@@ -21,7 +21,8 @@ export async function getActorDetails({
 /**
  * Format actors into a string
  * @param actors - list of actors
- * @deprecated
+ * TODO check if we should use this!
+ * // Also check if we can use something from core-plugin-v2
  * @returns string
  */
 export function formatActors({ actors }: { actors: Actor[] }) {

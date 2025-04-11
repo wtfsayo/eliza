@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { State } from '../state';
+import { State } from '../types';
 import {
   TemplateType,
   TemplateValues,

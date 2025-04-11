@@ -1,17 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { UUID, GoalStatus, Action, RAGKnowledgeItem } from '../types';
-import { State } from '../state';
-
-// Define StateV2 interface for testing
-interface StateV2 {
-  values: { [key: string]: any };
-  data: { [key: string]: any };
-  text: string;
-  [key: string]: any;
-}
+import { State } from '../types';
+import { State as StateV2 } from '@elizaos/core-plugin-v2';
 
 // Import the conversion functions
-import { fromV2State, toV2State } from '../state';
+import { translateV2StateToV1, translateV1StateToV2 } from '../translators/state-translator';
 
 // Helper function to create valid UUIDs for testing
 const createTestUUID = (num: number): UUID => {
@@ -80,7 +73,38 @@ const sampleActionsData: Action[] = [
     name: 'Action1',
     description: 'Action 1 description',
     similes: ['similar1', 'similar2'],
-    examples: [],
+    examples: [
+      [
+        {
+          user: 'Alice',
+          content: {
+            text: 'Hello, could you help me with this action?',
+          },
+        },
+        {
+          user: 'Agent',
+          content: {
+            text: 'Sure, I can help with Action1.',
+            action: 'Action1',
+          },
+        },
+      ],
+      [
+        {
+          user: 'Bob',
+          content: {
+            text: 'I need assistance with another use case.',
+          },
+        },
+        {
+          user: 'Agent',
+          content: {
+            text: 'I can perform Action1 for that use case.',
+            action: 'Action1',
+          },
+        },
+      ],
+    ],
     handler: dummyHandler,
     validate: dummyValidator,
   },
@@ -134,7 +158,7 @@ describe('State adapter', () => {
     };
 
     // Act
-    const stateV1 = fromV2State(stateV2);
+    const stateV1 = translateV2StateToV1(stateV2);
 
     // Assert
     expect(stateV1.userId).toBe(createTestUUID(123));
@@ -150,6 +174,13 @@ describe('State adapter', () => {
     expect(stateV1.knowledgeData).toHaveLength(1);
     expect(stateV1.ragKnowledgeData).toHaveLength(1);
     expect(stateV1.actionsData).toHaveLength(1);
+
+    // Check that action examples are properly transformed
+    expect(stateV1.actionsData[0].examples).toHaveLength(2);
+    expect(stateV1.actionsData[0].examples[0]).toHaveLength(2);
+    expect(stateV1.actionsData[0].examples[0][0].user).toBe('Alice');
+    expect(stateV1.actionsData[0].examples[0][1].user).toBe('Agent');
+    expect(stateV1.actionsData[0].examples[0][1].content.action).toBe('Action1');
 
     // Check string fields
     expect(stateV1.bio).toBe('Agent bio text');
@@ -209,7 +240,7 @@ describe('State adapter', () => {
     };
 
     // Act
-    const stateV2 = toV2State(stateV1);
+    const stateV2 = translateV1StateToV2(stateV1);
 
     // Assert
     expect(stateV2.values).toBeDefined();
@@ -250,6 +281,13 @@ describe('State adapter', () => {
     expect(stateV2.data.actionsData).toHaveLength(1);
     expect(stateV2.data.recentInteractionsData).toEqual(emptyMemoryData);
 
+    // Check action examples are properly transformed
+    expect(stateV2.data.actionsData[0].examples).toHaveLength(2);
+    expect(stateV2.data.actionsData[0].examples[0]).toHaveLength(2);
+    expect(stateV2.data.actionsData[0].examples[0][0].name).toBe('Alice');
+    expect(stateV2.data.actionsData[0].examples[0][1].name).toBe('Agent');
+    expect(stateV2.data.actionsData[0].examples[0][1].content.actions).toContain('Action1');
+
     // Check custom property preservation
     expect(stateV2.walletBalance).toBe(100);
     expect(stateV2.tokenPrices).toEqual({ ETH: 2000 });
@@ -264,8 +302,8 @@ describe('State adapter', () => {
     };
 
     // Act
-    const emptyV1 = fromV2State(emptyV2);
-    const backToV2 = toV2State(emptyV1);
+    const emptyV1 = translateV2StateToV1(emptyV2);
+    const backToV2 = translateV1StateToV2(emptyV1);
 
     // Assert - check that all default fields are set in V1
     expect(emptyV1.bio).toBe('');
@@ -341,8 +379,8 @@ describe('State adapter', () => {
     };
 
     // Convert to v2 and back
-    const tonStateV2 = toV2State(tonStateV1);
-    const tonStateV1Again = fromV2State(tonStateV2);
+    const tonStateV2 = translateV1StateToV2(tonStateV1);
+    const tonStateV1Again = translateV2StateToV1(tonStateV2);
 
     // Original properties should be preserved through the round trip
     expect(tonStateV1Again.walletAddress).toBe('0x123abc');
@@ -365,5 +403,32 @@ describe('State adapter', () => {
     expect(tonStateV2.walletBalance).toBe(10.5);
     expect(tonStateV2.stakedAmount).toBe(5.25);
     expect(tonStateV2.lastTransaction).toBe('2023-04-01');
+  });
+
+  // Test specifically for action example transformation
+  it('should correctly transform action examples between v1 and v2 formats', () => {
+    // Arrange
+    const v1State: State = {
+      text: 'Test state',
+      actionsData: sampleActionsData,
+    };
+
+    // Act: Convert to v2 and back to v1
+    const v2State = translateV1StateToV2(v1State);
+    const backToV1 = translateV2StateToV1(v2State);
+
+    // Assert: Check the action examples were properly transformed
+    // V2 format uses 'name' instead of 'user'
+    expect(v2State.data.actionsData[0].examples[0][0].name).toBe('Alice');
+    expect(v2State.data.actionsData[0].examples[0][1].name).toBe('Agent');
+
+    // V2 format uses 'actions' array instead of 'action' string
+    expect(v2State.data.actionsData[0].examples[0][1].content.actions).toContain('Action1');
+    expect(Array.isArray(v2State.data.actionsData[0].examples[0][1].content.actions)).toBe(true);
+
+    // Verify round trip preserves format
+    expect(backToV1.actionsData[0].examples[0][0].user).toBe('Alice');
+    expect(backToV1.actionsData[0].examples[0][1].user).toBe('Agent');
+    expect(backToV1.actionsData[0].examples[0][1].content.action).toBe('Action1');
   });
 });

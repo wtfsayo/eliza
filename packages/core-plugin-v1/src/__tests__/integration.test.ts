@@ -1,8 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 import { asUUID } from '../uuid';
-import { State, fromV2State, toV2State } from '../state';
-import { Provider, fromV2Provider, toV2Provider } from '../providers';
-import { ActionExample, fromV2ActionExample, toV2ActionExample } from '../actionExample';
+import { translateV1StateToV2 } from '../translators/state-translator';
+import { State, Provider, ActionExample } from '../types';
+import {
+  translateV1ProviderToV2 as toV2Provider,
+  translateV2ProviderToV1 as fromV2Provider,
+} from '../translators/provider-translator';
+import {
+  translateV1ActionExampleToV2,
+  translateV2ActionExampleToV1,
+} from '../translators/action-example-translator';
 import { TemplateType, processTemplate } from '../templates';
 
 describe('Integration tests for v1 compatibility layer', () => {
@@ -63,7 +70,7 @@ describe('Integration tests for v1 compatibility layer', () => {
     const v2Provider = toV2Provider(v1Provider);
 
     // Convert state to v2
-    const v2State = toV2State(v1State);
+    const v2State = translateV1StateToV2(v1State);
 
     // Use v2 provider with v2 state
     const result = await v2Provider.get(mockRuntime, mockMessage, v2State);
@@ -94,14 +101,14 @@ describe('Integration tests for v1 compatibility layer', () => {
     };
 
     // Convert to v2
-    const v2Example = toV2ActionExample(v1Example);
+    const v2Example = translateV1ActionExampleToV2(v1Example);
 
     // Verify correct conversion
     expect(v2Example.name).toBe('Test User');
     expect(v2Example.content.text).toBe('Example content');
 
     // Convert back to v1
-    const v1ExampleAgain = fromV2ActionExample(v2Example);
+    const v1ExampleAgain = translateV2ActionExampleToV1(v2Example);
 
     // Verify round-trip preservation
     expect(v1ExampleAgain).toEqual(v1Example);
