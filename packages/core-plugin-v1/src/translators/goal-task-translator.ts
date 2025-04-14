@@ -9,7 +9,7 @@ import {
   Objective as V1Objective,
   UUID as V1UUID,
 } from '../types';
-import { Task, UUID } from '@elizaos/core-plugin-v2/src/types';
+import { Task, UUID } from '@elizaos/core-plugin-v2';
 
 /**
  * Translates a V1 Goal to a V2 Task

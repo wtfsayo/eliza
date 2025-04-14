@@ -3,6 +3,7 @@ import { Semaphore as coreSemaphore, AgentRuntime as coreAgentRuntime } from '@e
 import type {
   Action,
   Agent,
+  ChannelType,
   Character,
   Component,
   Entity,
@@ -62,7 +63,40 @@ export class Semaphore {
  * @property {Plugin[]} plugins - The list of plugins to extend functionality.
  */
 export class AgentRuntime implements IAgentRuntime {
-  private _runtime;
+  private _runtime: coreAgentRuntime;
+
+  // Required properties from IAgentRuntime interface
+  get agentId(): UUID {
+    return this._runtime.agentId;
+  }
+  get character(): Character {
+    return this._runtime.character;
+  }
+  get providers(): Provider[] {
+    return this._runtime.providers;
+  }
+  get actions(): Action[] {
+    return this._runtime.actions;
+  }
+  get evaluators(): Evaluator[] {
+    return this._runtime.evaluators;
+  }
+  get plugins(): Plugin[] {
+    return this._runtime.plugins;
+  }
+  get services(): Map<ServiceTypeName, Service> {
+    return this._runtime.services;
+  }
+  get events(): Map<string, ((params: any) => Promise<void>)[]> {
+    return this._runtime.events;
+  }
+  get fetch(): typeof fetch | null {
+    return this._runtime.fetch;
+  }
+  get routes(): Route[] {
+    return this._runtime.routes;
+  }
+
   constructor(opts: {
     conversationLength?: number;
     agentId?: UUID;
@@ -242,11 +276,11 @@ export class AgentRuntime implements IAgentRuntime {
    * Ensures a participant is added to a room, checking that the entity exists first
    */
   async ensureParticipantInRoom(entityId: UUID, roomId: UUID) {
-    return this._runtime.ensureParticipantInRoom(entityId, roomid);
+    return this._runtime.ensureParticipantInRoom(entityId, roomId);
   }
 
   async removeParticipant(entityId: UUID, roomId: UUID): Promise<boolean> {
-    return this._runtime.removeParticipant(entityId, roomid);
+    return this._runtime.removeParticipant(entityId, roomId);
   }
 
   async getParticipantsForEntity(entityId: UUID): Promise<Participant[]> {
@@ -254,18 +288,18 @@ export class AgentRuntime implements IAgentRuntime {
   }
 
   async getParticipantsForRoom(roomId: UUID): Promise<UUID[]> {
-    return this._runtime.getParticipantsForRoom(roomid);
+    return this._runtime.getParticipantsForRoom(roomId);
   }
 
   async addParticipant(entityId: UUID, roomId: UUID): Promise<boolean> {
-    return this._runtime.addParticipant(entityId, roomid);
+    return this._runtime.addParticipant(entityId, roomId);
   }
 
   /**
    * Ensure the existence of a world.
    */
   async ensureWorldExists({ id, name, serverId, metadata }: World) {
-    return this._runtime.ensureWorldExists({ id, name, serverId, metadata });
+    return this._runtime.ensureWorldExists({ id, name, agentId: this.agentId, serverId, metadata });
   }
 
   /**
@@ -300,7 +334,7 @@ export class AgentRuntime implements IAgentRuntime {
     filterList: string[] | null = null, // only get providers that are in the filterList
     includeList: string[] | null = null // include providers that are private, dynamic or otherwise not included by default
   ): Promise<State> {
-    return this._runtime.composeState({ message, filterList, includeList });
+    return this._runtime.composeState(message, filterList, includeList);
   }
 
   getService<T extends Service>(service: ServiceTypeName): T | null {
@@ -333,7 +367,7 @@ export class AgentRuntime implements IAgentRuntime {
     modelType: T,
     params: Omit<ModelParamsMap[T], 'runtime'> | any
   ): Promise<R> {
-    return this._runtime.getModel(modelType, params);
+    return this._runtime.useModel(modelType, params);
   }
 
   registerEvent(event: string, handler: (params: any) => Promise<void>) {
@@ -348,7 +382,8 @@ export class AgentRuntime implements IAgentRuntime {
     return this._runtime.emitEvent(event, params);
   }
 
-  async ensureEmbeddingDimension() {
+  async ensureEmbeddingDimension(dimension?: number) {
+    // The core implementation may not accept a dimension parameter
     return this._runtime.ensureEmbeddingDimension();
   }
 
@@ -366,7 +401,7 @@ export class AgentRuntime implements IAgentRuntime {
   // Implement database adapter methods
 
   get db(): any {
-    return this._runtime.db();
+    return this._runtime.db;
   }
 
   async init(): Promise<void> {
@@ -398,7 +433,7 @@ export class AgentRuntime implements IAgentRuntime {
   }
 
   async ensureAgentExists(agent: Partial<Agent>): Promise<void> {
-    return this._runtime.deleteAgent(agentId);
+    return this._runtime.ensureAgentExists(agent);
   }
 
   async getEntityById(entityId: UUID): Promise<Entity | null> {
@@ -443,7 +478,7 @@ export class AgentRuntime implements IAgentRuntime {
   }
 
   async addEmbeddingToMemory(memory: Memory): Promise<Memory> {
-    return this._runtime.deleteComponent(componentId);
+    return this._runtime.addEmbeddingToMemory(memory);
   }
 
   async getMemories(params: {
@@ -634,11 +669,11 @@ export class AgentRuntime implements IAgentRuntime {
   }
 
   async getCache<T>(key: string): Promise<T | undefined> {
-    return this._runtime.getCache<T>(key);
+    return this._runtime.getCache(key) as Promise<T | undefined>;
   }
 
   async setCache<T>(key: string, value: T): Promise<boolean> {
-    return this._runtime.setCache<T>(key, value);
+    return this._runtime.setCache(key, value);
   }
 
   async deleteCache(key: string): Promise<boolean> {
@@ -671,14 +706,14 @@ export class AgentRuntime implements IAgentRuntime {
 
   // Event emitter methods
   on(event: string, callback: (data: any) => void): void {
-    return this._runtime.on(event, callback);
+    this._runtime.on(event, callback);
   }
 
   off(event: string, callback: (data: any) => void): void {
-    return this._runtime.off(event, callback);
+    this._runtime.off(event, callback);
   }
 
   emit(event: string, data: any): void {
-    return this._runtime.emit(event, data);
+    this._runtime.emit(event, data);
   }
 }

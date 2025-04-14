@@ -2,18 +2,10 @@ import {
   findEntityByName as coreFindEntityByName,
   createUniqueUuid as coreCreateUniqueUuid,
   getEntityDetails as coreGetEntityDetails,
-  formatEntities as coreFormatEntitiese,
+  formatEntities as coreFormatEntities,
 } from '@elizaos/core';
 
-import {
-  type Entity,
-  type IAgentRuntime,
-  type Memory,
-  ModelType,
-  type Relationship,
-  type State,
-  type UUID,
-} from './types';
+import { type Entity, type IAgentRuntime, type Memory, type State, type UUID } from './types';
 
 /**
  * Finds an entity by name in the given runtime environment.

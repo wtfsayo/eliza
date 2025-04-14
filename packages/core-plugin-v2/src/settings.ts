@@ -16,6 +16,15 @@ import {
   decryptObjectValues as coreDecryptObjectValues,
 } from '@elizaos/core';
 
+import {
+  type Setting,
+  type WorldSettings,
+  type Character,
+  type IAgentRuntime,
+  type World,
+  type OnboardingConfig,
+} from './types';
+
 /**
  * Creates a Setting object from a configSetting object by omitting the 'value' property.
  *
@@ -93,7 +102,7 @@ export async function updateWorldSettings(
   serverId: string,
   worldSettings: WorldSettings
 ): Promise<boolean> {
-  return coreUpdateWorldSettings(runtime, serverid, worldSettings);
+  return coreUpdateWorldSettings(runtime, serverId, worldSettings);
 }
 
 /**

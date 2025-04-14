@@ -3,6 +3,7 @@ import {
   formatActionNames as coreFormatActionNames,
   formatActions as coreFormatActions,
 } from '@elizaos/core';
+import { type Action } from './types';
 
 /**
  * Compose a specified number of random action examples from the given actionsData.

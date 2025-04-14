@@ -1,5 +1,8 @@
 import { logger as coreLogger } from '@elizaos/core';
 
+// Define the LogMethod type for the logger functions
+type LogMethod = (...args: any[]) => void;
+
 // logger wrapper/specification
 const logger: Record<
   | 'trace'
@@ -14,16 +17,38 @@ const logger: Record<
   | 'clear',
   LogMethod
 > = {
-  trace: (...args) => coreLogger.trace(...args),
-  debug: (...args) => coreLogger.debug(...args),
-  success: (...args) => coreLogger.debug(...args),
-  progress: (...args) => coreLogger.debug(...args),
-  log: (...args) => coreLogger.info(...args),
-  info: (...args) => coreLogger.info(...args),
-  warn: (...args) => coreLogger.warn(...args),
-  error: (...args) => coreLogger.error(...args),
-  fatal: (...args) => coreLogger.fatal(...args),
-  clear: () => coreLogger.clear(),
+  trace: function (...args: any[]) {
+    return coreLogger.trace.apply(coreLogger, args);
+  },
+  debug: function (...args: any[]) {
+    return coreLogger.debug.apply(coreLogger, args);
+  },
+  success: function (...args: any[]) {
+    return coreLogger.success.apply(coreLogger, args);
+  },
+  progress: function (...args: any[]) {
+    return coreLogger.progress.apply(coreLogger, args);
+  },
+  log: function (...args: any[]) {
+    return coreLogger.log.apply(coreLogger, args);
+  },
+  info: function (...args: any[]) {
+    return coreLogger.info.apply(coreLogger, args);
+  },
+  warn: function (...args: any[]) {
+    return coreLogger.warn.apply(coreLogger, args);
+  },
+  error: function (...args: any[]) {
+    return coreLogger.error.apply(coreLogger, args);
+  },
+  fatal: function (...args: any[]) {
+    return coreLogger.fatal.apply(coreLogger, args);
+  },
+  // Fix the clear method - assuming it doesn't need parameters
+  clear: function () {
+    // @ts-ignore - if core implementation expects args but works without them
+    return coreLogger.clear();
+  },
 };
 
 export { logger };

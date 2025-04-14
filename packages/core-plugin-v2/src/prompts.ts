@@ -21,7 +21,24 @@ import {
   truncateToCompleteSentence as coreTruncateToCompleteSentence,
   splitChunks as coreSplitChunks,
   trimTokens as coreTrimTokens,
+  parseJSONObjectFromText as coreParseJSONObjectFromText,
 } from '@elizaos/core';
+
+import {
+  type TemplateType,
+  type State,
+  type Memory,
+  type Entity,
+  type IAgentRuntime,
+} from './types';
+
+// TODO: move to core -> types.ts
+type ActionResponse = {
+  like: boolean;
+  retweet: boolean;
+  quote?: boolean;
+  reply?: boolean;
+};
 
 /**
  * Composes a context string by replacing placeholders in a template with corresponding values from the state.
@@ -58,7 +75,7 @@ export const composePrompt = ({
   state: { [key: string]: string };
   template: TemplateType;
 }) => {
-  return coreComposePrompt(state, template);
+  return coreComposePrompt({ state, template });
 };
 
 /**
@@ -76,7 +93,7 @@ export const composePromptFromState = ({
   state: State;
   template: TemplateType;
 }) => {
-  return coreComposePromptFromState(state, template);
+  return coreComposePromptFromState({ state, template });
 };
 
 /**
@@ -135,7 +152,7 @@ export const formatPosts = ({
   entities: Entity[];
   conversationHeader?: boolean;
 }) => {
-  return coreFormatPosts(messages, entities, conversationHeader);
+  return coreFormatPosts({ messages, entities, conversationHeader });
 };
 
 /**
@@ -152,7 +169,7 @@ export const formatMessages = ({
   messages: Memory[];
   entities: Entity[];
 }) => {
-  return coreFormatMessages(messages, entites);
+  return coreFormatMessages({ messages, entities });
 };
 
 export const formatTimestamp = (messageDate: number) => {

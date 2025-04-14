@@ -1,5 +1,4 @@
-import { State } from './state';
-import { TemplateType as TemplateTypeV2 } from '@elizaos/core-plugin-v2';
+import { State } from './types';
 
 /**
  * Template type definition for v1 compatibility

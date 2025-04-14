@@ -2,6 +2,7 @@ import {
   getWavHeader as coreGetWavHeader,
   prependWavHeader as corePrependWavHeader,
 } from '@elizaos/core';
+import { Readable } from 'stream';
 
 /**
  * Generates a WAV file header based on the provided audio parameters.

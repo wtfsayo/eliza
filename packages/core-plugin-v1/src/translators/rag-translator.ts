@@ -8,7 +8,7 @@ import {
   KnowledgeItem as V2KnowledgeItem,
   Memory as V2Memory,
   MemoryType,
-} from '@elizaos/core-plugin-v2/src/types';
+} from '@elizaos/core-plugin-v2';
 
 /**
  * Translates a V2 Memory to a V1 RAGKnowledgeItem

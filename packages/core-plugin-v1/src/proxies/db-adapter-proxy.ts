@@ -12,7 +12,7 @@ import {
   RAGKnowledgeItem as V1RAGKnowledgeItem,
 } from '../types';
 import type { CompatAgentRuntime } from '../runtime';
-import { UUID } from '@elizaos/core-plugin-v2/src/types';
+import { UUID } from '@elizaos/core-plugin-v2';
 import { translateV2MemoryToV1, translateV1MemoryToV2 } from '../translators/memory-translator';
 import {
   translateV1GoalToV2Task,

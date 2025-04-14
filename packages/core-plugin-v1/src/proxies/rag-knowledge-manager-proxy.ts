@@ -9,7 +9,7 @@ import {
 } from '../translators/rag-translator';
 import { generateUuidFromString } from '../uuid';
 import type { CompatAgentRuntime } from '../runtime';
-import { Memory as V2Memory, MemoryType } from '@elizaos/core-plugin-v2/src/types';
+import { Memory as V2Memory, MemoryType } from '@elizaos/core-plugin-v2';
 
 /**
  * Creates a proxy object that implements the V1 IRAGKnowledgeManager interface
