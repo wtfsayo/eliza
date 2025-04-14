@@ -9,6 +9,7 @@
 export * from './types';
 export * from './context';
 export * from './generation';
+export * from './logger';
 export * from './messages';
 export * from './posts';
 export * from './runtime';
