@@ -1,9 +1,9 @@
 export {
   agentTable,
   mapToAgent,
-  mapToDrizzleAgent,
-  type DrizzleAgent,
-  type DrizzleAgentInsert,
+  mapToAgentModel,
+  type AgentModel,
+  type AgentInsertModel,
 } from './agent';
 export {
   cacheTable,

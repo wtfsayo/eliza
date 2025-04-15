@@ -33,11 +33,12 @@ import {
   taskTable,
   worldTable,
   mapToAgent,
-  mapToDrizzleAgent,
-  DrizzleCache,
-  Cache,
+  mapToAgentModel,
+  AgentModel,
   mapToCache,
   mapToDrizzleCache,
+  DrizzleCache,
+  Cache,
   mapToComponent,
   mapToDrizzleComponent,
   mapToDrizzleEmbedding,
@@ -251,7 +252,7 @@ export abstract class BaseDrizzleAdapter<
     return this.withDatabase(async () => {
       try {
         // Convert from Core type to Drizzle schema type
-        const drizzleAgent = mapToDrizzleAgent(agent);
+        const drizzleAgent = mapToAgentModel(agent);
 
         await this.db.transaction(async (tx) => {
           await tx.insert(agentTable).values(drizzleAgent);
@@ -292,7 +293,7 @@ export abstract class BaseDrizzleAdapter<
           }
 
           // Convert from Core type to Drizzle schema type with proper typing
-          const drizzleAgent = mapToDrizzleAgent(agent);
+          const drizzleAgent = mapToAgentModel(agent);
 
           // Use a properly typed update operation
           await tx

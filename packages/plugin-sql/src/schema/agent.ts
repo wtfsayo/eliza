@@ -2,12 +2,9 @@ import type { Agent, UUID, MessageExample } from '@elizaos/core';
 import { sql } from 'drizzle-orm';
 import { boolean, jsonb, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
 import { numberTimestamp } from './types';
-import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 
 /**
  * Represents a table for storing agent data.
- *
- * @type {Table}
  */
 export const agentTable = pgTable(
   'agents',
@@ -47,8 +44,7 @@ export const agentTable = pgTable(
       .default(sql`'[]'::jsonb`),
     settings: jsonb('settings')
       .$type<{
-        secrets?: { [key: string]: string | boolean | number };
-        [key: string]: unknown;
+        [key: string]: any | string | boolean | number;
       }>()
       .default(sql`'{}'::jsonb`),
     style: jsonb('style')
@@ -62,37 +58,37 @@ export const agentTable = pgTable(
   (table) => [unique('name_unique').on(table.name)]
 );
 
-// Inferred database model types from the agent table schema
-export type DrizzleAgent = InferSelectModel<typeof agentTable>;
-export type DrizzleAgentInsert = InferInsertModel<typeof agentTable>;
+// Using modern type inference with $ prefix
+export type AgentModel = typeof agentTable.$inferSelect;
+export type AgentInsertModel = typeof agentTable.$inferInsert;
 
 // Type mapping utility to convert between Drizzle and Core types
-export function mapToAgent(drizzleAgent: DrizzleAgent): Agent {
+export function mapToAgent(agentModel: AgentModel): Agent {
   // Explicit mapping of properties ensures type safety
   return {
-    id: drizzleAgent.id as UUID, // Cast to ensure UUID type compatibility
-    name: drizzleAgent.name || '',
-    username: drizzleAgent.username || undefined,
-    system: drizzleAgent.system || undefined,
-    bio: drizzleAgent.bio,
-    messageExamples: drizzleAgent.messageExamples || [],
-    postExamples: drizzleAgent.postExamples || [],
-    topics: drizzleAgent.topics || [],
-    adjectives: drizzleAgent.adjectives || [],
-    knowledge: drizzleAgent.knowledge || [],
-    plugins: drizzleAgent.plugins || [],
-    settings: drizzleAgent.settings || {},
-    style: drizzleAgent.style || {},
-    enabled: drizzleAgent.enabled,
-    createdAt: drizzleAgent.createdAt,
-    updatedAt: drizzleAgent.updatedAt,
+    id: agentModel.id as UUID, // Cast to ensure UUID type compatibility
+    name: agentModel.name || '',
+    username: agentModel.username || undefined,
+    system: agentModel.system || undefined,
+    bio: agentModel.bio,
+    messageExamples: agentModel.messageExamples || [],
+    postExamples: agentModel.postExamples || [],
+    topics: agentModel.topics || [],
+    adjectives: agentModel.adjectives || [],
+    knowledge: agentModel.knowledge || [],
+    plugins: agentModel.plugins || [],
+    settings: agentModel.settings || {},
+    style: agentModel.style || {},
+    enabled: agentModel.enabled,
+    createdAt: agentModel.createdAt,
+    updatedAt: agentModel.updatedAt,
   };
 }
 
-export function mapToDrizzleAgent(agent: Partial<Agent>): DrizzleAgentInsert {
+export function mapToAgentModel(agent: Partial<Agent>): AgentInsertModel {
   // Return a properly typed object with only the properties
   // that are defined in the database schema
-  const result: Partial<DrizzleAgentInsert> = {};
+  const result: Partial<AgentInsertModel> = {};
 
   // Only copy properties that exist in the agent
   if (agent.id !== undefined) result.id = agent.id;
@@ -112,5 +108,5 @@ export function mapToDrizzleAgent(agent: Partial<Agent>): DrizzleAgentInsert {
   if (agent.createdAt !== undefined) result.createdAt = agent.createdAt;
   if (agent.updatedAt !== undefined) result.updatedAt = agent.updatedAt;
 
-  return result as DrizzleAgentInsert;
+  return result as AgentInsertModel;
 }
