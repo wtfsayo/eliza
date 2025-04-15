@@ -648,6 +648,10 @@ const startAgents = async (options: {
   if (options.characters) {
     for (const character of options.characters) {
       // make sure character has sql plugin
+      if (!character.plugins) {
+        logger.info(character.name + ' is missing plugins key, SKIPPING LOAD');
+        continue;
+      }
       const hasSqlPlugin = character.plugins.some((plugin) => plugin.includes('plugin-sql'));
       if (!hasSqlPlugin) {
         character.plugins.push('@elizaos/plugin-sql');
