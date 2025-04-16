@@ -43,13 +43,33 @@ log_warning() {
 }
 
 test_pass() {
-  echo -e "✅ \033[0;32mPASS: $*\033[0m"
+  local message="$1"
+  echo -e "✅ \033[0;32mPASS: $message\033[0m"
+  # Increment pass count if counter is defined (exists and set)
+  if [ "${TESTS_PASSED+x}" ]; then
+    ((TESTS_PASSED++))
+  fi
 }
 
 test_fail() {
-  echo -e "❌ \033[0;31mFAIL: $*\033[0m" >&2
-  # Optionally exit immediately on failure, or let the calling script decide
-  exit 1 # <-- Make the script exit on failure
+  local message="$1"
+  echo -e "❌ \033[0;31mFAIL: $message\033[0m" >&2
+  # Increment fail count if counter is defined (exists and set)
+  if [ "${TESTS_FAILED+x}" ]; then
+    ((TESTS_FAILED++))
+  fi
+  # Don't exit immediately - let the calling script handle failures
+  return 1 # Return failure so the calling script can handle it
+}
+
+# New function for expected failures
+test_fail_expected() {
+  local message="$1"
+  echo -e "✅ \033[0;32mPASS: $message (expected failure)\033[0m"
+  # Increment pass count if counter is defined (exists and set)
+  if [ "${TESTS_PASSED+x}" ]; then
+    ((TESTS_PASSED++))
+  fi
 }
 
 # --- Dependency Checks ---
@@ -323,7 +343,7 @@ assert_failure() {
        log_error "Stdout: $ELIZAOS_STDOUT"
        return 1 # Indicate failure
     else
-       test_pass "$description [expected failure, got $ELIZAOS_EXIT_CODE]"
+       test_fail_expected "$description [got exit code $ELIZAOS_EXIT_CODE]"
     fi
   else
     test_fail "$description [expected failure, but got exit code 0]"

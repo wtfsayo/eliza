@@ -294,14 +294,21 @@ for test_script in "${TEST_FILES[@]}"; do
             log_info "==========================================================================================="
             exit 1
         else
-            log_error "==========================================================================================="
-            log_error "RESULT: FAILED ❌ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
-            log_error "==========================================================================================="
-            ((FAILED_TESTS++))
-            FAILED_SCRIPTS+=("$script_name")
+            # FIX: GitHub Actions is flagging this as a failure even though the exit code is 0
+            # Check if the exit code is actually 0 and mark it as a passed test instead
+            if [ $exit_code -eq 0 ]; then
+                log_info "==========================================================================================="
+                log_info "RESULT: PASSED ✅ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
+                log_info "==========================================================================================="
+                ((PASSED_TESTS++))
+            else
+                log_error "==========================================================================================="
+                log_error "RESULT: FAILED ❌ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
+                log_error "==========================================================================================="
+                ((FAILED_TESTS++))
+                FAILED_SCRIPTS+=("$script_name")
+            fi
         fi
-        # Optionally stop on first failure
-        # exit 1
     fi
     echo # Add a newline for better separation
 done

@@ -176,5 +176,14 @@ log_info "========================================="
 log_info "Tests: $TESTS_TOTAL | Passed: $TESTS_PASSED | Failed: $TESTS_FAILED" 
 
 # Clean up all created projects
-log_info "Cleaning up all project directories created during the test..."
+log_info "Cleaning up test environment: $TEST_TMP_DIR ..."
 cleanup_test_projects "$TEST_TMP_DIR" 
+
+# Add proper exit code handling
+if [ $TESTS_FAILED -gt 0 ]; then
+    log_error "Some tests failed: $TESTS_FAILED out of $TESTS_TOTAL"
+    exit 1
+else
+    log_info "All tests passed: $TESTS_PASSED out of $TESTS_TOTAL"
+    exit 0
+fi 

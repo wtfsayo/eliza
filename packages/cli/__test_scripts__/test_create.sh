@@ -136,11 +136,10 @@ if [[ "${ELIZAOS_EXIT_CODE}" -eq 0 ]]; then
     test4_result=1 # Failure
 else
     # Expected behavior in a properly implemented CLI (fixed now)
-    test_pass "CLI properly rejects creating project in existing directory with exit code: $ELIZAOS_EXIT_CODE"
+    test_fail_expected "CLI properly rejects creating project in existing directory with exit code: $ELIZAOS_EXIT_CODE"
     assert_stderr_contains "already exists" "CLI should show message about existing directory"
     success1=$?
     if [ $success1 -eq 0 ]; then
-        ((TESTS_PASSED++))
         test4_result=0 # Success
     else
         ((TESTS_FAILED++))
@@ -182,11 +181,10 @@ if [[ "${ELIZAOS_EXIT_CODE}" -eq 0 ]]; then
     test6_result=1 # Failure
 else
     # Expected behavior in a properly implemented CLI (fixed now)
-    test_pass "CLI properly rejects invalid project name with exit code: $ELIZAOS_EXIT_CODE"
+    test_fail_expected "CLI properly rejects invalid project name with exit code: $ELIZAOS_EXIT_CODE"
     assert_stderr_contains "Invalid" "CLI should show message about invalid project name"
     success1=$?
     if [ $success1 -eq 0 ]; then
-        ((TESTS_PASSED++))
         test6_result=0 # Success
     else
         ((TESTS_FAILED++))
