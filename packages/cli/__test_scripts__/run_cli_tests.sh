@@ -317,19 +317,12 @@ execute_tests_and_cleanup() {
                 final_exit_code=1
                 break
             else
-                # Check if the exit code is actually 0 and mark it as a passed test instead
-                if [ $exit_code -eq 0 ]; then
-                    log_info "==========================================================================================="
-                    log_info "RESULT: PASSED ✅ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
-                    log_info "==========================================================================================="
-                    ((PASSED_TESTS++))
-                else
-                    log_error "==========================================================================================="
-                    log_error "RESULT: FAILED ❌ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
-                    log_error "==========================================================================================="
-                    ((FAILED_TESTS++))
-                    FAILED_SCRIPTS+=("$script_name")
-                fi
+                # Any other non-zero exit code from the script indicates a failure
+                log_error "==========================================================================================="
+                log_error "RESULT: FAILED ❌ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
+                log_error "==========================================================================================="
+                ((FAILED_TESTS++))
+                FAILED_SCRIPTS+=("$script_name")
             fi
         fi
         echo # Add a newline for better separation
