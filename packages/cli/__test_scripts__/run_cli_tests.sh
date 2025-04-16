@@ -196,11 +196,10 @@ cleanup_test_directories() {
 
 # --- Safe Cleanup Function ---
 # Ensures cleanup runs without errors and without affecting the script exit code
-safe_cleanup() {
-    log_info "Running safe cleanup..."
-    
+do_safe_cleanup() {
     # Save the previous exit code so we can preserve it
     local previous_exit_code=$?
+    log_info "Running safe cleanup... (current exit code: $previous_exit_code)"
     
     # Disable exit on error temporarily for cleanup
     set +e
@@ -211,17 +210,169 @@ safe_cleanup() {
     # Clean up test directories
     cleanup_test_directories || log_error "Failed to clean up directories, but continuing"
     
-    # Set the exit code back to what it was before
+    # Log the exit code that will be preserved
     log_info "Safe cleanup completed. Original exit code was: $previous_exit_code"
-    # We explicitly do NOT exit here to let the script continue
-    set -e  # Re-enable exit on error
+    
+    # Re-enable exit on error
+    set -e
+    
+    # Return the original exit code
+    return $previous_exit_code
 }
 
-# --- Trap for Cleanup ---
-# Ensure server is stopped even if script exits unexpectedly, but don't change exit code
-trap 'safe_cleanup' EXIT
+# This function explicitly checks the exit code and manages cleanup
+execute_tests_and_cleanup() {
+    local final_exit_code=0
+    
+    # Start the test server before running any tests
+    start_test_server
+    
+    TOTAL_START_TIME=$(date +%s)
+    TEST_FILES=($(find "$SCRIPT_DIR" -maxdepth 1 -name 'test_*.sh' -print | sort))
+    TOTAL_TESTS=${#TEST_FILES[@]}
+    PASSED_TESTS=0
+    FAILED_TESTS=0
+    FAILED_SCRIPTS=()
+    TIMED_OUT_SCRIPTS=()
+    
+    # Check for timeout command (standard on Linux, needs coreutils on macOS)
+    TIMEOUT_CMD="timeout"
+    if ! command -v timeout &> /dev/null; then
+        # Check for gtimeout (GNU timeout from coreutils on macOS)
+        if command -v gtimeout &> /dev/null; then
+            TIMEOUT_CMD="gtimeout"
+            log_info "Using gtimeout from coreutils"
+        else
+            log_error "Timeout command not found. Please install coreutils."
+            log_error "On macOS: brew install coreutils"
+            log_error "On Linux: apt-get install coreutils (or equivalent)"
+            final_exit_code=1
+            do_safe_cleanup
+            return $final_exit_code
+        fi
+    fi
+    
+    # For debugging purposes, show the timeout command version
+    if [[ "$TIMEOUT_CMD" == "timeout" ]]; then
+        timeout --version | head -n 1 || log_info "timeout command doesn't support --version"
+    else
+        gtimeout --version | head -n 1 || log_info "gtimeout command doesn't support --version" 
+    fi
+    
+    # Set timeout duration - using 60 seconds now
+    TIMEOUT_DURATION=60
+    log_info "Found ${TOTAL_TESTS} test script(s) to execute with ${TIMEOUT_DURATION}s timeout..."
+    echo  # Add spacing for readability
+    
+    for test_script in "${TEST_FILES[@]}"; do
+        script_name=$(basename "$test_script")
+        script_start_time=$(date +%s)
+        
+        log_info "==========================================================================================="
+        log_info "EXECUTING TEST SCRIPT: $script_name (timeout: ${TIMEOUT_DURATION}s)"
+        log_info "==========================================================================================="
+    
+        # ---> Print script name BEFORE execution <-----
+        echo "---> Now executing: $script_name <---"
+    
+        # Execute the test script in a subshell to isolate environment changes and traps
+        # The -k option ensures that if the command doesn't terminate within 5 seconds, it will be forcefully killed
+        if $TIMEOUT_CMD -k 1s ${TIMEOUT_DURATION}s bash "$test_script"; then
+            script_end_time=$(date +%s)
+            script_elapsed=$((script_end_time - script_start_time))
+            
+            log_info "==========================================================================================="
+            log_info "RESULT: PASSED ✅ | TIME: ${script_elapsed}s | SCRIPT: $script_name"
+            log_info "==========================================================================================="
+            ((PASSED_TESTS++))
+        else
+            script_end_time=$(date +%s)
+            script_elapsed=$((script_end_time - script_start_time))
+            exit_code=$?
+            
+            if [ $exit_code -eq 124 ] || [ $exit_code -eq 137 ]; then
+                # Exit code 124 indicates a timeout, 137 indicates SIGKILL (kill -9)
+                log_error "==========================================================================================="
+                log_error "RESULT: TIMED OUT ⏱️  | TIME: ${script_elapsed}s | SCRIPT: $script_name (exit code: $exit_code)"
+                log_error "==========================================================================================="
+                log_error "Exiting test suite early due to timeout."
+                log_error "This likely indicates an issue with a long-running command that didn't terminate properly."
+                ((FAILED_TESTS++))
+                FAILED_SCRIPTS+=("$script_name")
+                TIMED_OUT_SCRIPTS+=("$script_name")
+                
+                # Exit immediately on timeout
+                TOTAL_END_TIME=$(date +%s)
+                TOTAL_ELAPSED=$((TOTAL_END_TIME - TOTAL_START_TIME))
+                
+                log_info "==========================================================================================="
+                log_info "                               TEST SUITE SUMMARY"
+                log_info "==========================================================================================="
+                log_info "Total Scripts Executed: $((PASSED_TESTS + FAILED_TESTS))"
+                log_info "Total Time: ${TOTAL_ELAPSED}s"
+                log_info "Passed: $PASSED_TESTS ✅"
+                log_info "Failed: $FAILED_TESTS ❌"
+                log_error "The test suite was terminated early due to a timeout in $script_name"
+                log_info "==========================================================================================="
+                final_exit_code=1
+                break
+            else
+                # Check if the exit code is actually 0 and mark it as a passed test instead
+                if [ $exit_code -eq 0 ]; then
+                    log_info "==========================================================================================="
+                    log_info "RESULT: PASSED ✅ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
+                    log_info "==========================================================================================="
+                    ((PASSED_TESTS++))
+                else
+                    log_error "==========================================================================================="
+                    log_error "RESULT: FAILED ❌ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
+                    log_error "==========================================================================================="
+                    ((FAILED_TESTS++))
+                    FAILED_SCRIPTS+=("$script_name")
+                fi
+            fi
+        fi
+        echo # Add a newline for better separation
+    done
+    
+    # --- Summary ---
+    TOTAL_END_TIME=$(date +%s)
+    TOTAL_ELAPSED=$((TOTAL_END_TIME - TOTAL_START_TIME))
+    
+    log_info "==========================================================================================="
+    log_info "                               TEST SUITE SUMMARY"
+    log_info "==========================================================================================="
+    log_info "Total Scripts Executed: $TOTAL_TESTS"
+    log_info "Total Time: ${TOTAL_ELAPSED}s"
+    log_info "Passed: $PASSED_TESTS ✅"
+    log_info "Failed: $FAILED_TESTS ❌"
+    
+    if [ $FAILED_TESTS -ne 0 ]; then
+        log_error "The following test script(s) failed:"
+        for failed_script in "${FAILED_SCRIPTS[@]}"; do
+            if [[ " ${TIMED_OUT_SCRIPTS[@]:-} " == *" $failed_script "* ]]; then
+                log_error "  - $failed_script (TIMED OUT)"
+            else
+                log_error "  - $failed_script"
+            fi
+        done
+        final_exit_code=1
+    else
+        log_info "All test scripts passed successfully! 🎉"
+    fi
+    
+    log_info "==========================================================================================="
+    log_info "Preparing to exit with code: $final_exit_code"
+    
+    # Perform cleanup and return the final exit code
+    do_safe_cleanup
+    
+    return $final_exit_code
+}
 
-# --- Test Execution ---
+# --- Main Execution ---
+# Trap is not needed since we'll control cleanup explicitly
+# Removed the trap: trap 'safe_cleanup' EXIT
 
 log_info "==========================================================================================="
 log_info "                            ELIZA CLI SHELL TEST SUITE"
@@ -230,145 +381,12 @@ log_info "======================================================================
 # Check dependencies needed by the test setup itself (this calls function from setup script)
 check_dependencies
 
-# Start the test server before running any tests
-start_test_server
+# Run tests and handle cleanup
+execute_tests_and_cleanup
+exit_code=$?
 
-TOTAL_START_TIME=$(date +%s)
-TEST_FILES=($(find "$SCRIPT_DIR" -maxdepth 1 -name 'test_*.sh' -print | sort))
-TOTAL_TESTS=${#TEST_FILES[@]}
-PASSED_TESTS=0
-FAILED_TESTS=0
-FAILED_SCRIPTS=()
-TIMED_OUT_SCRIPTS=()
+# Debug output
+log_info "DEBUG: Final script exit code: $exit_code"
 
-# Check for timeout command (standard on Linux, needs coreutils on macOS)
-TIMEOUT_CMD="timeout"
-if ! command -v timeout &> /dev/null; then
-    # Check for gtimeout (GNU timeout from coreutils on macOS)
-    if command -v gtimeout &> /dev/null; then
-        TIMEOUT_CMD="gtimeout"
-        log_info "Using gtimeout from coreutils"
-    else
-        log_error "Timeout command not found. Please install coreutils."
-        log_error "On macOS: brew install coreutils"
-        log_error "On Linux: apt-get install coreutils (or equivalent)"
-        exit 1
-    fi
-fi
-
-# For debugging purposes, show the timeout command version
-if [[ "$TIMEOUT_CMD" == "timeout" ]]; then
-    timeout --version | head -n 1 || log_info "timeout command doesn't support --version"
-else
-    gtimeout --version | head -n 1 || log_info "gtimeout command doesn't support --version" 
-fi
-
-# Set timeout duration - using 60 seconds now
-TIMEOUT_DURATION=60
-log_info "Found ${TOTAL_TESTS} test script(s) to execute with ${TIMEOUT_DURATION}s timeout..."
-echo  # Add spacing for readability
-
-for test_script in "${TEST_FILES[@]}"; do
-    script_name=$(basename "$test_script")
-    script_start_time=$(date +%s)
-    
-    log_info "==========================================================================================="
-    log_info "EXECUTING TEST SCRIPT: $script_name (timeout: ${TIMEOUT_DURATION}s)"
-    log_info "==========================================================================================="
-
-    # ---> Print script name BEFORE execution <-----
-    echo "---> Now executing: $script_name <---"
-
-    # Execute the test script in a subshell to isolate environment changes and traps
-    # The -k option ensures that if the command doesn't terminate within 5 seconds, it will be forcefully killed
-    if $TIMEOUT_CMD -k 1s ${TIMEOUT_DURATION}s bash "$test_script"; then
-        script_end_time=$(date +%s)
-        script_elapsed=$((script_end_time - script_start_time))
-        
-        log_info "==========================================================================================="
-        log_info "RESULT: PASSED ✅ | TIME: ${script_elapsed}s | SCRIPT: $script_name"
-        log_info "==========================================================================================="
-        ((PASSED_TESTS++))
-    else
-        script_end_time=$(date +%s)
-        script_elapsed=$((script_end_time - script_start_time))
-        exit_code=$?
-        
-        if [ $exit_code -eq 124 ] || [ $exit_code -eq 137 ]; then
-            # Exit code 124 indicates a timeout, 137 indicates SIGKILL (kill -9)
-            log_error "==========================================================================================="
-            log_error "RESULT: TIMED OUT ⏱️  | TIME: ${script_elapsed}s | SCRIPT: $script_name (exit code: $exit_code)"
-            log_error "==========================================================================================="
-            log_error "Exiting test suite early due to timeout."
-            log_error "This likely indicates an issue with a long-running command that didn't terminate properly."
-            ((FAILED_TESTS++))
-            FAILED_SCRIPTS+=("$script_name")
-            TIMED_OUT_SCRIPTS+=("$script_name")
-            
-            # Exit immediately on timeout
-            TOTAL_END_TIME=$(date +%s)
-            TOTAL_ELAPSED=$((TOTAL_END_TIME - TOTAL_START_TIME))
-            
-            log_info "==========================================================================================="
-            log_info "                               TEST SUITE SUMMARY"
-            log_info "==========================================================================================="
-            log_info "Total Scripts Executed: $((PASSED_TESTS + FAILED_TESTS))"
-            log_info "Total Time: ${TOTAL_ELAPSED}s"
-            log_info "Passed: $PASSED_TESTS ✅"
-            log_info "Failed: $FAILED_TESTS ❌"
-            log_error "The test suite was terminated early due to a timeout in $script_name"
-            log_info "==========================================================================================="
-            exit 1
-        else
-            # Check if the exit code is actually 0 and mark it as a passed test instead
-            if [ $exit_code -eq 0 ]; then
-                log_info "==========================================================================================="
-                log_info "RESULT: PASSED ✅ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
-                log_info "==========================================================================================="
-                ((PASSED_TESTS++))
-            else
-                log_error "==========================================================================================="
-                log_error "RESULT: FAILED ❌ | EXIT CODE: $exit_code | TIME: ${script_elapsed}s | SCRIPT: $script_name"
-                log_error "==========================================================================================="
-                ((FAILED_TESTS++))
-                FAILED_SCRIPTS+=("$script_name")
-            fi
-        fi
-    fi
-    echo # Add a newline for better separation
-done
-
-# --- Summary ---
-TOTAL_END_TIME=$(date +%s)
-TOTAL_ELAPSED=$((TOTAL_END_TIME - TOTAL_START_TIME))
-
-log_info "==========================================================================================="
-log_info "                               TEST SUITE SUMMARY"
-log_info "==========================================================================================="
-log_info "Total Scripts Executed: $TOTAL_TESTS"
-log_info "Total Time: ${TOTAL_ELAPSED}s"
-log_info "Passed: $PASSED_TESTS ✅"
-log_info "Failed: $FAILED_TESTS ❌"
-
-FINAL_EXIT_CODE=0
-
-if [ $FAILED_TESTS -ne 0 ]; then
-    log_error "The following test script(s) failed:"
-    for failed_script in "${FAILED_SCRIPTS[@]}"; do
-        if [[ " ${TIMED_OUT_SCRIPTS[@]:-} " == *" $failed_script "* ]]; then
-            log_error "  - $failed_script (TIMED OUT)"
-        else
-            log_error "  - $failed_script"
-        fi
-    done
-    FINAL_EXIT_CODE=1
-else
-    log_info "All test scripts passed successfully! 🎉"
-fi
-
-log_info "==========================================================================================="
-log_info "Preparing to exit with code: $FINAL_EXIT_CODE"
-
-# In GitHub Actions, we need to explicitly call exit here instead of letting the trap handle it
-# This ensures our exit code is properly set before any cleanup happens
-exit $FINAL_EXIT_CODE 
+# We need to explicitly exit with the correct code
+exit $exit_code 
