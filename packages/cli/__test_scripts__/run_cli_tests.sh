@@ -378,6 +378,23 @@ log_info "======================================================================
 log_info "                            ELIZA CLI SHELL TEST SUITE"
 log_info "==========================================================================================="
 
+# Create logs directory if it doesn't exist
+LOGS_DIR="$SCRIPT_DIR/logs"
+mkdir -p "$LOGS_DIR"
+LOG_FILE="$LOGS_DIR/test_run_$(date +%Y%m%d_%H%M%S).log"
+log_info "Logging detailed output to: $LOG_FILE"
+
+# Log system info
+{
+  echo "===== SYSTEM INFO ====="
+  echo "Date: $(date)"
+  echo "OS: $(uname -a)"
+  echo "Node: $(node -v)"
+  echo "Bun: $(bun -v)"
+  echo "Running in GitHub Actions: ${GITHUB_ACTIONS:-false}"
+  echo "======================="
+} | tee -a "$LOG_FILE"
+
 # Check dependencies needed by the test setup itself (this calls function from setup script)
 check_dependencies
 
@@ -385,8 +402,31 @@ check_dependencies
 execute_tests_and_cleanup
 exit_code=$?
 
-# Debug output
-log_info "DEBUG: Final script exit code: $exit_code"
+# Capture error details
+error_details=""
+if [ $exit_code -ne 0 ]; then
+  error_details="Tests failed with $FAILED_TESTS out of $TOTAL_TESTS tests failing"
+else
+  error_details="All $TOTAL_TESTS tests passed successfully"
+fi
 
-# We need to explicitly exit with the correct code
-exit $exit_code 
+# Log the exit status for debugging
+{
+  echo "===== TEST SUMMARY ====="
+  echo "Final script exit code: $exit_code"
+  echo "Error details: $error_details"
+  echo "======================="
+} | tee -a "$LOG_FILE"
+
+# Debug message direct to console (will appear in CI logs)
+log_info "DEBUG: Final script exit code: $exit_code"
+log_info "DEBUG: Error details: $error_details"
+
+# Force the exit code to be explicit
+if [ $exit_code -ne 0 ]; then
+  log_error "Exiting with error code: $exit_code"
+  exit $exit_code
+else
+  log_info "Exiting with success code: 0"
+  exit 0
+fi 

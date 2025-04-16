@@ -182,8 +182,31 @@ cleanup_test_projects "$TEST_TMP_DIR"
 # Add proper exit code handling
 if [ $TESTS_FAILED -gt 0 ]; then
     log_error "Some tests failed: $TESTS_FAILED out of $TESTS_TOTAL"
+    
+    # Log detailed exit info
+    echo "===== TEST AGENT RESULTS SUMMARY ====="
+    echo "Total tests: $TESTS_TOTAL"
+    echo "Passed: $TESTS_PASSED"
+    echo "Failed: $TESTS_FAILED"
+    echo "Exiting with error code 1"
+    echo "====================================="
+    
+    # If running in GitHub Actions, add special annotations for better visibility
+    if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+        echo "::error::test_agent.sh failed with $TESTS_FAILED test failures"
+    fi
+    
     exit 1
 else
     log_info "All tests passed: $TESTS_PASSED out of $TESTS_TOTAL"
+    
+    # Log detailed exit info
+    echo "===== TEST AGENT RESULTS SUMMARY ====="
+    echo "Total tests: $TESTS_TOTAL"
+    echo "Passed: $TESTS_PASSED"
+    echo "Failed: $TESTS_FAILED"
+    echo "Exiting with success code 0"
+    echo "====================================="
+    
     exit 0
 fi 
