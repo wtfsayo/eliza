@@ -30,12 +30,10 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        working-directory: packages/cli
         run: bun install
 
-      - name: Build CLI
-        working-directory: packages/cli
-        run: bun run build
+      - name: Build packages
+        run: bun turbo run build --filter=@elizaos/cli...
 
       - name: Run CLI tests
         working-directory: packages/cli/__test_scripts__
