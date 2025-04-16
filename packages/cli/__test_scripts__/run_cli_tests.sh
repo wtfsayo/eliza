@@ -189,11 +189,37 @@ cleanup_test_directories() {
         log_info "Removing server data directory: $TEST_SERVER_ELIZA_DIR"
         rm -rf "$TEST_SERVER_ELIZA_DIR"
     fi
+    
+    # Return success
+    return 0
+}
+
+# --- Safe Cleanup Function ---
+# Ensures cleanup runs without errors and without affecting the script exit code
+safe_cleanup() {
+    log_info "Running safe cleanup..."
+    
+    # Save the previous exit code so we can preserve it
+    local previous_exit_code=$?
+    
+    # Disable exit on error temporarily for cleanup
+    set +e
+    
+    # Explicitly stop the server
+    stop_test_server || log_error "Failed to stop server, but continuing"
+    
+    # Clean up test directories
+    cleanup_test_directories || log_error "Failed to clean up directories, but continuing"
+    
+    # Set the exit code back to what it was before
+    log_info "Safe cleanup completed. Original exit code was: $previous_exit_code"
+    # We explicitly do NOT exit here to let the script continue
+    set -e  # Re-enable exit on error
 }
 
 # --- Trap for Cleanup ---
-# Ensure server is stopped even if script exits unexpectedly
-trap 'stop_test_server; cleanup_test_directories' EXIT SIGINT SIGTERM
+# Ensure server is stopped even if script exits unexpectedly, but don't change exit code
+trap 'safe_cleanup' EXIT
 
 # --- Test Execution ---
 
@@ -294,7 +320,6 @@ for test_script in "${TEST_FILES[@]}"; do
             log_info "==========================================================================================="
             exit 1
         else
-            # FIX: GitHub Actions is flagging this as a failure even though the exit code is 0
             # Check if the exit code is actually 0 and mark it as a passed test instead
             if [ $exit_code -eq 0 ]; then
                 log_info "==========================================================================================="
@@ -317,12 +342,6 @@ done
 TOTAL_END_TIME=$(date +%s)
 TOTAL_ELAPSED=$((TOTAL_END_TIME - TOTAL_START_TIME))
 
-# Make sure we clean up all test directories created during this run
-cleanup_test_directories
-
-# Explicitly stop the server after all tests and before the final exit
-stop_test_server
-
 log_info "==========================================================================================="
 log_info "                               TEST SUITE SUMMARY"
 log_info "==========================================================================================="
@@ -330,6 +349,8 @@ log_info "Total Scripts Executed: $TOTAL_TESTS"
 log_info "Total Time: ${TOTAL_ELAPSED}s"
 log_info "Passed: $PASSED_TESTS ✅"
 log_info "Failed: $FAILED_TESTS ❌"
+
+FINAL_EXIT_CODE=0
 
 if [ $FAILED_TESTS -ne 0 ]; then
     log_error "The following test script(s) failed:"
@@ -340,10 +361,14 @@ if [ $FAILED_TESTS -ne 0 ]; then
             log_error "  - $failed_script"
         fi
     done
-    log_info "==========================================================================================="
-    exit 1
+    FINAL_EXIT_CODE=1
 else
     log_info "All test scripts passed successfully! 🎉"
-    log_info "==========================================================================================="
-    exit 0
-fi 
+fi
+
+log_info "==========================================================================================="
+log_info "Preparing to exit with code: $FINAL_EXIT_CODE"
+
+# In GitHub Actions, we need to explicitly call exit here instead of letting the trap handle it
+# This ensures our exit code is properly set before any cleanup happens
+exit $FINAL_EXIT_CODE 
