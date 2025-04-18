@@ -91,8 +91,11 @@ export abstract class BaseDrizzleAdapter<
   protected readonly maxDelay: number = 10000;
   protected readonly jitterMax: number = 1000;
   protected embeddingDimension: EmbeddingDimensionColumn = DIMENSION_MAP[384];
+  protected abstract withDatabase<T>(
+    operation: () => Promise<T>,
+    operationName: string
+  ): Promise<T>;
 
-  protected abstract withDatabase<T>(operation: () => Promise<T>): Promise<T>;
   public abstract init(): Promise<void>;
   public abstract close(): Promise<void>;
 
@@ -110,11 +113,20 @@ export abstract class BaseDrizzleAdapter<
 
   /**
    * Executes the given operation with retry logic.
+   * Handles database errors gracefully with exponential backoff.
+   *
+   * @template T
+   * @param {() => Promise<T>} operation - The operation to be executed
+   * @param {string} operationName - Name of the operation being performed (for logging)
+   * @returns {Promise<T>} A promise that resolves with the result of the operation
+   */
+  /**
+   * Executes the given operation with retry logic.
    * @template T
    * @param {() => Promise<T>} operation - The operation to be executed.
    * @returns {Promise<T>} A promise that resolves with the result of the operation.
    */
-  protected async withRetry<T>(operation: () => Promise<T>): Promise<T> {
+  protected async withRetry<T>(operation: () => Promise<T>, operationName: string): Promise<T> {
     let lastError: Error = new Error('Unknown error');
 
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
@@ -139,6 +151,7 @@ export abstract class BaseDrizzleAdapter<
           logger.error('Max retry attempts reached:', {
             error: error instanceof Error ? error.message : String(error),
             totalAttempts: attempt,
+            operationName,
           });
           throw error instanceof Error ? error : new Error(String(error));
         }
@@ -217,7 +230,7 @@ export abstract class BaseDrizzleAdapter<
 
       // Use type mapping utility to convert from Drizzle schema to Core type
       return mapToAgent(result[0]);
-    });
+    }, 'getAgent');
   }
 
   /**
@@ -231,7 +244,7 @@ export abstract class BaseDrizzleAdapter<
 
       // Map each Drizzle agent to Core agent type
       return result.map((agent) => mapToAgent(agent));
-    });
+    }, 'getAgents');
   }
 
   /**
@@ -262,7 +275,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return false;
       }
-    });
+    }, 'createAgent');
   }
 
   /**
@@ -274,44 +287,46 @@ export abstract class BaseDrizzleAdapter<
   async updateAgent(agentId: UUID, agent: Partial<Agent>): Promise<boolean> {
     return this.withDatabase(async () => {
       try {
-        await this.withRetry(async () => {
-          return await this.db.transaction(async (tx) => {
-            // Update agentInfo
-            const agentInfo: Partial<AgentInsertModel> = mapToAgentModel(agent);
+        return await this.db.transaction(async (tx) => {
+          // Update agentInfo
+          const agentInfo: Partial<AgentInsertModel> = mapToAgentModel(agent);
 
-            // Delete settings from agentInfo if they exist, as we'll handle them separately
-            if ('settings' in agentInfo) {
-              delete agentInfo.settings;
-            }
+          // Delete settings from agentInfo if they exist, as we'll handle them separately
+          if ('settings' in agentInfo) {
+            delete agentInfo.settings;
+          }
 
-            // Set updatedAt
-            agentInfo.updatedAt = Date.now();
+          // Set updatedAt
+          agentInfo.updatedAt = Date.now();
 
-            // First update everything except settings
-            if (Object.keys(agentInfo).length > 0) {
-              await tx
-                .update(agentTable)
-                .set(agentInfo)
-                .where(sql`${agentTable.id} = ${agentId}`);
-            }
+          // First update everything except settings
+          if (Object.keys(agentInfo).length > 0) {
+            await tx
+              .update(agentTable)
+              .set(agentInfo)
+              .where(sql`${agentTable.id} = ${agentId}`);
+          }
 
-            // Then update settings if needed
-            if (agent.settings !== undefined) {
-              const mergedSettings = await this.mergeAgentSettings(tx, agentId, agent.settings);
+          // Then update settings if needed
+          if (agent.settings !== undefined) {
+            const mergedSettings = await this.mergeAgentSettings(tx, agentId, agent.settings);
 
-              await tx
-                .update(agentTable)
-                .set({ settings: mergedSettings, updatedAt: Date.now() })
-                .where(sql`${agentTable.id} = ${agentId}`);
-            }
-          });
+            await tx
+              .update(agentTable)
+              .set({ settings: mergedSettings, updatedAt: Date.now() })
+              .where(sql`${agentTable.id} = ${agentId}`);
+          }
+          return true;
         });
-        return true;
       } catch (error) {
-        console.error('Error updating agent:', error);
+        logger.error('Error updating agent:', {
+          error: error instanceof Error ? error.message : String(error),
+          agentId,
+          agent,
+        });
         return false;
       }
-    });
+    }, 'updateAgent');
   }
 
   /**
@@ -654,7 +669,7 @@ export abstract class BaseDrizzleAdapter<
         }
         throw error;
       }
-    });
+    }, 'deleteAgent');
   }
 
   /**
@@ -677,7 +692,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return 0;
       }
-    });
+    }, 'countAgents');
   }
 
   /**
@@ -696,7 +711,7 @@ export abstract class BaseDrizzleAdapter<
         });
         throw error;
       }
-    });
+    }, 'cleanupAgents');
   }
 
   /**
@@ -722,7 +737,7 @@ export abstract class BaseDrizzleAdapter<
       entityData.components = result.filter((row) => row.components).map((row) => row.components);
 
       return entityData;
-    });
+    }, 'getEntityById');
   }
 
   /**
@@ -775,7 +790,7 @@ export abstract class BaseDrizzleAdapter<
       }
 
       return Array.from(entitiesByIdMap.values());
-    });
+    }, 'getEntitiesForRoom');
   }
 
   /**
@@ -808,7 +823,7 @@ export abstract class BaseDrizzleAdapter<
         logger.trace(error);
         return false;
       }
-    });
+    }, 'createEntity');
   }
 
   /**
@@ -863,7 +878,7 @@ export abstract class BaseDrizzleAdapter<
         .update(entityTable)
         .set(drizzleEntity)
         .where(and(eq(entityTable.id, entity.id as UUID), eq(entityTable.agentId, entity.agentId)));
-    });
+    }, 'updateEntity');
   }
 
   async getComponent(
@@ -888,7 +903,7 @@ export abstract class BaseDrizzleAdapter<
         .from(componentTable)
         .where(and(...conditions));
       return result.length > 0 ? mapToComponent(result[0]) : null;
-    });
+    }, 'getComponent');
   }
 
   /**
@@ -915,7 +930,7 @@ export abstract class BaseDrizzleAdapter<
         .from(componentTable)
         .where(and(...conditions));
       return result.map(mapToComponent);
-    });
+    }, 'getComponents');
   }
 
   /**
@@ -928,7 +943,7 @@ export abstract class BaseDrizzleAdapter<
       const drizzleComponent = mapToDrizzleComponent(component);
       await this.db.insert(componentTable).values(drizzleComponent);
       return true;
-    });
+    }, 'createComponent');
   }
 
   /**
@@ -943,7 +958,7 @@ export abstract class BaseDrizzleAdapter<
         .update(componentTable)
         .set(drizzleComponent)
         .where(eq(componentTable.id, component.id));
-    });
+    }, 'updateComponent');
   }
 
   /**
@@ -954,7 +969,7 @@ export abstract class BaseDrizzleAdapter<
   async deleteComponent(componentId: UUID): Promise<void> {
     return this.withDatabase(async () => {
       await this.db.delete(componentTable).where(eq(componentTable.id, componentId));
-    });
+    }, 'deleteComponent');
   }
 
   /**
@@ -1045,7 +1060,7 @@ export abstract class BaseDrizzleAdapter<
 
         return memory;
       });
-    });
+    }, 'getMemories');
   }
 
   /**
@@ -1094,7 +1109,7 @@ export abstract class BaseDrizzleAdapter<
 
         return memory;
       });
-    });
+    }, 'getMemoriesByRoomIds');
   }
 
   /**
@@ -1127,7 +1142,7 @@ export abstract class BaseDrizzleAdapter<
       }
 
       return memory;
-    });
+    }, 'getMemoryById');
   }
 
   /**
@@ -1167,7 +1182,7 @@ export abstract class BaseDrizzleAdapter<
 
         return memory;
       });
-    });
+    }, 'getMemoriesByIds');
   }
 
   /**
@@ -1254,7 +1269,7 @@ export abstract class BaseDrizzleAdapter<
         }
         throw error;
       }
-    });
+    }, 'getCachedEmbeddings');
   }
 
   /**
@@ -1293,7 +1308,7 @@ export abstract class BaseDrizzleAdapter<
         });
         throw error;
       }
-    });
+    }, 'log');
   }
 
   /**
@@ -1331,7 +1346,7 @@ export abstract class BaseDrizzleAdapter<
 
       // Map the Drizzle results to the Core Log type
       return result.map(mapToLog);
-    });
+    }, 'getLogs');
   }
 
   /**
@@ -1342,7 +1357,7 @@ export abstract class BaseDrizzleAdapter<
   async deleteLog(logId: UUID): Promise<void> {
     return this.withDatabase(async () => {
       await this.db.delete(logTable).where(eq(logTable.id, logId));
-    });
+    }, 'deleteLog');
   }
 
   /**
@@ -1462,7 +1477,7 @@ export abstract class BaseDrizzleAdapter<
 
         return memory;
       });
-    });
+    }, 'searchMemoriesByEmbedding');
   }
 
   /**
@@ -1646,7 +1661,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return false;
       }
-    });
+    }, 'updateMemory');
   }
 
   /**
@@ -1670,7 +1685,7 @@ export abstract class BaseDrizzleAdapter<
       logger.debug('Memory and related fragments removed successfully:', {
         memoryId,
       });
-    });
+    }, 'deleteMemory');
   }
 
   /**
@@ -1751,7 +1766,7 @@ export abstract class BaseDrizzleAdapter<
         roomId,
         tableName,
       });
-    });
+    }, 'deleteAllMemories');
   }
 
   /**
@@ -1777,7 +1792,7 @@ export abstract class BaseDrizzleAdapter<
         .where(and(...conditions));
 
       return Number(result[0]?.count ?? 0);
-    });
+    }, 'countMemories');
   }
 
   /**
@@ -1786,21 +1801,19 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<Room | null>} A Promise that resolves to the room if found, null otherwise.
    */
   async getRoom(roomId: UUID): Promise<Room | null> {
-    return this.withRetry(async () => {
-      return this.withDatabase(async () => {
-        const roomEntry = await this.db
-          .select()
-          .from(roomTable)
-          .where(eq(roomTable.id, roomId))
-          .limit(1);
+    return this.withDatabase(async () => {
+      const roomEntry = await this.db
+        .select()
+        .from(roomTable)
+        .where(eq(roomTable.id, roomId))
+        .limit(1);
 
-        if (!roomEntry.length) {
-          return null;
-        }
+      if (!roomEntry.length) {
+        return null;
+      }
 
-        return mapToRoom(roomEntry[0]);
-      });
-    });
+      return mapToRoom(roomEntry[0]);
+    }, 'getRoom');
   }
 
   /**
@@ -1809,13 +1822,11 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<Room[]>} A Promise that resolves to an array of rooms.
    */
   async getRooms(worldId: UUID): Promise<Room[]> {
-    return this.withRetry(async () => {
-      return this.withDatabase(async () => {
-        const rooms = await this.db.select().from(roomTable).where(eq(roomTable.worldId, worldId));
+    return this.withDatabase(async () => {
+      const rooms = await this.db.select().from(roomTable).where(eq(roomTable.worldId, worldId));
 
-        return rooms.map(mapToRoom);
-      });
-    });
+      return rooms.map(mapToRoom);
+    }, 'getRooms');
   }
 
   /**
@@ -1824,14 +1835,9 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<void>} A Promise that resolves when the room is updated.
    */
   async updateRoom(room: Room): Promise<void> {
-    return this.withRetry(async () => {
-      return this.withDatabase(async () => {
-        await this.db
-          .update(roomTable)
-          .set(mapToDrizzleRoom(room))
-          .where(eq(roomTable.id, room.id));
-      });
-    });
+    return this.withDatabase(async () => {
+      await this.db.update(roomTable).set(mapToDrizzleRoom(room)).where(eq(roomTable.id, room.id));
+    }, 'updateRoom');
   }
 
   /**
@@ -1867,7 +1873,7 @@ export abstract class BaseDrizzleAdapter<
         })
         .onConflictDoNothing({ target: roomTable.id });
       return newRoomId as UUID;
-    });
+    }, 'createRoom');
   }
 
   /**
@@ -1876,11 +1882,9 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<void>} A Promise that resolves when the room is deleted.
    */
   async deleteRoom(roomId: UUID): Promise<void> {
-    return this.withRetry(async () => {
-      return this.withDatabase(async () => {
-        await this.db.delete(roomTable).where(eq(roomTable.id, roomId));
-      });
-    });
+    return this.withDatabase(async () => {
+      await this.db.delete(roomTable).where(eq(roomTable.id, roomId));
+    }, 'deleteRoom');
   }
 
   /**
@@ -1889,7 +1893,7 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<UUID[]>} A Promise that resolves to an array of room IDs.
    */
   async getRoomsForParticipant(entityId: UUID): Promise<UUID[]> {
-    return this.withRetry(async () => {
+    return this.withDatabase(async () => {
       const result = await this.db
         .select({ roomId: participantTable.roomId })
         .from(participantTable)
@@ -1897,7 +1901,7 @@ export abstract class BaseDrizzleAdapter<
         .where(and(eq(participantTable.entityId, entityId), eq(roomTable.agentId, this.agentId)));
 
       return result.map((row) => row.roomId as UUID);
-    });
+    }, 'getRoomsForParticipant');
   }
 
   /**
@@ -1906,7 +1910,7 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<UUID[]>} A Promise that resolves to an array of room IDs.
    */
   async getRoomsForParticipants(entityIds: UUID[]): Promise<UUID[]> {
-    return this.withRetry(async () => {
+    return this.withDatabase(async () => {
       const result = await this.db
         .selectDistinct({ roomId: participantTable.roomId })
         .from(participantTable)
@@ -1916,7 +1920,7 @@ export abstract class BaseDrizzleAdapter<
         );
 
       return result.map((row) => row.roomId as UUID);
-    });
+    }, 'getRoomsForParticipants');
   }
 
   /**
@@ -1926,7 +1930,7 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<boolean>} A Promise that resolves to a boolean indicating whether the participant was added successfully.
    */
   async addParticipant(entityId: UUID, roomId: UUID): Promise<boolean> {
-    return this.withRetry(async () => {
+    return this.withDatabase(async () => {
       try {
         const participantId = v4() as UUID;
 
@@ -1955,7 +1959,7 @@ export abstract class BaseDrizzleAdapter<
         });
         throw error;
       }
-    });
+    }, 'addParticipant');
   }
 
   /**
@@ -1965,7 +1969,7 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<boolean>} A Promise that resolves to a boolean indicating whether the participant was removed successfully.
    */
   async removeParticipant(entityId: UUID, roomId: UUID): Promise<boolean> {
-    return this.withRetry(async () => {
+    return this.withDatabase(async () => {
       try {
         const result = await this.db
           .delete(participantTable)
@@ -1987,7 +1991,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return false;
       }
-    });
+    }, 'removeParticipant');
   }
 
   /**
@@ -1996,7 +2000,7 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<Participant[]>} A Promise that resolves to an array of participants.
    */
   async getParticipantsForEntity(entityId: UUID): Promise<Participant[]> {
-    return this.withRetry(async () => {
+    return this.withDatabase(async () => {
       const participants = await this.db
         .select({
           id: participantTable.id,
@@ -2012,7 +2016,7 @@ export abstract class BaseDrizzleAdapter<
           return mapToParticipant(participant as DrizzleParticipant, entity);
         })
       );
-    });
+    }, 'getParticipantsForEntity');
   }
 
   /**
@@ -2021,14 +2025,14 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<UUID[]>} A Promise that resolves to an array of entity IDs participating in the room.
    */
   async getParticipantsForRoom(roomId: UUID): Promise<UUID[]> {
-    return this.withRetry(async () => {
+    return this.withDatabase(async () => {
       const result = await this.db
         .select({ entityId: participantTable.entityId })
         .from(participantTable)
         .where(eq(participantTable.roomId, roomId));
 
       return result.map((row) => row.entityId as UUID);
-    });
+    }, 'getParticipantsForRoom');
   }
 
   /**
@@ -2041,7 +2045,7 @@ export abstract class BaseDrizzleAdapter<
     roomId: UUID,
     entityId: UUID
   ): Promise<'FOLLOWED' | 'MUTED' | null> {
-    return this.withRetry(async () => {
+    return this.withDatabase(async () => {
       const result = await this.db
         .select({ roomState: participantTable.roomState })
         .from(participantTable)
@@ -2058,7 +2062,7 @@ export abstract class BaseDrizzleAdapter<
       }
 
       return (result[0].roomState as 'FOLLOWED' | 'MUTED') || null;
-    });
+    }, 'getParticipantUserState');
   }
 
   /**
@@ -2073,7 +2077,7 @@ export abstract class BaseDrizzleAdapter<
     entityId: UUID,
     state: 'FOLLOWED' | 'MUTED' | null
   ): Promise<void> {
-    return this.withRetry(async () => {
+    return this.withDatabase(async () => {
       try {
         await this.db
           .update(participantTable)
@@ -2103,7 +2107,7 @@ export abstract class BaseDrizzleAdapter<
         });
         throw error;
       }
-    });
+    }, 'setParticipantUserState');
   }
 
   /**
@@ -2141,7 +2145,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return false;
       }
-    });
+    }, 'createRelationship');
   }
 
   /**
@@ -2167,7 +2171,7 @@ export abstract class BaseDrizzleAdapter<
         });
         throw error;
       }
-    });
+    }, 'updateRelationship');
   }
 
   /**
@@ -2207,7 +2211,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return null;
       }
-    });
+    }, 'getRelationship');
   }
 
   /**
@@ -2252,7 +2256,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return [];
       }
-    });
+    }, 'getRelationships');
   }
 
   /**
@@ -2282,7 +2286,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return undefined;
       }
-    });
+    }, 'getCache');
   }
 
   /**
@@ -2324,7 +2328,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return false;
       }
-    });
+    }, 'setCache');
   }
 
   /**
@@ -2349,7 +2353,7 @@ export abstract class BaseDrizzleAdapter<
         });
         return false;
       }
-    });
+    }, 'deleteCache');
   }
 
   /**
@@ -2365,7 +2369,7 @@ export abstract class BaseDrizzleAdapter<
         id: newWorldId,
       });
       return newWorldId;
-    });
+    }, 'createWorld');
   }
 
   /**
@@ -2377,7 +2381,7 @@ export abstract class BaseDrizzleAdapter<
     return this.withDatabase(async () => {
       const result = await this.db.select().from(worldTable).where(eq(worldTable.id, id));
       return result[0] as World | null;
-    });
+    }, 'getWorld');
   }
 
   /**
@@ -2391,7 +2395,7 @@ export abstract class BaseDrizzleAdapter<
         .from(worldTable)
         .where(eq(worldTable.agentId, this.agentId));
       return result as World[];
-    });
+    }, 'getAllWorlds');
   }
 
   /**
@@ -2402,7 +2406,7 @@ export abstract class BaseDrizzleAdapter<
   async updateWorld(world: World): Promise<void> {
     return this.withDatabase(async () => {
       await this.db.update(worldTable).set(world).where(eq(worldTable.id, world.id));
-    });
+    }, 'updateWorld');
   }
 
   /**
@@ -2413,7 +2417,7 @@ export abstract class BaseDrizzleAdapter<
   async removeWorld(id: UUID): Promise<void> {
     return this.withDatabase(async () => {
       await this.db.delete(worldTable).where(eq(worldTable.id, id));
-    });
+    }, 'removeWorld');
   }
 
   /**
@@ -2422,31 +2426,26 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<UUID>} A Promise that resolves to the ID of the created task.
    */
   async createTask(task: Task): Promise<UUID> {
-    return this.withRetry(async () => {
-      return this.withDatabase(async () => {
-        const now = new Date();
-        const metadata = task.metadata || {};
+    return this.withDatabase(async () => {
+      const now = new Date();
+      const metadata = task.metadata || {};
 
-        const values = {
-          id: task.id as UUID,
-          name: task.name,
-          description: task.description,
-          roomId: task.roomId,
-          worldId: task.worldId,
-          tags: task.tags,
-          metadata: metadata,
-          createdAt: now,
-          updatedAt: now,
-          agentId: this.agentId,
-        };
-        const result = await this.db
-          .insert(taskTable)
-          .values(values)
-          .returning({ id: taskTable.id });
+      const values = {
+        id: task.id as UUID,
+        name: task.name,
+        description: task.description,
+        roomId: task.roomId,
+        worldId: task.worldId,
+        tags: task.tags,
+        metadata: metadata,
+        createdAt: now,
+        updatedAt: now,
+        agentId: this.agentId,
+      };
+      const result = await this.db.insert(taskTable).values(values).returning({ id: taskTable.id });
 
-        return result[0].id;
-      });
-    });
+      return result[0].id;
+    }, 'createTask');
   }
 
   /**
@@ -2455,35 +2454,33 @@ export abstract class BaseDrizzleAdapter<
    * @returns Promise resolving to an array of Task objects
    */
   async getTasks(params: { roomId?: UUID; tags?: string[] }): Promise<Task[]> {
-    return this.withRetry(async () => {
-      return this.withDatabase(async () => {
-        let query = this.db.select().from(taskTable).where(eq(taskTable.agentId, this.agentId));
+    return this.withDatabase(async () => {
+      let query = this.db.select().from(taskTable).where(eq(taskTable.agentId, this.agentId));
 
-        // Apply filters if provided
-        if (params.roomId) {
-          query = query.where(eq(taskTable.roomId, params.roomId));
-        }
+      // Apply filters if provided
+      if (params.roomId) {
+        query = query.where(eq(taskTable.roomId, params.roomId));
+      }
 
-        if (params.tags && params.tags.length > 0) {
-          // Filter by tags - find tasks that have ALL of the specified tags
-          // Using @> operator which checks if left array contains all elements from right array
-          const tagParams = params.tags.map((tag) => `'${tag.replace(/'/g, "''")}'`).join(', ');
-          query = query.where(sql`${taskTable.tags} @> ARRAY[${sql.raw(tagParams)}]::text[]`);
-        }
+      if (params.tags && params.tags.length > 0) {
+        // Filter by tags - find tasks that have ALL of the specified tags
+        // Using @> operator which checks if left array contains all elements from right array
+        const tagParams = params.tags.map((tag) => `'${tag.replace(/'/g, "''")}'`).join(', ');
+        query = query.where(sql`${taskTable.tags} @> ARRAY[${sql.raw(tagParams)}]::text[]`);
+      }
 
-        const result = await query;
+      const result = await query;
 
-        return result.map((row) => ({
-          id: row.id,
-          name: row.name,
-          description: row.description,
-          roomId: row.roomId,
-          worldId: row.worldId,
-          tags: row.tags,
-          metadata: row.metadata,
-        }));
-      });
-    });
+      return result.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        roomId: row.roomId,
+        worldId: row.worldId,
+        tags: row.tags,
+        metadata: row.metadata,
+      }));
+    }, 'getTasks');
   }
 
   /**
@@ -2492,24 +2489,22 @@ export abstract class BaseDrizzleAdapter<
    * @returns Promise resolving to the Task object if found, null otherwise
    */
   async getTasksByName(name: string): Promise<Task[]> {
-    return this.withRetry(async () => {
-      return this.withDatabase(async () => {
-        const result = await this.db
-          .select()
-          .from(taskTable)
-          .where(and(eq(taskTable.name, name), eq(taskTable.agentId, this.agentId)));
+    return this.withDatabase(async () => {
+      const result = await this.db
+        .select()
+        .from(taskTable)
+        .where(and(eq(taskTable.name, name), eq(taskTable.agentId, this.agentId)));
 
-        return result.map((row) => ({
-          id: row.id,
-          name: row.name,
-          description: row.description,
-          roomId: row.roomId,
-          worldId: row.worldId,
-          tags: row.tags || [],
-          metadata: row.metadata || {},
-        }));
-      });
-    });
+      return result.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        roomId: row.roomId,
+        worldId: row.worldId,
+        tags: row.tags || [],
+        metadata: row.metadata || {},
+      }));
+    }, 'getTasksByName');
   }
 
   /**
@@ -2518,30 +2513,28 @@ export abstract class BaseDrizzleAdapter<
    * @returns Promise resolving to the Task object if found, null otherwise
    */
   async getTask(id: UUID): Promise<Task | null> {
-    return this.withRetry(async () => {
-      return this.withDatabase(async () => {
-        const result = await this.db
-          .select()
-          .from(taskTable)
-          .where(and(eq(taskTable.id, id), eq(taskTable.agentId, this.agentId)))
-          .limit(1);
+    return this.withDatabase(async () => {
+      const result = await this.db
+        .select()
+        .from(taskTable)
+        .where(and(eq(taskTable.id, id), eq(taskTable.agentId, this.agentId)))
+        .limit(1);
 
-        if (result.length === 0) {
-          return null;
-        }
+      if (result.length === 0) {
+        return null;
+      }
 
-        const row = result[0];
-        return {
-          id: row.id,
-          name: row.name,
-          description: row.description,
-          roomId: row.roomId,
-          worldId: row.worldId,
-          tags: row.tags || [],
-          metadata: row.metadata || {},
-        };
-      });
-    });
+      const row = result[0];
+      return {
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        roomId: row.roomId,
+        worldId: row.worldId,
+        tags: row.tags || [],
+        metadata: row.metadata || {},
+      };
+    }, 'getTask');
   }
 
   /**
@@ -2551,43 +2544,41 @@ export abstract class BaseDrizzleAdapter<
    * @returns Promise resolving when the update is complete
    */
   async updateTask(id: UUID, task: Partial<Task>): Promise<void> {
-    await this.withRetry(async () => {
-      await this.withDatabase(async () => {
-        const updateValues: Partial<Task> = {};
+    return this.withDatabase(async () => {
+      const updateValues: Partial<Task> = {};
 
-        // Add fields to update if they exist in the partial task object
-        if (task.name !== undefined) updateValues.name = task.name;
-        if (task.description !== undefined) updateValues.description = task.description;
-        if (task.roomId !== undefined) updateValues.roomId = task.roomId;
-        if (task.worldId !== undefined) updateValues.worldId = task.worldId;
-        if (task.tags !== undefined) updateValues.tags = task.tags;
+      // Add fields to update if they exist in the partial task object
+      if (task.name !== undefined) updateValues.name = task.name;
+      if (task.description !== undefined) updateValues.description = task.description;
+      if (task.roomId !== undefined) updateValues.roomId = task.roomId;
+      if (task.worldId !== undefined) updateValues.worldId = task.worldId;
+      if (task.tags !== undefined) updateValues.tags = task.tags;
 
-        task.updatedAt = Date.now();
+      task.updatedAt = Date.now();
 
-        // Handle metadata updates
-        if (task.metadata) {
-          // Get current task to merge metadata
-          const currentTask = await this.getTask(id);
-          if (currentTask) {
-            const currentMetadata = currentTask.metadata || {};
-            const newMetadata = {
-              ...currentMetadata,
-              ...task.metadata,
-            };
-            updateValues.metadata = newMetadata;
-          } else {
-            updateValues.metadata = {
-              ...task.metadata,
-            };
-          }
+      // Handle metadata updates
+      if (task.metadata) {
+        // Get current task to merge metadata
+        const currentTask = await this.getTask(id);
+        if (currentTask) {
+          const currentMetadata = currentTask.metadata || {};
+          const newMetadata = {
+            ...currentMetadata,
+            ...task.metadata,
+          };
+          updateValues.metadata = newMetadata;
+        } else {
+          updateValues.metadata = {
+            ...task.metadata,
+          };
         }
+      }
 
-        await this.db
-          .update(taskTable)
-          .set(updateValues)
-          .where(and(eq(taskTable.id, id), eq(taskTable.agentId, this.agentId)));
-      });
-    });
+      await this.db
+        .update(taskTable)
+        .set(updateValues)
+        .where(and(eq(taskTable.id, id), eq(taskTable.agentId, this.agentId)));
+    }, 'updateTask');
   }
 
   /**
@@ -2596,13 +2587,11 @@ export abstract class BaseDrizzleAdapter<
    * @returns Promise resolving when the deletion is complete
    */
   async deleteTask(id: UUID): Promise<void> {
-    await this.withRetry(async () => {
-      await this.withDatabase(async () => {
-        await this.db
-          .delete(taskTable)
-          .where(and(eq(taskTable.id, id), eq(taskTable.agentId, this.agentId)));
-      });
-    });
+    return this.withDatabase(async () => {
+      await this.db
+        .delete(taskTable)
+        .where(and(eq(taskTable.id, id), eq(taskTable.agentId, this.agentId)));
+    }, 'deleteTask');
   }
 
   /**
@@ -2655,7 +2644,7 @@ export abstract class BaseDrizzleAdapter<
         unique: row.memory.unique,
         embedding: row.embedding ?? undefined,
       }));
-    });
+    }, 'getMemoriesByServerId');
   }
 
   /**
@@ -2698,6 +2687,6 @@ export abstract class BaseDrizzleAdapter<
       logger.debug('Rooms and related logs deleted successfully for server:', {
         serverId,
       });
-    });
+    }, 'deleteRoomsByServerId');
   }
 }
