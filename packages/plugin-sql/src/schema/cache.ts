@@ -33,8 +33,8 @@ export const cacheTable = pgTable(
 /**
  * Type definitions for the cache table
  */
-export type DrizzleCache = InferSelectModel<typeof cacheTable>;
-export type DrizzleCacheInsert = InferInsertModel<typeof cacheTable>;
+export type CacheModel = InferSelectModel<typeof cacheTable>;
+export type CacheModelInsert = InferInsertModel<typeof cacheTable>;
 
 /**
  * Interface representing a cache entry in the application
@@ -49,24 +49,24 @@ export interface Cache<T = any> {
 }
 
 /**
- * Maps a DrizzleCache object to a Cache object
+ * Maps a CacheModel object to a Cache object
  */
-export function mapToCache(drizzleCache: DrizzleCache): Cache {
+export function mapToCache<T = any>(cacheModel: CacheModel): Cache<T> {
   return {
-    id: drizzleCache.id as UUID,
-    key: drizzleCache.key,
-    agentId: drizzleCache.agentId as UUID,
-    value: drizzleCache.value,
-    createdAt: drizzleCache.createdAt,
-    expiresAt: drizzleCache.expiresAt ?? undefined,
+    id: cacheModel.id as UUID,
+    key: cacheModel.key,
+    agentId: cacheModel.agentId as UUID,
+    value: cacheModel.value as T,
+    createdAt: cacheModel.createdAt,
+    expiresAt: cacheModel.expiresAt ?? undefined,
   };
 }
 
 /**
- * Maps a Cache object to a DrizzleCacheInsert object
+ * Maps a Cache object to a CacheModelInsert object
  */
-export function mapToDrizzleCache(cache: Partial<Cache>): DrizzleCacheInsert {
-  const result: Partial<DrizzleCacheInsert> = {};
+export function mapToCacheModel<T = any>(cache: Partial<Cache<T>>): CacheModelInsert {
+  const result: Partial<CacheModelInsert> = {};
 
   if (cache.id !== undefined) result.id = cache.id;
   if (cache.key !== undefined) result.key = cache.key;
@@ -75,5 +75,5 @@ export function mapToDrizzleCache(cache: Partial<Cache>): DrizzleCacheInsert {
   if (cache.createdAt !== undefined) result.createdAt = cache.createdAt;
   if (cache.expiresAt !== undefined) result.expiresAt = cache.expiresAt;
 
-  return result as DrizzleCacheInsert;
+  return result as CacheModelInsert;
 }

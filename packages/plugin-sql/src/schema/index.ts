@@ -8,7 +8,7 @@ export {
 export {
   cacheTable,
   mapToCache,
-  mapToDrizzleCache,
+  mapToCacheModel,
   type DrizzleCache,
   type DrizzleCacheInsert,
   Cache,

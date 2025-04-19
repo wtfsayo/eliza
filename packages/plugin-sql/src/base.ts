@@ -35,7 +35,7 @@ import {
   mapToAgentModel,
   AgentInsertModel,
   mapToCache,
-  mapToDrizzleCache,
+  mapToCacheModel,
   DrizzleCache,
   Cache,
   mapToComponent,
@@ -55,6 +55,7 @@ import {
 import type { DrizzleOperations } from './types';
 import { DrizzleLogInsert, mapToLog } from './schema/log';
 import { DrizzleMemory, mapToMemory, mapToDrizzleMemory } from './schema/memory';
+import { CacheModel } from './schema/cache';
 
 // Define the metadata type inline since we can't import it
 /**
@@ -2262,7 +2263,7 @@ export abstract class BaseDrizzleAdapter<
   /**
    * Asynchronously retrieves a cache value from the database based on the provided key.
    * @param {string} key - The key to retrieve the cache value for.
-   * @returns {Promise<T | undefined>} A Promise that resolves to the cache value if found, undefined otherwise.
+   * @returns {Promise<T | undefined>} A Promise that resolves to the cached value if found, undefined otherwise.
    */
   async getCache<T>(key: string): Promise<T | undefined> {
     return this.withDatabase(async () => {
@@ -2276,8 +2277,8 @@ export abstract class BaseDrizzleAdapter<
         if (!result.length) return undefined;
 
         // Map the raw database result to our type-safe Cache model
-        const cacheEntry = mapToCache(result[0] as DrizzleCache);
-        return cacheEntry.value as T;
+        const cacheEntry = mapToCache<T>(result[0] as CacheModel);
+        return cacheEntry.value;
       } catch (error) {
         logger.error('Error fetching cache', {
           error: error instanceof Error ? error.message : String(error),
@@ -2293,20 +2294,22 @@ export abstract class BaseDrizzleAdapter<
    * Asynchronously sets a cache value in the database based on the provided key and value.
    * @param {string} key - The key to set the cache value for.
    * @param {T} value - The value to set in the cache.
+   * @param {number} [expiresAt] - Optional timestamp when the cache entry expires.
    * @returns {Promise<boolean>} A Promise that resolves to a boolean indicating whether the cache value was set successfully.
    */
-  async setCache<T>(key: string, value: T): Promise<boolean> {
+  async setCache<T>(key: string, value: T, expiresAt?: number): Promise<boolean> {
     return this.withDatabase(async () => {
       try {
         // Create a properly typed cache entry
-        const cacheEntry: Partial<Cache> = {
+        const cacheEntry: Partial<Cache<T>> = {
           key: key,
           agentId: this.agentId,
           value: value,
+          expiresAt: expiresAt,
         };
 
         // Map to Drizzle-compatible insert type
-        const drizzleCache = mapToDrizzleCache(cacheEntry);
+        const drizzleCache = mapToCacheModel<T>(cacheEntry);
 
         await this.db.transaction(async (tx) => {
           await tx
@@ -2316,6 +2319,7 @@ export abstract class BaseDrizzleAdapter<
               target: [cacheTable.key, cacheTable.agentId],
               set: {
                 value: value,
+                expiresAt: expiresAt,
               },
             });
         });
