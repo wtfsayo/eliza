@@ -15,9 +15,8 @@ import {
   logger,
   stringToUuid,
 } from '@elizaos/core';
-import { and, cosineDistance, count, desc, eq, gte, inArray, lte, or, sql, not } from 'drizzle-orm';
+import { and, cosineDistance, count, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
 import { v4 } from 'uuid';
-import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { DIMENSION_MAP, type EmbeddingDimensionColumn } from './schema/embedding';
 import {
   agentTable,
@@ -34,7 +33,7 @@ import {
   worldTable,
   mapToAgent,
   mapToAgentModel,
-  AgentModel,
+  AgentInsertModel,
   mapToCache,
   mapToDrizzleCache,
   DrizzleCache,
@@ -46,7 +45,6 @@ import {
   mapToDrizzleEntity,
   type Embedding,
   DrizzleParticipant,
-  DrizzleParticipantInsert,
   mapToParticipant,
   mapToDrizzleParticipant,
   mapToRelationship,
@@ -56,13 +54,7 @@ import {
 } from './schema/index';
 import type { DrizzleOperations } from './types';
 import { DrizzleLogInsert, mapToLog } from './schema/log';
-import {
-  DrizzleMemory,
-  DrizzleMemoryInsert,
-  mapToMemory,
-  mapToDrizzleMemory,
-} from './schema/memory';
-import { randomUUID } from 'crypto';
+import { DrizzleMemory, mapToMemory, mapToDrizzleMemory } from './schema/memory';
 
 // Define the metadata type inline since we can't import it
 /**
@@ -282,39 +274,41 @@ export abstract class BaseDrizzleAdapter<
   async updateAgent(agentId: UUID, agent: Partial<Agent>): Promise<boolean> {
     return this.withDatabase(async () => {
       try {
-        if (!agentId) {
-          throw new Error('Agent ID is required for update');
-        }
+        await this.withRetry(async () => {
+          return await this.db.transaction(async (tx) => {
+            // Update agentInfo
+            const agentInfo: Partial<AgentInsertModel> = mapToAgentModel(agent);
 
-        await this.db.transaction(async (tx) => {
-          // Handle settings update if present
-          if (agent?.settings) {
-            agent.settings = await this.mergeAgentSettings(tx, agentId, agent.settings);
-          }
+            // Delete settings from agentInfo if they exist, as we'll handle them separately
+            if ('settings' in agentInfo) {
+              delete agentInfo.settings;
+            }
 
-          // Convert from Core type to Drizzle schema type with proper typing
-          const drizzleAgent = mapToAgentModel(agent);
+            // Set updatedAt
+            agentInfo.updatedAt = Date.now();
 
-          // Use a properly typed update operation
-          await tx
-            .update(agentTable)
-            .set({
-              ...drizzleAgent,
-              updatedAt: Date.now(),
-            })
-            .where(eq(agentTable.id, agentId));
-        });
+            // First update everything except settings
+            if (Object.keys(agentInfo).length > 0) {
+              await tx
+                .update(agentTable)
+                .set(agentInfo)
+                .where(sql`${agentTable.id} = ${agentId}`);
+            }
 
-        logger.debug('Agent updated successfully:', {
-          agentId,
+            // Then update settings if needed
+            if (agent.settings !== undefined) {
+              const mergedSettings = await this.mergeAgentSettings(tx, agentId, agent.settings);
+
+              await tx
+                .update(agentTable)
+                .set({ settings: mergedSettings, updatedAt: Date.now() })
+                .where(sql`${agentTable.id} = ${agentId}`);
+            }
+          });
         });
         return true;
       } catch (error) {
-        logger.error('Error updating agent:', {
-          error: error instanceof Error ? error.message : String(error),
-          agentId,
-          agent,
-        });
+        console.error('Error updating agent:', error);
         return false;
       }
     });
@@ -332,49 +326,65 @@ export abstract class BaseDrizzleAdapter<
   private async mergeAgentSettings(
     tx: DrizzleOperations,
     agentId: UUID,
-    updatedSettings: any
-  ): Promise<any> {
+    updatedSettings: Partial<Agent['settings']> | undefined
+  ): Promise<Agent['settings']> {
     // First get the current agent data
     const currentAgent = await tx
-      .select({ settings: agentTable.settings })
+      .select()
       .from(agentTable)
-      .where(eq(agentTable.id, agentId))
+      .where(sql`${agentTable.id} = ${agentId}`)
       .limit(1);
 
-    if (currentAgent.length === 0 || !currentAgent[0].settings) {
-      return updatedSettings;
+    if (!currentAgent || currentAgent.length === 0) {
+      return updatedSettings || {};
     }
 
-    const currentSettings = currentAgent[0].settings;
+    const currentSettings = currentAgent[0].settings || {};
 
-    // Handle secrets with special null-values treatment
-    if (updatedSettings.secrets) {
-      const currentSecrets = currentSettings.secrets || {};
-      const updatedSecrets = updatedSettings.secrets;
+    // If no updates, return current settings
+    if (!updatedSettings) {
+      return currentSettings;
+    }
 
-      // Create a new secrets object
-      const mergedSecrets = { ...currentSecrets };
+    // Perform a deep merge of the settings
+    const mergedSettings = this.deepMergeSettings(currentSettings, updatedSettings);
 
-      // Process the incoming secrets updates
-      for (const [key, value] of Object.entries(updatedSecrets)) {
-        if (value === null) {
-          // If value is null, remove the key
-          delete mergedSecrets[key];
-        } else {
-          // Otherwise, update the value
-          mergedSecrets[key] = value;
-        }
+    return mergedSettings;
+  }
+
+  /**
+   * Deep merge settings objects with proper handling of null values to remove keys
+   * and preserving nested objects
+   */
+  private deepMergeSettings(
+    current: Record<string, any>,
+    updates: Record<string, any>
+  ): Record<string, any> {
+    const result = { ...current };
+
+    for (const [key, value] of Object.entries(updates)) {
+      // If value is null, remove the key
+      if (value === null) {
+        delete result[key];
       }
-
-      // Replace the secrets in updatedSettings with our processed version
-      updatedSettings.secrets = mergedSecrets;
+      // If both values are objects (and not arrays or null), recursively merge
+      else if (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        typeof result[key] === 'object' &&
+        result[key] !== null &&
+        !Array.isArray(result[key])
+      ) {
+        result[key] = this.deepMergeSettings(result[key], value);
+      }
+      // Otherwise directly assign (includes arrays, primitives, etc.)
+      else {
+        result[key] = value;
+      }
     }
 
-    // Deep merge the settings objects
-    return {
-      ...currentSettings,
-      ...updatedSettings,
-    };
+    return result;
   }
 
   /**

@@ -100,7 +100,8 @@ export function mapToAgentModel(agent: Partial<Agent>): AgentInsertModel {
   if (agent.postExamples !== undefined) result.postExamples = agent.postExamples;
   if (agent.topics !== undefined) result.topics = agent.topics;
   if (agent.adjectives !== undefined) result.adjectives = agent.adjectives;
-  if (agent.knowledge !== undefined) result.knowledge = agent.knowledge;
+  if (agent.knowledge !== undefined)
+    result.knowledge = agent.knowledge as (string | { path: string; shared?: boolean })[];
   if (agent.plugins !== undefined) result.plugins = agent.plugins;
   if (agent.settings !== undefined) result.settings = agent.settings;
   if (agent.style !== undefined) result.style = agent.style;

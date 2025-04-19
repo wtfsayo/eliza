@@ -7,6 +7,8 @@ export default defineConfig({
     // Increase timeout for all tests
     testTimeout: 30000, // 30 seconds
     // Increase hook timeout specifically
-    hookTimeout: 40000, // 40 seconds
+    hookTimeout: 40000, // 40 seconds,
+    include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: ['**/node_modules/**', '**/dist/**'],
   },
 });
