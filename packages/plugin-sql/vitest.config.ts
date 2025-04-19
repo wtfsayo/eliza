@@ -8,6 +8,10 @@ export default defineConfig({
     testTimeout: 30000, // 30 seconds
     // Increase hook timeout specifically
     hookTimeout: 40000, // 40 seconds,
+
+    // Disable parallel execution of test files
+    fileParallelism: false,
+
     include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     exclude: ['**/node_modules/**', '**/dist/**'],
   },

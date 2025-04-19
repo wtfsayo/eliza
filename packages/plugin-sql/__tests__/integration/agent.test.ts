@@ -1,11 +1,11 @@
 import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { PgDatabaseAdapter } from '../../src/pg/adapter';
 import { PostgresConnectionManager } from '../../src/pg/manager';
-import { type UUID, type Agent, type MessageExample } from '@elizaos/core';
+import { type UUID, type Agent } from '@elizaos/core';
 import { agentTable } from '../../src/schema/agent';
 import { sql } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import { config } from './config';
+import { config } from './seed/config';
 
 // Mock only the logger
 vi.mock('@elizaos/core', async () => {

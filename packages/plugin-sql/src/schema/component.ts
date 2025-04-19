@@ -38,11 +38,11 @@ export const componentTable = pgTable('components', {
 });
 
 // Inferred database model types from the component table schema
-export type DrizzleComponent = InferSelectModel<typeof componentTable>;
-export type DrizzleComponentInsert = InferInsertModel<typeof componentTable>;
+export type SelectComponent = InferSelectModel<typeof componentTable>;
+export type ComponentModelInsert = InferInsertModel<typeof componentTable>;
 
 // Type mapping utility to convert between Drizzle and Core types
-export function mapToComponent(drizzleComponent: DrizzleComponent): Component {
+export function mapToComponent(drizzleComponent: SelectComponent): Component {
   // Explicit mapping of properties ensures type safety
   return {
     id: drizzleComponent.id as UUID,
@@ -56,10 +56,10 @@ export function mapToComponent(drizzleComponent: DrizzleComponent): Component {
   };
 }
 
-export function mapToDrizzleComponent(component: Partial<Component>): DrizzleComponentInsert {
+export function mapToComponentModel(component: Partial<Component>): ComponentModelInsert {
   // Return a properly typed object with only the properties
   // that are defined in the database schema
-  const result: Partial<DrizzleComponentInsert> = {};
+  const result: Partial<ComponentModelInsert> = {};
 
   // Only copy properties that exist in the component
   if (component.id !== undefined) result.id = component.id;
@@ -71,5 +71,5 @@ export function mapToDrizzleComponent(component: Partial<Component>): DrizzleCom
   if (component.type !== undefined) result.type = component.type;
   if (component.data !== undefined) result.data = component.data;
 
-  return result as DrizzleComponentInsert;
+  return result as ComponentModelInsert;
 }

@@ -93,8 +93,8 @@ export const memoryTable = pgTable(
 );
 
 // Inferred database model types from the memory table schema
-export type DrizzleMemory = InferSelectModel<typeof memoryTable>;
-export type DrizzleMemoryInsert = InferInsertModel<typeof memoryTable>;
+export type SelectMemory = InferSelectModel<typeof memoryTable>;
+export type InsertMemory = InferInsertModel<typeof memoryTable>;
 
 export const memoryRelations = relations(memoryTable, ({ one }) => ({
   embedding: one(embeddingTable),
@@ -103,7 +103,7 @@ export const memoryRelations = relations(memoryTable, ({ one }) => ({
 /**
  * Maps a Drizzle memory record to the core Memory type
  */
-export function mapToMemory(drizzleMemory: DrizzleMemory): Memory {
+export function mapToMemory(drizzleMemory: SelectMemory): Memory {
   return {
     id: drizzleMemory.id as UUID,
     entityId: drizzleMemory.entityId as UUID,
@@ -120,8 +120,8 @@ export function mapToMemory(drizzleMemory: DrizzleMemory): Memory {
 /**
  * Maps a core Memory object to a Drizzle memory record for database operations
  */
-export function mapToDrizzleMemory(memory: Partial<Memory>): DrizzleMemoryInsert {
-  const result: Partial<DrizzleMemoryInsert> = {};
+export function mapToMemoryModel(memory: Partial<Memory>, tableName: string): InsertMemory {
+  const result: Partial<InsertMemory> = {};
 
   // Copy only properties that exist in the memory object
   if (memory.id !== undefined) result.id = memory.id;
@@ -134,10 +134,8 @@ export function mapToDrizzleMemory(memory: Partial<Memory>): DrizzleMemoryInsert
   if (memory.unique !== undefined) result.unique = memory.unique;
   if (memory.metadata !== undefined) result.metadata = memory.metadata;
 
-  // Set type based on metadata if not explicitly set
-  if (memory.metadata?.type) {
-    result.type = memory.metadata.type;
-  }
+  // Set the memory type based on the table name parameter
+  result.type = tableName;
 
-  return result as DrizzleMemoryInsert;
+  return result as InsertMemory;
 }

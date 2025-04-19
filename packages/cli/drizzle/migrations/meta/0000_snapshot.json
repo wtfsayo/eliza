@@ -1,5 +1,9 @@
 {
+<<<<<<< HEAD
   "id": "8d7ae0aa-76b7-4e80-9133-db45fb9b6d1e",
+=======
+  "id": "da3854d5-a7cb-4e4b-897c-12e5aec3a977",
+>>>>>>> 0daab69e8 (chore: fix schema gaps & type safety component, memory, embedding)
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -947,137 +951,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.relationships": {
-      "name": "relationships",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamptz",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "sourceEntityId": {
-          "name": "sourceEntityId",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "targetEntityId": {
-          "name": "targetEntityId",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "agentId": {
-          "name": "agentId",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tags": {
-          "name": "tags",
-          "type": "text[]",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "idx_relationships_users": {
-          "name": "idx_relationships_users",
-          "columns": [
-            {
-              "expression": "sourceEntityId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "targetEntityId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "relationships_sourceEntityId_entities_id_fk": {
-          "name": "relationships_sourceEntityId_entities_id_fk",
-          "tableFrom": "relationships",
-          "tableTo": "entities",
-          "columnsFrom": ["sourceEntityId"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "relationships_targetEntityId_entities_id_fk": {
-          "name": "relationships_targetEntityId_entities_id_fk",
-          "tableFrom": "relationships",
-          "tableTo": "entities",
-          "columnsFrom": ["targetEntityId"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "relationships_agentId_agents_id_fk": {
-          "name": "relationships_agentId_agents_id_fk",
-          "tableFrom": "relationships",
-          "tableTo": "agents",
-          "columnsFrom": ["agentId"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "fk_user_a": {
-          "name": "fk_user_a",
-          "tableFrom": "relationships",
-          "tableTo": "entities",
-          "columnsFrom": ["sourceEntityId"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "fk_user_b": {
-          "name": "fk_user_b",
-          "tableFrom": "relationships",
-          "tableTo": "entities",
-          "columnsFrom": ["targetEntityId"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "unique_relationship": {
-          "name": "unique_relationship",
-          "nullsNotDistinct": false,
-          "columns": ["sourceEntityId", "targetEntityId", "agentId"]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.rooms": {
       "name": "rooms",
       "schema": "",
@@ -1305,6 +1178,137 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.relationships": {
+      "name": "relationships",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamptz",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "sourceEntityId": {
+          "name": "sourceEntityId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "targetEntityId": {
+          "name": "targetEntityId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "agentId": {
+          "name": "agentId",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tags": {
+          "name": "tags",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_relationships_users": {
+          "name": "idx_relationships_users",
+          "columns": [
+            {
+              "expression": "sourceEntityId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "targetEntityId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "relationships_sourceEntityId_entities_id_fk": {
+          "name": "relationships_sourceEntityId_entities_id_fk",
+          "tableFrom": "relationships",
+          "tableTo": "entities",
+          "columnsFrom": ["sourceEntityId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "relationships_targetEntityId_entities_id_fk": {
+          "name": "relationships_targetEntityId_entities_id_fk",
+          "tableFrom": "relationships",
+          "tableTo": "entities",
+          "columnsFrom": ["targetEntityId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "relationships_agentId_agents_id_fk": {
+          "name": "relationships_agentId_agents_id_fk",
+          "tableFrom": "relationships",
+          "tableTo": "agents",
+          "columnsFrom": ["agentId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "fk_user_a": {
+          "name": "fk_user_a",
+          "tableFrom": "relationships",
+          "tableTo": "entities",
+          "columnsFrom": ["sourceEntityId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "fk_user_b": {
+          "name": "fk_user_b",
+          "tableFrom": "relationships",
+          "tableTo": "entities",
+          "columnsFrom": ["targetEntityId"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "unique_relationship": {
+          "name": "unique_relationship",
+          "nullsNotDistinct": false,
+          "columns": ["sourceEntityId", "targetEntityId", "agentId"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

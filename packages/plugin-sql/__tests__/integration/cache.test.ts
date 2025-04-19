@@ -2,8 +2,12 @@ import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import { PgDatabaseAdapter } from '../../src/pg/adapter';
 import { PostgresConnectionManager } from '../../src/pg/manager';
 import { type UUID } from '@elizaos/core';
-import { config } from './config';
-import { testAgentSettings, testCacheEntries, testCacheWithExpiration } from './seed';
+import { config } from './seed/config';
+import {
+  cacheTestAgentSettings,
+  testCacheEntries,
+  testCacheWithExpiration,
+} from './seed/cache-seed';
 
 // Mock only the logger
 vi.mock('@elizaos/core', async () => {
@@ -27,7 +31,7 @@ describe('Cache Integration Tests', () => {
 
   beforeAll(async () => {
     // Create a random agent ID for use with the adapter
-    testAgentId = testAgentSettings.id;
+    testAgentId = cacheTestAgentSettings.id as UUID;
 
     // Initialize connection manager and adapter
     connectionManager = new PostgresConnectionManager(config.DATABASE_URL);
@@ -36,14 +40,14 @@ describe('Cache Integration Tests', () => {
     await adapter.init();
 
     // Ensure the test agent exists
-    await adapter.createAgent(testAgentSettings);
+    await adapter.createAgent(cacheTestAgentSettings);
   }, 5000);
 
   afterAll(async () => {
     // Clean up any test agents
     const client = await connectionManager.getClient();
     try {
-      await client.query(`DELETE FROM agents WHERE name = '${testAgentSettings.name}'`);
+      await client.query(`DELETE FROM agents WHERE name = '${cacheTestAgentSettings.name}'`);
     } finally {
       client.release();
     }

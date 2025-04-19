@@ -5,10 +5,13 @@ config({ path: '../../.env' });
 
 export default defineConfig({
   dialect: 'postgresql',
-  schema: './src/schema/index.ts',
+  schema: './src/schema',
   out: './drizzle/migrations',
+  migrations: {
+    schema: 'public',
+  },
   dbCredentials: {
-    url: process.env.POSTGRES_URL || 'file://../../pglite',
+    url: 'postgresql://postgres:postgres@localhost:5432/eliza',
   },
   breakpoints: true,
 });

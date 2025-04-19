@@ -63,8 +63,8 @@ export type EmbeddingDimensionColumn =
 export type EmbeddingTableColumn = (typeof embeddingTable._.columns)[EmbeddingDimensionColumn];
 
 // Inferred database model types from the embedding table schema
-export type DrizzleEmbedding = InferSelectModel<typeof embeddingTable>;
-export type DrizzleEmbeddingInsert = InferInsertModel<typeof embeddingTable>;
+export type SelectEmbedding = InferSelectModel<typeof embeddingTable>;
+export type InsertEmbedding = InferInsertModel<typeof embeddingTable>;
 
 /**
  * Represents an embedding in the application
@@ -84,7 +84,7 @@ export interface Embedding {
 /**
  * Maps a database embedding to the application embedding model
  */
-export function mapToEmbedding(drizzleEmbedding: DrizzleEmbedding): Embedding {
+export function mapToEmbedding(drizzleEmbedding: SelectEmbedding): Embedding {
   return {
     id: drizzleEmbedding.id as UUID,
     memoryId: drizzleEmbedding.memoryId as UUID,
@@ -101,8 +101,8 @@ export function mapToEmbedding(drizzleEmbedding: DrizzleEmbedding): Embedding {
 /**
  * Maps an application embedding to its database representation
  */
-export function mapToDrizzleEmbedding(embedding: Partial<Embedding>): DrizzleEmbeddingInsert {
-  const result: Partial<DrizzleEmbeddingInsert> = {};
+export function mapToEmbeddingModel(embedding: Partial<Embedding>): InsertEmbedding {
+  const result: Partial<InsertEmbedding> = {};
 
   if (embedding.id !== undefined) result.id = embedding.id;
   if (embedding.memoryId !== undefined) result.memoryId = embedding.memoryId;
@@ -114,5 +114,5 @@ export function mapToDrizzleEmbedding(embedding: Partial<Embedding>): DrizzleEmb
   if (embedding.dim1536 !== undefined) result.dim1536 = embedding.dim1536;
   if (embedding.dim3072 !== undefined) result.dim3072 = embedding.dim3072;
 
-  return result as DrizzleEmbeddingInsert;
+  return result as InsertEmbedding;
 }

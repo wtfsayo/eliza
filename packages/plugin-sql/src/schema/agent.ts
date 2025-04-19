@@ -59,11 +59,11 @@ export const agentTable = pgTable(
 );
 
 // Using modern type inference with $ prefix
-export type AgentModel = typeof agentTable.$inferSelect;
-export type AgentInsertModel = typeof agentTable.$inferInsert;
+export type SelectAgent = typeof agentTable.$inferSelect;
+export type InsertAgent = typeof agentTable.$inferInsert;
 
 // Type mapping utility to convert between Drizzle and Core types
-export function mapToAgent(agentModel: AgentModel): Agent {
+export function mapToAgent(agentModel: SelectAgent): Agent {
   // Explicit mapping of properties ensures type safety
   return {
     id: agentModel.id as UUID, // Cast to ensure UUID type compatibility
@@ -85,10 +85,10 @@ export function mapToAgent(agentModel: AgentModel): Agent {
   };
 }
 
-export function mapToAgentModel(agent: Partial<Agent>): AgentInsertModel {
+export function mapToAgentModel(agent: Partial<Agent>): InsertAgent {
   // Return a properly typed object with only the properties
   // that are defined in the database schema
-  const result: Partial<AgentInsertModel> = {};
+  const result: Partial<InsertAgent> = {};
 
   // Only copy properties that exist in the agent
   if (agent.id !== undefined) result.id = agent.id;
@@ -109,5 +109,5 @@ export function mapToAgentModel(agent: Partial<Agent>): AgentInsertModel {
   if (agent.createdAt !== undefined) result.createdAt = agent.createdAt;
   if (agent.updatedAt !== undefined) result.updatedAt = agent.updatedAt;
 
-  return result as AgentInsertModel;
+  return result as InsertAgent;
 }

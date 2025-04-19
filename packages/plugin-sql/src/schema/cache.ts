@@ -33,8 +33,8 @@ export const cacheTable = pgTable(
 /**
  * Type definitions for the cache table
  */
-export type CacheModel = InferSelectModel<typeof cacheTable>;
-export type CacheModelInsert = InferInsertModel<typeof cacheTable>;
+export type SelectCache = InferSelectModel<typeof cacheTable>;
+export type InsertCache = InferInsertModel<typeof cacheTable>;
 
 /**
  * Interface representing a cache entry in the application
@@ -49,9 +49,9 @@ export interface Cache<T = any> {
 }
 
 /**
- * Maps a CacheModel object to a Cache object
+ * Maps a SelectCache object to a Cache object
  */
-export function mapToCache<T = any>(cacheModel: CacheModel): Cache<T> {
+export function mapToCache<T = any>(cacheModel: SelectCache): Cache<T> {
   return {
     id: cacheModel.id as UUID,
     key: cacheModel.key,
@@ -63,10 +63,10 @@ export function mapToCache<T = any>(cacheModel: CacheModel): Cache<T> {
 }
 
 /**
- * Maps a Cache object to a CacheModelInsert object
+ * Maps a Cache object to a InsertCache object
  */
-export function mapToCacheModel<T = any>(cache: Partial<Cache<T>>): CacheModelInsert {
-  const result: Partial<CacheModelInsert> = {};
+export function mapToCacheModel<T = any>(cache: Partial<Cache<T>>): InsertCache {
+  const result: Partial<InsertCache> = {};
 
   if (cache.id !== undefined) result.id = cache.id;
   if (cache.key !== undefined) result.key = cache.key;
@@ -75,5 +75,5 @@ export function mapToCacheModel<T = any>(cache: Partial<Cache<T>>): CacheModelIn
   if (cache.createdAt !== undefined) result.createdAt = cache.createdAt;
   if (cache.expiresAt !== undefined) result.expiresAt = cache.expiresAt;
 
-  return result as CacheModelInsert;
+  return result as InsertCache;
 }

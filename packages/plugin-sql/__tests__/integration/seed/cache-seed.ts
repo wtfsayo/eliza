@@ -1,22 +1,37 @@
 /**
- * Default settings for integration tests
+ * Seed data for cache integration tests
  */
-import { type UUID } from '@elizaos/core';
-import { v4 as uuidv4 } from 'uuid';
+import { type UUID, AgentStatus, type Agent } from '@elizaos/core';
+import { v4 } from 'uuid';
 
 /**
- * Default test agent settings
+ * Default test agent settings for cache tests
  */
-export const testAgentSettings = {
-  id: uuidv4() as UUID,
+export const cacheTestAgentSettings = {
+  id: v4() as UUID,
   name: 'Cache Test Agent',
   username: 'cache_test_agent',
+  system: 'Test agent system prompt',
   bio: 'An agent for testing cache operations',
   enabled: true,
+  status: AgentStatus.ACTIVE,
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+  messageExamples: [],
+  postExamples: [],
+  topics: [],
+  adjectives: [],
+  knowledge: [],
+  plugins: [],
   settings: {
     cacheTestSetting: 'cache test value',
   },
-};
+  style: {
+    all: [],
+    chat: [],
+    post: [],
+  },
+} as Agent;
 
 /**
  * Test cache values
