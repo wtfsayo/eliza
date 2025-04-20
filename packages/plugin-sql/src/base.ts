@@ -47,6 +47,8 @@ import {
   mapToRelationship,
   mapToRelationshipRow,
   mapToRoom,
+  mapToTask,
+  mapToTaskRow,
   memoryTable,
   participantTable,
   relationshipTable,
@@ -2403,22 +2405,23 @@ export abstract class BaseDrizzleAdapter<
    */
   async createTask(task: Task): Promise<UUID> {
     return this.withDatabase(async () => {
-      const now = new Date();
-      const metadata = task.metadata || {};
-
-      const values = {
-        id: task.id as UUID,
-        name: task.name,
-        description: task.description,
-        roomId: task.roomId,
-        worldId: task.worldId,
-        tags: task.tags,
-        metadata: metadata,
-        createdAt: now,
-        updatedAt: now,
+      // Prepare the task with agent ID if not present
+      const taskWithAgent = {
+        ...task,
         agentId: this.agentId,
       };
-      const result = await this.db.insert(taskTable).values(values).returning({ id: taskTable.id });
+
+      // Convert to database format using the mapping function
+      const taskRow = mapToTaskRow(taskWithAgent);
+
+      // Ensure timestamps if not provided
+      if (!taskRow.createdAt) taskRow.createdAt = new Date();
+      if (!taskRow.updatedAt) taskRow.updatedAt = new Date();
+
+      const result = await this.db
+        .insert(taskTable)
+        .values(taskRow)
+        .returning({ id: taskTable.id });
 
       return result[0].id;
     }, 'createTask');
@@ -2447,15 +2450,8 @@ export abstract class BaseDrizzleAdapter<
 
       const result = await query;
 
-      return result.map((row) => ({
-        id: row.id,
-        name: row.name,
-        description: row.description,
-        roomId: row.roomId,
-        worldId: row.worldId,
-        tags: row.tags,
-        metadata: row.metadata,
-      }));
+      // Map database rows to core Task objects
+      return result.map(mapToTask);
     }, 'getTasks');
   }
 
@@ -2471,15 +2467,8 @@ export abstract class BaseDrizzleAdapter<
         .from(taskTable)
         .where(and(eq(taskTable.name, name), eq(taskTable.agentId, this.agentId)));
 
-      return result.map((row) => ({
-        id: row.id,
-        name: row.name,
-        description: row.description,
-        roomId: row.roomId,
-        worldId: row.worldId,
-        tags: row.tags || [],
-        metadata: row.metadata || {},
-      }));
+      // Map database rows to core Task objects
+      return result.map(mapToTask);
     }, 'getTasksByName');
   }
 
@@ -2500,16 +2489,8 @@ export abstract class BaseDrizzleAdapter<
         return null;
       }
 
-      const row = result[0];
-      return {
-        id: row.id,
-        name: row.name,
-        description: row.description,
-        roomId: row.roomId,
-        worldId: row.worldId,
-        tags: row.tags || [],
-        metadata: row.metadata || {},
-      };
+      // Map database row to core Task object
+      return mapToTask(result[0]);
     }, 'getTask');
   }
 
@@ -2521,18 +2502,13 @@ export abstract class BaseDrizzleAdapter<
    */
   async updateTask(id: UUID, task: Partial<Task>): Promise<void> {
     return this.withDatabase(async () => {
-      const updateValues: Partial<Task> = {};
+      // Start with the basic task updates
+      let updateValues = mapToTaskRow(task);
 
-      // Add fields to update if they exist in the partial task object
-      if (task.name !== undefined) updateValues.name = task.name;
-      if (task.description !== undefined) updateValues.description = task.description;
-      if (task.roomId !== undefined) updateValues.roomId = task.roomId;
-      if (task.worldId !== undefined) updateValues.worldId = task.worldId;
-      if (task.tags !== undefined) updateValues.tags = task.tags;
+      // Always update the updatedAt timestamp
+      updateValues.updatedAt = new Date();
 
-      task.updatedAt = Date.now();
-
-      // Handle metadata updates
+      // Handle metadata updates - need to merge with existing metadata
       if (task.metadata) {
         // Get current task to merge metadata
         const currentTask = await this.getTask(id);
@@ -2543,10 +2519,6 @@ export abstract class BaseDrizzleAdapter<
             ...task.metadata,
           };
           updateValues.metadata = newMetadata;
-        } else {
-          updateValues.metadata = {
-            ...task.metadata,
-          };
         }
       }
 
