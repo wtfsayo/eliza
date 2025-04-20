@@ -19,15 +19,15 @@ import { and, cosineDistance, count, desc, eq, gte, inArray, lte, or, sql } from
 import { v4 } from 'uuid';
 import { DIMENSION_MAP, type EmbeddingDimensionColumn } from './schema/embedding';
 import {
-  InsertAgent,
   agentTable,
   Cache,
-  SelectCache,
   cacheTable,
   componentTable,
   DrizzleParticipant,
   embeddingTable,
   entityTable,
+  InsertAgent,
+  InsertLog,
   logTable,
   mapToAgent,
   mapToAgentRow,
@@ -35,28 +35,30 @@ import {
   mapToCacheRow,
   mapToComponent,
   mapToComponentRow,
-  mapToEntityRow,
   mapToDrizzleParticipant,
   mapToDrizzleRelationship,
   mapToDrizzleRoom,
   mapToEmbeddingRow,
   mapToEntity,
+  mapToEntityRow,
+  mapToLog,
   mapToMemory,
   mapToMemoryRow,
   mapToParticipant,
   mapToRelationship,
   mapToRoom,
-  SelectMemory,
   memoryTable,
   participantTable,
   relationshipTable,
   roomTable,
+  SelectCache,
+  SelectMemory,
   taskTable,
   type Embedding,
   worldTable,
+  mapToLogRow,
 } from './schema/index';
 import type { DrizzleOperations } from './types';
-import { DrizzleLogInsert, mapToLog } from './schema/log';
 
 // Define the metadata type inline since we can't import it
 /**
@@ -174,7 +176,6 @@ export abstract class BaseDrizzleAdapter<
     }
 
     const agents = await this.getAgents();
-    console.log('Agents:', agents);
     const existingAgent = agents.find(
       (a: Partial<Agent & { status: string }>) => a.name === agent.name
     );
@@ -1292,12 +1293,12 @@ export abstract class BaseDrizzleAdapter<
   }): Promise<void> {
     return this.withDatabase(async () => {
       try {
-        const logEntry: DrizzleLogInsert = {
+        const logEntry: InsertLog = mapToLogRow({
           body: params.body,
           entityId: params.entityId,
           roomId: params.roomId,
           type: params.type,
-        };
+        });
 
         await this.db.transaction(async (tx) => {
           await tx.insert(logTable).values(logEntry);
@@ -1347,7 +1348,6 @@ export abstract class BaseDrizzleAdapter<
         .limit(count ?? 10)
         .offset(offset ?? 0);
 
-      // Map the Drizzle results to the Core Log type
       return result.map(mapToLog);
     }, 'getLogs');
   }
@@ -1533,16 +1533,8 @@ export abstract class BaseDrizzleAdapter<
     // Convert to database format using the mapping function
     const memoryRow = mapToMemoryRow(memoryData, tableName);
 
-    // Store content and metadata as properly formatted JSON
-    const contentToInsert =
-      typeof memory.content === 'string' ? JSON.parse(memory.content) : memory.content;
-
     await this.db.transaction(async (tx) => {
-      await tx.insert(memoryTable).values({
-        ...memoryRow,
-        content: sql`${contentToInsert}::jsonb`,
-        metadata: sql`${memory.metadata || {}}::jsonb`,
-      });
+      await tx.insert(memoryTable).values(memoryRow);
 
       if (memory.embedding && Array.isArray(memory.embedding)) {
         const cleanVector = memory.embedding.map((n) =>
@@ -1583,33 +1575,10 @@ export abstract class BaseDrizzleAdapter<
           hasEmbedding: !!memory.embedding,
         });
 
+        const partialMemoryRow = mapToMemoryRow(memory);
+
         await this.db.transaction(async (tx) => {
-          // Update memory content and metadata
-          if (memory.content || memory.metadata) {
-            // We need to handle SQL expressions separately from the Drizzle type system
-            // because we're using raw SQL for the jsonb fields
-
-            if (memory.content) {
-              const contentToUpdate =
-                typeof memory.content === 'string' ? JSON.parse(memory.content) : memory.content;
-
-              await tx
-                .update(memoryTable)
-                .set({
-                  content: sql`${contentToUpdate}::jsonb`,
-                })
-                .where(eq(memoryTable.id, memory.id));
-            }
-
-            if (memory.metadata) {
-              await tx
-                .update(memoryTable)
-                .set({
-                  metadata: sql`${memory.metadata}::jsonb`,
-                })
-                .where(eq(memoryTable.id, memory.id));
-            }
-          }
+          await tx.update(memoryTable).set(partialMemoryRow).where(eq(memoryTable.id, memory.id));
 
           // Update embedding if provided
           if (memory.embedding && Array.isArray(memory.embedding)) {

@@ -120,13 +120,16 @@ export function mapToMemory(memoryRow: SelectMemory): Memory {
 /**
  * Maps a core Memory object to a Drizzle memory record for database operations
  */
-export function mapToMemoryRow(memory: Partial<Memory>, tableName: string): InsertMemory {
+export function mapToMemoryRow(memory: Partial<Memory>, tableName?: string): InsertMemory {
   const result: Partial<InsertMemory> = {};
+
+  const contentToInsert =
+    typeof memory.content === 'string' ? JSON.parse(memory.content) : memory.content;
 
   // Copy only properties that exist in the memory object
   if (memory.id !== undefined) result.id = memory.id;
   if (memory.createdAt !== undefined) result.createdAt = memory.createdAt;
-  if (memory.content !== undefined) result.content = memory.content;
+  if (memory.content !== undefined) result.content = contentToInsert;
   if (memory.entityId !== undefined) result.entityId = memory.entityId;
   if (memory.agentId !== undefined) result.agentId = memory.agentId;
   if (memory.roomId !== undefined) result.roomId = memory.roomId;
@@ -134,8 +137,8 @@ export function mapToMemoryRow(memory: Partial<Memory>, tableName: string): Inse
   if (memory.unique !== undefined) result.unique = memory.unique;
   if (memory.metadata !== undefined) result.metadata = memory.metadata;
 
-  // Set the memory type based on the table name parameter
-  result.type = tableName;
+  // Set the memory type based on the table name parameter if it exists
+  if (tableName) result.type = tableName;
 
   return result as InsertMemory;
 }

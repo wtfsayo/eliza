@@ -51,46 +51,34 @@ describe('Component Integration Tests', () => {
     adapter = new PgDatabaseAdapter(testAgentId, connectionManager);
     await adapter.init();
 
-    console.log('Starting test data setup...');
-
     try {
       // Use ensureAgentExists instead of createAgent
-      console.log('Ensuring agent exists with ID:', testAgentId);
       const agent = await adapter.ensureAgentExists(componentTestAgentSettings as Agent);
-      console.log('Agent:', agent);
 
       // Create the test world
-      console.log('Creating world with ID:', testWorldId);
       const worldId = await adapter.createWorld({
         ...componentTestWorld,
         agentId: agent.id,
       } as World);
-      console.log('World created with ID:', worldId);
 
       // Create the test entity
-      console.log('Creating entity with ID:', testEntityId);
       const entityCreated = await adapter.createEntity({
         ...componentTestEntity,
         agentId: agent.id,
       } as Entity);
-      console.log('Entity created:', entityCreated);
 
       // Create the source entity
-      console.log('Creating source entity with ID:', testSourceEntityId);
       const sourceEntityCreated = await adapter.createEntity({
         ...componentTestSourceEntity,
         agentId: agent.id,
       } as Entity);
-      console.log('Source entity created:', sourceEntityCreated);
 
       // Create the test room
-      console.log('Creating room with ID:', testRoomId);
       const roomId = await adapter.createRoom({
         ...componentTestRoom,
         agentId: agent.id,
         worldId: worldId,
       } as Room);
-      console.log('Room created with ID:', roomId);
     } catch (error) {
       console.error('Error in setup:', error);
       throw error;
@@ -102,7 +90,6 @@ describe('Component Integration Tests', () => {
     const client = await connectionManager.getClient();
     try {
       // Delete test data in correct order due to foreign key constraints
-      console.log('Cleaning up test data...');
       await client.query(
         `DELETE FROM components WHERE "entityId" = '${testEntityId}' OR "sourceEntityId" = '${testSourceEntityId}'`
       );

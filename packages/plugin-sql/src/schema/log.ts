@@ -7,11 +7,10 @@ import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
 import type { Log, UUID } from '@elizaos/core';
 
 /**
- * Represents a PostgreSQL table for storing logs.
+ * Definition of a table representing logs in the database.
  *
  * @type {Table}
  */
-
 export const logTable = pgTable(
   'logs',
   {
@@ -43,23 +42,32 @@ export const logTable = pgTable(
 );
 
 // Inferred database model types from the log table schema
-export type DrizzleLog = InferSelectModel<typeof logTable>;
-export type DrizzleLogInsert = InferInsertModel<typeof logTable>;
+export type SelectLog = InferSelectModel<typeof logTable>;
+export type InsertLog = InferInsertModel<typeof logTable>;
 
-// Type mapping utility to convert between Drizzle and Core types
-export function mapToLog(drizzleLog: DrizzleLog): Log {
+/**
+ * Maps a database log record to the Core Log type
+ * @param logRow The database log record
+ * @returns The Core Log type
+ */
+export function mapToLog(logRow: SelectLog): Log {
   return {
-    id: drizzleLog.id as UUID,
-    entityId: drizzleLog.entityId as UUID,
-    roomId: drizzleLog.roomId as UUID,
-    body: drizzleLog.body,
-    type: drizzleLog.type,
-    createdAt: new Date(drizzleLog.createdAt),
+    id: logRow.id as UUID,
+    entityId: logRow.entityId as UUID,
+    roomId: logRow.roomId as UUID,
+    body: logRow.body,
+    type: logRow.type,
+    createdAt: new Date(logRow.createdAt),
   };
 }
 
-export function mapToDrizzleLog(log: Partial<Log>): DrizzleLogInsert {
-  const result: Partial<DrizzleLogInsert> = {};
+/**
+ * Maps a Core Log object to a database log record
+ * @param log The Core Log object
+ * @returns The database log record
+ */
+export function mapToLogRow(log: Partial<Log>): InsertLog {
+  const result: Partial<InsertLog> = {};
 
   if (log.id !== undefined) result.id = log.id;
   if (log.entityId !== undefined) result.entityId = log.entityId;
@@ -68,5 +76,5 @@ export function mapToDrizzleLog(log: Partial<Log>): DrizzleLogInsert {
   if (log.type !== undefined) result.type = log.type;
   if (log.createdAt !== undefined) result.createdAt = log.createdAt.getTime();
 
-  return result as DrizzleLogInsert;
+  return result as InsertLog;
 }

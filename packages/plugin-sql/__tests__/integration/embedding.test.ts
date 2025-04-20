@@ -37,8 +37,6 @@ describe('Embedding Integration Tests', () => {
   let adapter: PgDatabaseAdapter;
   let agentId: UUID = embeddingTestAgentId;
 
-  console.log('agentId:', agentId);
-
   beforeAll(async () => {
     // Initialize connection manager and adapter
     connectionManager = new PostgresConnectionManager(config.DATABASE_URL);
@@ -46,38 +44,26 @@ describe('Embedding Integration Tests', () => {
     adapter = new PgDatabaseAdapter(agentId, connectionManager);
     await adapter.init();
 
-    console.log('Starting test data setup...');
-
     try {
       // Step 1: Create test agent
-      console.log('Creating agent with ID:', agentId);
       const agent = await adapter.ensureAgentExists(embeddingTestAgent);
-      console.log('Agent created:', agent);
 
       // Step 2: Create test world
-      console.log('Creating world with ID:', embeddingTestWorldId);
       await adapter.createWorld({
         id: embeddingTestWorldId,
         name: 'Embedding Test World',
         agentId: embeddingTestAgentId,
         serverId: 'test-server',
       });
-      console.log('World created successfully');
 
       // Step 3: Create test entity
-      console.log('Creating entity with ID:', embeddingTestEntityId);
       const entityCreated = await adapter.createEntity(embeddingTestEntity);
-      console.log('Entity created:', entityCreated);
 
       // Step 4: Create test room
-      console.log('Creating room with ID:', embeddingTestRoomId);
       const roomId = await adapter.createRoom(embeddingTestRoom);
-      console.log('Room created with ID:', roomId);
 
       // Step 5: Add entity as participant in the room
-      console.log('Adding entity as participant to room');
       await adapter.addParticipant(embeddingTestEntityId, embeddingTestRoomId);
-      console.log('Entity added as participant');
     } catch (error) {
       console.error('Error in setup:', error);
       throw error;
@@ -88,7 +74,6 @@ describe('Embedding Integration Tests', () => {
     // Clean up test data
     const client = await connectionManager.getClient();
     try {
-      console.log('Cleaning up test data...');
       // Order matters for foreign key constraints
       await client.query('DELETE FROM embeddings WHERE TRUE');
       await client.query('DELETE FROM participants WHERE TRUE');
