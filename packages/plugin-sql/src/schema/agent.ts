@@ -63,29 +63,29 @@ export type SelectAgent = typeof agentTable.$inferSelect;
 export type InsertAgent = typeof agentTable.$inferInsert;
 
 // Type mapping utility to convert between Drizzle and Core types
-export function mapToAgent(agentModel: SelectAgent): Agent {
+export function mapToAgent(agentRow: SelectAgent): Agent {
   // Explicit mapping of properties ensures type safety
   return {
-    id: agentModel.id as UUID, // Cast to ensure UUID type compatibility
-    name: agentModel.name || '',
-    username: agentModel.username || undefined,
-    system: agentModel.system || undefined,
-    bio: agentModel.bio,
-    messageExamples: agentModel.messageExamples || [],
-    postExamples: agentModel.postExamples || [],
-    topics: agentModel.topics || [],
-    adjectives: agentModel.adjectives || [],
-    knowledge: agentModel.knowledge || [],
-    plugins: agentModel.plugins || [],
-    settings: agentModel.settings || {},
-    style: agentModel.style || {},
-    enabled: agentModel.enabled,
-    createdAt: agentModel.createdAt,
-    updatedAt: agentModel.updatedAt,
+    id: agentRow.id as UUID, // Cast to ensure UUID type compatibility
+    name: agentRow.name || '',
+    username: agentRow.username || undefined,
+    system: agentRow.system || undefined,
+    bio: agentRow.bio,
+    messageExamples: agentRow.messageExamples || [],
+    postExamples: agentRow.postExamples || [],
+    topics: agentRow.topics || [],
+    adjectives: agentRow.adjectives || [],
+    knowledge: agentRow.knowledge || [],
+    plugins: agentRow.plugins || [],
+    settings: agentRow.settings || {},
+    style: agentRow.style || {},
+    enabled: agentRow.enabled,
+    createdAt: agentRow.createdAt,
+    updatedAt: agentRow.updatedAt,
   };
 }
 
-export function mapToAgentModel(agent: Partial<Agent>): InsertAgent {
+export function mapToAgentRow(agent: Partial<Agent>): InsertAgent {
   // Return a properly typed object with only the properties
   // that are defined in the database schema
   const result: Partial<InsertAgent> = {};

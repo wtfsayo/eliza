@@ -51,21 +51,21 @@ export interface Cache<T = any> {
 /**
  * Maps a SelectCache object to a Cache object
  */
-export function mapToCache<T = any>(cacheModel: SelectCache): Cache<T> {
+export function mapToCache<T = any>(cacheRow: SelectCache): Cache<T> {
   return {
-    id: cacheModel.id as UUID,
-    key: cacheModel.key,
-    agentId: cacheModel.agentId as UUID,
-    value: cacheModel.value as T,
-    createdAt: cacheModel.createdAt,
-    expiresAt: cacheModel.expiresAt ?? undefined,
+    id: cacheRow.id as UUID,
+    key: cacheRow.key,
+    agentId: cacheRow.agentId as UUID,
+    value: cacheRow.value as T,
+    createdAt: cacheRow.createdAt,
+    expiresAt: cacheRow.expiresAt ?? undefined,
   };
 }
 
 /**
  * Maps a Cache object to a InsertCache object
  */
-export function mapToCacheModel<T = any>(cache: Partial<Cache<T>>): InsertCache {
+export function mapToCacheRow<T = any>(cache: Partial<Cache<T>>): InsertCache {
   const result: Partial<InsertCache> = {};
 
   if (cache.id !== undefined) result.id = cache.id;

@@ -30,19 +30,19 @@ import {
   entityTable,
   logTable,
   mapToAgent,
-  mapToAgentModel,
+  mapToAgentRow,
   mapToCache,
-  mapToCacheModel,
+  mapToCacheRow,
   mapToComponent,
-  mapToComponentModel,
-  mapToDrizzleEntity,
+  mapToComponentRow,
+  mapToEntityRow,
   mapToDrizzleParticipant,
   mapToDrizzleRelationship,
   mapToDrizzleRoom,
-  mapToEmbeddingModel,
+  mapToEmbeddingRow,
   mapToEntity,
   mapToMemory,
-  mapToMemoryModel,
+  mapToMemoryRow,
   mapToParticipant,
   mapToRelationship,
   mapToRoom,
@@ -260,7 +260,7 @@ export abstract class BaseDrizzleAdapter<
     return this.withDatabase(async () => {
       try {
         // Convert from Core type to Drizzle schema type
-        const drizzleAgent = mapToAgentModel(agent);
+        const drizzleAgent = mapToAgentRow(agent);
 
         await this.db.transaction(async (tx) => {
           await tx.insert(agentTable).values(drizzleAgent);
@@ -292,7 +292,7 @@ export abstract class BaseDrizzleAdapter<
       try {
         return await this.db.transaction(async (tx) => {
           // Update agentInfo
-          const agentInfo: Partial<InsertAgent> = mapToAgentModel(agent);
+          const agentInfo: Partial<InsertAgent> = mapToAgentRow(agent);
 
           // Delete settings from agentInfo if they exist, as we'll handle them separately
           if ('settings' in agentInfo) {
@@ -805,10 +805,10 @@ export abstract class BaseDrizzleAdapter<
     return this.withDatabase(async () => {
       try {
         return this.db.transaction(async (tx) => {
-          // Convert from Core type to Drizzle schema type
-          const drizzleEntity = mapToDrizzleEntity(entity);
+          // Convert from Core type to database schema type
+          const entityModel = mapToEntityRow(entity);
 
-          await tx.insert(entityTable).values(drizzleEntity);
+          await tx.insert(entityTable).values(entityModel);
 
           logger.debug('Entity created successfully:', {
             entity,
@@ -844,11 +844,11 @@ export abstract class BaseDrizzleAdapter<
       const existingEntity = await this.getEntityById(entity.id);
 
       if (!existingEntity) {
-        // Convert from Core type to Drizzle schema type for insert
-        const drizzleEntity = mapToDrizzleEntity(entity);
+        // Convert from Core type to database schema type for insert
+        const entityModel = mapToEntityRow(entity);
 
         // Insert the entity
-        await this.db.insert(entityTable).values(drizzleEntity);
+        await this.db.insert(entityTable).values(entityModel);
 
         logger.debug('Entity created via ensureEntityExists:', {
           entityId: entity.id,
@@ -874,12 +874,12 @@ export abstract class BaseDrizzleAdapter<
    */
   async updateEntity(entity: Entity): Promise<void> {
     return this.withDatabase(async () => {
-      // Convert from Core type to Drizzle schema type
-      const drizzleEntity = mapToDrizzleEntity(entity);
+      // Convert from Core type to database schema type
+      const entityModel = mapToEntityRow(entity);
 
       await this.db
         .update(entityTable)
-        .set(drizzleEntity)
+        .set(entityModel)
         .where(and(eq(entityTable.id, entity.id as UUID), eq(entityTable.agentId, entity.agentId)));
     }, 'updateEntity');
   }
@@ -943,7 +943,7 @@ export abstract class BaseDrizzleAdapter<
    */
   async createComponent(component: Component): Promise<boolean> {
     return this.withDatabase(async () => {
-      const componentModel = mapToComponentModel(component);
+      const componentModel = mapToComponentRow(component);
       await this.db.insert(componentTable).values(componentModel);
       return true;
     }, 'createComponent');
@@ -956,7 +956,7 @@ export abstract class BaseDrizzleAdapter<
    */
   async updateComponent(component: Component): Promise<void> {
     return this.withDatabase(async () => {
-      const componentModel = mapToComponentModel(component);
+      const componentModel = mapToComponentRow(component);
       await this.db
         .update(componentTable)
         .set(componentModel)
@@ -1051,10 +1051,10 @@ export abstract class BaseDrizzleAdapter<
       const rows = count ? await query.limit(params.count) : await query;
 
       return rows.map((row) => {
-        const drizzleMemory: SelectMemory = row.memory;
+        const memoryRow: SelectMemory = row.memory;
 
         // Use the mapping function to convert to core Memory type
-        const memory = mapToMemory(drizzleMemory);
+        const memory = mapToMemory(memoryRow);
 
         // Add embedding if available
         if (row.embedding) {
@@ -1531,7 +1531,7 @@ export abstract class BaseDrizzleAdapter<
     };
 
     // Convert to database format using the mapping function
-    const drizzleMemory = mapToMemoryModel(memoryData, tableName);
+    const memoryRow = mapToMemoryRow(memoryData, tableName);
 
     // Store content and metadata as properly formatted JSON
     const contentToInsert =
@@ -1539,8 +1539,7 @@ export abstract class BaseDrizzleAdapter<
 
     await this.db.transaction(async (tx) => {
       await tx.insert(memoryTable).values({
-        ...drizzleMemory,
-        // TODO: see if we can improve this.
+        ...memoryRow,
         content: sql`${contentToInsert}::jsonb`,
         metadata: sql`${memory.metadata || {}}::jsonb`,
       });
@@ -1561,7 +1560,7 @@ export abstract class BaseDrizzleAdapter<
         embeddingData[this.embeddingDimension] = cleanVector;
 
         // Convert to database format and insert
-        const drizzleEmbedding = mapToEmbeddingModel(embeddingData);
+        const drizzleEmbedding = mapToEmbeddingRow(embeddingData);
         await tx.insert(embeddingTable).values([drizzleEmbedding]);
       }
     });
@@ -1631,7 +1630,7 @@ export abstract class BaseDrizzleAdapter<
               embeddingData[this.embeddingDimension] = cleanVector;
 
               // Convert to database format
-              const updateValues = mapToEmbeddingModel(embeddingData);
+              const updateValues = mapToEmbeddingRow(embeddingData);
 
               await tx
                 .update(embeddingTable)
@@ -1647,7 +1646,7 @@ export abstract class BaseDrizzleAdapter<
               embeddingData[this.embeddingDimension] = cleanVector;
 
               // Convert to database format
-              const drizzleEmbedding = mapToEmbeddingModel(embeddingData);
+              const drizzleEmbedding = mapToEmbeddingRow(embeddingData);
               await tx.insert(embeddingTable).values([drizzleEmbedding]);
             }
           }
@@ -2311,7 +2310,7 @@ export abstract class BaseDrizzleAdapter<
         };
 
         // Map to Drizzle-compatible insert type
-        const drizzleCache = mapToCacheModel<T>(cacheEntry);
+        const drizzleCache = mapToCacheRow<T>(cacheEntry);
 
         await this.db.transaction(async (tx) => {
           await tx

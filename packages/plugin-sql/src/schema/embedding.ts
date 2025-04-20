@@ -84,24 +84,24 @@ export interface Embedding {
 /**
  * Maps a database embedding to the application embedding model
  */
-export function mapToEmbedding(drizzleEmbedding: SelectEmbedding): Embedding {
+export function mapToEmbedding(embeddingRow: SelectEmbedding): Embedding {
   return {
-    id: drizzleEmbedding.id as UUID,
-    memoryId: drizzleEmbedding.memoryId as UUID,
-    createdAt: drizzleEmbedding.createdAt,
-    dim384: drizzleEmbedding.dim384 || undefined,
-    dim512: drizzleEmbedding.dim512 || undefined,
-    dim768: drizzleEmbedding.dim768 || undefined,
-    dim1024: drizzleEmbedding.dim1024 || undefined,
-    dim1536: drizzleEmbedding.dim1536 || undefined,
-    dim3072: drizzleEmbedding.dim3072 || undefined,
+    id: embeddingRow.id as UUID,
+    memoryId: embeddingRow.memoryId as UUID,
+    createdAt: embeddingRow.createdAt,
+    dim384: embeddingRow.dim384 || undefined,
+    dim512: embeddingRow.dim512 || undefined,
+    dim768: embeddingRow.dim768 || undefined,
+    dim1024: embeddingRow.dim1024 || undefined,
+    dim1536: embeddingRow.dim1536 || undefined,
+    dim3072: embeddingRow.dim3072 || undefined,
   };
 }
 
 /**
  * Maps an application embedding to its database representation
  */
-export function mapToEmbeddingModel(embedding: Partial<Embedding>): InsertEmbedding {
+export function mapToEmbeddingRow(embedding: Partial<Embedding>): InsertEmbedding {
   const result: Partial<InsertEmbedding> = {};
 
   if (embedding.id !== undefined) result.id = embedding.id;

@@ -30,30 +30,30 @@ export const entityTable = pgTable(
 );
 
 // Inferred database model types from the entity table schema
-export type DrizzleEntity = InferSelectModel<typeof entityTable>;
-export type DrizzleEntityInsert = InferInsertModel<typeof entityTable>;
+export type SelectEntity = InferSelectModel<typeof entityTable>;
+export type InsertEntity = InferInsertModel<typeof entityTable>;
 
 /**
- * Maps a Drizzle Entity from the database to the Core Entity type
- * @param drizzleEntity The entity data from the database
+ * Maps a database entity model to the Core Entity type
+ * @param entityRow The entity data from the database
  * @returns A properly typed Entity object for the core system
  */
-export function mapToEntity(drizzleEntity: DrizzleEntity): Entity {
+export function mapToEntity(entityRow: SelectEntity): Entity {
   return {
-    id: drizzleEntity.id as UUID,
-    names: drizzleEntity.names || [],
-    metadata: drizzleEntity.metadata || {},
-    agentId: drizzleEntity.agentId as UUID,
+    id: entityRow.id as UUID,
+    names: entityRow.names || [],
+    metadata: entityRow.metadata || {},
+    agentId: entityRow.agentId as UUID,
   };
 }
 
 /**
- * Maps a Core Entity (or partial entity) to a Drizzle database entity for storage
+ * Maps a Core Entity (or partial entity) to a database entity model for storage
  * @param entity The core entity to map to database format
  * @returns A properly typed object for database operations
  */
-export function mapToDrizzleEntity(entity: Partial<Entity>): DrizzleEntityInsert {
-  const result: Partial<DrizzleEntityInsert> = {};
+export function mapToEntityRow(entity: Partial<Entity>): InsertEntity {
+  const result: Partial<InsertEntity> = {};
 
   // Only copy properties that exist in the entity
   if (entity.id !== undefined) result.id = entity.id;
@@ -61,5 +61,5 @@ export function mapToDrizzleEntity(entity: Partial<Entity>): DrizzleEntityInsert
   if (entity.metadata !== undefined) result.metadata = entity.metadata;
   if (entity.agentId !== undefined) result.agentId = entity.agentId;
 
-  return result as DrizzleEntityInsert;
+  return result as InsertEntity;
 }

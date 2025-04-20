@@ -103,24 +103,24 @@ export const memoryRelations = relations(memoryTable, ({ one }) => ({
 /**
  * Maps a Drizzle memory record to the core Memory type
  */
-export function mapToMemory(drizzleMemory: SelectMemory): Memory {
+export function mapToMemory(memoryRow: SelectMemory): Memory {
   return {
-    id: drizzleMemory.id as UUID,
-    entityId: drizzleMemory.entityId as UUID,
-    agentId: drizzleMemory.agentId as UUID | undefined,
-    roomId: drizzleMemory.roomId as UUID,
-    worldId: drizzleMemory.worldId as UUID | undefined,
-    createdAt: drizzleMemory.createdAt,
-    content: drizzleMemory.content,
-    unique: drizzleMemory.unique,
-    metadata: drizzleMemory.metadata,
+    id: memoryRow.id as UUID,
+    entityId: memoryRow.entityId as UUID,
+    agentId: memoryRow.agentId as UUID | undefined,
+    roomId: memoryRow.roomId as UUID,
+    worldId: memoryRow.worldId as UUID | undefined,
+    createdAt: memoryRow.createdAt,
+    content: memoryRow.content,
+    unique: memoryRow.unique,
+    metadata: memoryRow.metadata,
   };
 }
 
 /**
  * Maps a core Memory object to a Drizzle memory record for database operations
  */
-export function mapToMemoryModel(memory: Partial<Memory>, tableName: string): InsertMemory {
+export function mapToMemoryRow(memory: Partial<Memory>, tableName: string): InsertMemory {
   const result: Partial<InsertMemory> = {};
 
   // Copy only properties that exist in the memory object

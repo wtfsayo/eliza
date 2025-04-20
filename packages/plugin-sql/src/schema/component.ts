@@ -42,21 +42,21 @@ export type SelectComponent = InferSelectModel<typeof componentTable>;
 export type ComponentModelInsert = InferInsertModel<typeof componentTable>;
 
 // Type mapping utility to convert between Drizzle and Core types
-export function mapToComponent(drizzleComponent: SelectComponent): Component {
+export function mapToComponent(componentRow: SelectComponent): Component {
   // Explicit mapping of properties ensures type safety
   return {
-    id: drizzleComponent.id as UUID,
-    entityId: drizzleComponent.entityId as UUID,
-    agentId: drizzleComponent.agentId as UUID,
-    roomId: drizzleComponent.roomId as UUID,
-    worldId: drizzleComponent.worldId as UUID,
-    sourceEntityId: drizzleComponent.sourceEntityId as UUID,
-    type: drizzleComponent.type,
-    data: drizzleComponent.data || {},
+    id: componentRow.id as UUID,
+    entityId: componentRow.entityId as UUID,
+    agentId: componentRow.agentId as UUID,
+    roomId: componentRow.roomId as UUID,
+    worldId: componentRow.worldId as UUID,
+    sourceEntityId: componentRow.sourceEntityId as UUID,
+    type: componentRow.type,
+    data: componentRow.data || {},
   };
 }
 
-export function mapToComponentModel(component: Partial<Component>): ComponentModelInsert {
+export function mapToComponentRow(component: Partial<Component>): ComponentModelInsert {
   // Return a properly typed object with only the properties
   // that are defined in the database schema
   const result: Partial<ComponentModelInsert> = {};
