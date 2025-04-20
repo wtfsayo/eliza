@@ -23,7 +23,6 @@ import {
   Cache,
   cacheTable,
   componentTable,
-  SelectParticipant,
   embeddingTable,
   entityTable,
   InsertAgent,
@@ -35,17 +34,18 @@ import {
   mapToCacheRow,
   mapToComponent,
   mapToComponentRow,
-  mapToParticipantRow,
-  mapToDrizzleRelationship,
   mapToDrizzleRoom,
   mapToEmbeddingRow,
   mapToEntity,
   mapToEntityRow,
   mapToLog,
+  mapToLogRow,
   mapToMemory,
   mapToMemoryRow,
   mapToParticipant,
+  mapToParticipantRow,
   mapToRelationship,
+  mapToRelationshipRow,
   mapToRoom,
   memoryTable,
   participantTable,
@@ -53,10 +53,10 @@ import {
   roomTable,
   SelectCache,
   SelectMemory,
+  SelectParticipant,
   taskTable,
   type Embedding,
   worldTable,
-  mapToLogRow,
 } from './schema/index';
 import type { DrizzleOperations } from './types';
 
@@ -2097,7 +2097,7 @@ export abstract class BaseDrizzleAdapter<
     metadata?: { [key: string]: unknown };
   }): Promise<boolean> {
     return this.withDatabase(async () => {
-      const relationshipData = mapToDrizzleRelationship({
+      const relationshipData = mapToRelationshipRow({
         id: v4() as UUID,
         sourceEntityId: params.sourceEntityId,
         targetEntityId: params.targetEntityId,
@@ -2127,7 +2127,7 @@ export abstract class BaseDrizzleAdapter<
   async updateRelationship(relationship: Relationship): Promise<void> {
     return this.withDatabase(async () => {
       try {
-        const relationshipData = mapToDrizzleRelationship(relationship);
+        const relationshipData = mapToRelationshipRow(relationship);
         await this.db
           .update(relationshipTable)
           .set({

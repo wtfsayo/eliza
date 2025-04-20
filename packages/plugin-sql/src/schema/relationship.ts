@@ -48,15 +48,15 @@ export const relationshipTable = pgTable(
 );
 
 // Inferred database model types from the relationship table schema
-export type DrizzleRelationship = InferSelectModel<typeof relationshipTable>;
-export type DrizzleRelationshipInsert = InferInsertModel<typeof relationshipTable>;
+export type SelectRelationship = InferSelectModel<typeof relationshipTable>;
+export type InsertRelationship = InferInsertModel<typeof relationshipTable>;
 
 /**
  * Maps a Drizzle Relationship from the database to the Core Relationship type
  * @param drizzleRelationship The relationship data from the database
  * @returns A properly typed Relationship object for the core system
  */
-export function mapToRelationship(drizzleRelationship: DrizzleRelationship): Relationship {
+export function mapToRelationship(drizzleRelationship: SelectRelationship): Relationship {
   return {
     id: drizzleRelationship.id as UUID,
     sourceEntityId: drizzleRelationship.sourceEntityId as UUID,
@@ -73,10 +73,8 @@ export function mapToRelationship(drizzleRelationship: DrizzleRelationship): Rel
  * @param relationship The core relationship to map to database format
  * @returns A properly typed object for database operations
  */
-export function mapToDrizzleRelationship(
-  relationship: Partial<Relationship>
-): DrizzleRelationshipInsert {
-  const result: Partial<DrizzleRelationshipInsert> = {};
+export function mapToRelationshipRow(relationship: Partial<Relationship>): InsertRelationship {
+  const result: Partial<InsertRelationship> = {};
 
   // Only copy properties that exist in the relationship
   if (relationship.id !== undefined) result.id = relationship.id;
@@ -89,5 +87,5 @@ export function mapToDrizzleRelationship(
   if (relationship.metadata !== undefined) result.metadata = relationship.metadata;
   // createdAt is managed by the database with default SQL value
 
-  return result as DrizzleRelationshipInsert;
+  return result as InsertRelationship;
 }
