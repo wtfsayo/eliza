@@ -23,7 +23,7 @@ import {
   Cache,
   cacheTable,
   componentTable,
-  DrizzleParticipant,
+  SelectParticipant,
   embeddingTable,
   entityTable,
   InsertAgent,
@@ -35,7 +35,7 @@ import {
   mapToCacheRow,
   mapToComponent,
   mapToComponentRow,
-  mapToDrizzleParticipant,
+  mapToParticipantRow,
   mapToDrizzleRelationship,
   mapToDrizzleRoom,
   mapToEmbeddingRow,
@@ -1908,7 +1908,7 @@ export abstract class BaseDrizzleAdapter<
         await this.db
           .insert(participantTable)
           .values(
-            mapToDrizzleParticipant({
+            mapToParticipantRow({
               id: participantId,
               entity: {
                 id: entityId,
@@ -1984,7 +1984,7 @@ export abstract class BaseDrizzleAdapter<
       return Promise.all(
         participants.map(async (participant) => {
           const entity = await this.getEntityById(participant.entityId as UUID);
-          return mapToParticipant(participant as DrizzleParticipant, entity);
+          return mapToParticipant(participant as SelectParticipant, entity);
         })
       );
     }, 'getParticipantsForEntity');
@@ -2053,7 +2053,7 @@ export abstract class BaseDrizzleAdapter<
         await this.db
           .update(participantTable)
           .set(
-            mapToDrizzleParticipant({
+            mapToParticipantRow({
               entity: {
                 id: entityId,
                 names: [], // Minimal Entity to satisfy type checker

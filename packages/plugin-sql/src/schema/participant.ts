@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { foreignKey, index, pgTable, text, unique, uuid } from 'drizzle-orm/pg-core';
 import { type UUID, type Participant } from '@elizaos/core';
 import { agentTable } from './agent';
@@ -50,33 +50,30 @@ export const participantTable = pgTable(
 );
 
 // Inferred database model types from the participant table schema
-export type DrizzleParticipant = InferSelectModel<typeof participantTable>;
-export type DrizzleParticipantInsert = InferInsertModel<typeof participantTable>;
+export type SelectParticipant = InferSelectModel<typeof participantTable>;
+export type InsertParticipant = InferInsertModel<typeof participantTable>;
 
 /**
- * Maps a DrizzleParticipant to the core Participant interface
+ * Maps a Drizzle participant record to the core Participant interface
  */
-export function mapToParticipant(
-  drizzleParticipant: DrizzleParticipant,
-  entity?: any
-): Participant {
+export function mapToParticipant(participantRow: SelectParticipant, entity?: any): Participant {
   return {
-    id: drizzleParticipant.id as UUID,
-    entity: entity || { id: drizzleParticipant.entityId as UUID },
+    id: participantRow.id as UUID,
+    entity: entity || { id: participantRow.entityId as UUID },
   };
 }
 
 /**
- * Maps a core Participant to a DrizzleParticipantInsert format for database operations
+ * Maps a core Participant to a Drizzle participant record for database operations
  */
-export function mapToDrizzleParticipant(
+export function mapToParticipantRow(
   participant: Partial<Participant> & {
     roomId?: UUID;
     agentId?: UUID;
     roomState?: 'FOLLOWED' | 'MUTED' | null;
   }
-): DrizzleParticipantInsert {
-  const result: Partial<DrizzleParticipantInsert> = {};
+): InsertParticipant {
+  const result: Partial<InsertParticipant> = {};
 
   // Only copy properties that exist in the participant
   if (participant.id !== undefined) result.id = participant.id;
@@ -85,5 +82,5 @@ export function mapToDrizzleParticipant(
   if (participant.agentId !== undefined) result.agentId = participant.agentId;
   if (participant.roomState !== undefined) result.roomState = participant.roomState;
 
-  return result as DrizzleParticipantInsert;
+  return result as InsertParticipant;
 }
