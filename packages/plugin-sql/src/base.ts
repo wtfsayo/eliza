@@ -34,7 +34,7 @@ import {
   mapToCacheRow,
   mapToComponent,
   mapToComponentRow,
-  mapToDrizzleRoom,
+  mapToRoomRow,
   mapToEmbeddingRow,
   mapToEntity,
   mapToEntityRow,
@@ -1807,7 +1807,7 @@ export abstract class BaseDrizzleAdapter<
    */
   async updateRoom(room: Room): Promise<void> {
     return this.withDatabase(async () => {
-      await this.db.update(roomTable).set(mapToDrizzleRoom(room)).where(eq(roomTable.id, room.id));
+      await this.db.update(roomTable).set(mapToRoomRow(room)).where(eq(roomTable.id, room.id));
     }, 'updateRoom');
   }
 
@@ -1831,17 +1831,19 @@ export abstract class BaseDrizzleAdapter<
       const newRoomId = id || v4();
       await this.db
         .insert(roomTable)
-        .values({
-          id: newRoomId,
-          name,
-          agentId,
-          source,
-          type,
-          channelId,
-          serverId,
-          worldId,
-          metadata,
-        })
+        .values(
+          mapToRoomRow({
+            id: newRoomId,
+            name,
+            agentId,
+            source,
+            type,
+            channelId,
+            serverId,
+            worldId,
+            metadata,
+          })
+        )
         .onConflictDoNothing({ target: roomTable.id });
       return newRoomId as UUID;
     }, 'createRoom');

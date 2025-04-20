@@ -8,18 +8,7 @@ import { ChannelType, Room as CoreRoom, UUID } from '@elizaos/core';
 
 /**
  * Defines a table schema for 'rooms' in the database.
- *
- * @typedef {object} RoomTable
- * @property {string} id - The unique identifier for the room.
- * @property {string} agentId - The UUID of the agent associated with the room.
- * @property {string} source - The source of the room.
- * @property {string} type - The type of the room.
- * @property {string} serverId - The server ID of the room.
- * @property {string} worldId - The UUID of the world associated with the room.
- * @property {string} name - The name of the room.
- * @property {object} metadata - Additional metadata for the room in JSON format.
- * @property {string} channelId - The channel ID of the room.
- * @property {number} createdAt - The timestamp of when the room was created.
+ * Rooms represent channels or spaces where entities can participate and interact.
  */
 export const roomTable = pgTable('rooms', {
   id: uuid('id')
@@ -36,7 +25,7 @@ export const roomTable = pgTable('rooms', {
     onDelete: 'cascade',
   }),
   name: text('name'),
-  metadata: jsonb('metadata'),
+  metadata: jsonb('metadata').default(sql`'{}'::jsonb`),
   channelId: text('channelId'),
   createdAt: numberTimestamp('createdAt')
     .default(sql`now()`)
@@ -44,26 +33,35 @@ export const roomTable = pgTable('rooms', {
 });
 
 // Inferred database model types from the room table schema
-export type DrizzleRoom = InferSelectModel<typeof roomTable>;
-export type DrizzleRoomInsert = InferInsertModel<typeof roomTable>;
+export type SelectRoom = InferSelectModel<typeof roomTable>;
+export type InsertRoom = InferInsertModel<typeof roomTable>;
 
-// Type mapping utility to convert between Drizzle and Core types
-export function mapToRoom(drizzleRoom: DrizzleRoom): CoreRoom {
+/**
+ * Maps a Drizzle room record to the core Room type
+ * @param roomRow The room data from the database
+ * @returns A properly typed Room object for the core system
+ */
+export function mapToRoom(roomRow: SelectRoom): CoreRoom {
   return {
-    id: drizzleRoom.id as UUID,
-    agentId: drizzleRoom.agentId as UUID | undefined,
-    source: drizzleRoom.source,
-    type: drizzleRoom.type as ChannelType,
-    channelId: drizzleRoom.channelId || undefined,
-    serverId: drizzleRoom.serverId || undefined,
-    worldId: drizzleRoom.worldId as UUID | undefined,
-    name: drizzleRoom.name || undefined,
-    metadata: drizzleRoom.metadata as Record<string, unknown> | undefined,
+    id: roomRow.id as UUID,
+    agentId: roomRow.agentId as UUID | undefined,
+    source: roomRow.source,
+    type: roomRow.type as ChannelType,
+    channelId: roomRow.channelId || undefined,
+    serverId: roomRow.serverId || undefined,
+    worldId: roomRow.worldId as UUID | undefined,
+    name: roomRow.name || undefined,
+    metadata: (roomRow.metadata as Record<string, unknown>) || {},
   };
 }
 
-export function mapToDrizzleRoom(room: Partial<CoreRoom>): DrizzleRoomInsert {
-  const result: Partial<DrizzleRoomInsert> = {};
+/**
+ * Maps a Core Room (or partial room) to a Drizzle database room for storage
+ * @param room The core room to map to database format
+ * @returns A properly typed object for database operations
+ */
+export function mapToRoomRow(room: Partial<CoreRoom>): InsertRoom {
+  const result: Partial<InsertRoom> = {};
 
   // Only copy properties that exist in the room
   if (room.id !== undefined) result.id = room.id;
@@ -76,5 +74,5 @@ export function mapToDrizzleRoom(room: Partial<CoreRoom>): DrizzleRoomInsert {
   if (room.worldId !== undefined) result.worldId = room.worldId;
   if (room.metadata !== undefined) result.metadata = room.metadata;
 
-  return result as DrizzleRoomInsert;
+  return result as InsertRoom;
 }
