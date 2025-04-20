@@ -49,6 +49,8 @@ import {
   mapToRoom,
   mapToTask,
   mapToTaskRow,
+  mapToWorld,
+  mapToWorldRow,
   memoryTable,
   participantTable,
   relationshipTable,
@@ -2342,10 +2344,12 @@ export abstract class BaseDrizzleAdapter<
   async createWorld(world: World): Promise<UUID> {
     return this.withDatabase(async () => {
       const newWorldId = world.id || v4();
-      await this.db.insert(worldTable).values({
+      const worldData = mapToWorldRow({
         ...world,
         id: newWorldId,
       });
+
+      await this.db.insert(worldTable).values(worldData);
       return newWorldId;
     }, 'createWorld');
   }
@@ -2358,7 +2362,9 @@ export abstract class BaseDrizzleAdapter<
   async getWorld(id: UUID): Promise<World | null> {
     return this.withDatabase(async () => {
       const result = await this.db.select().from(worldTable).where(eq(worldTable.id, id));
-      return result[0] as World | null;
+      if (result.length === 0) return null;
+
+      return mapToWorld(result[0]);
     }, 'getWorld');
   }
 
@@ -2372,7 +2378,8 @@ export abstract class BaseDrizzleAdapter<
         .select()
         .from(worldTable)
         .where(eq(worldTable.agentId, this.agentId));
-      return result as World[];
+
+      return result.map(mapToWorld);
     }, 'getAllWorlds');
   }
 
@@ -2383,7 +2390,8 @@ export abstract class BaseDrizzleAdapter<
    */
   async updateWorld(world: World): Promise<void> {
     return this.withDatabase(async () => {
-      await this.db.update(worldTable).set(world).where(eq(worldTable.id, world.id));
+      const worldData = mapToWorldRow(world);
+      await this.db.update(worldTable).set(worldData).where(eq(worldTable.id, world.id));
     }, 'updateWorld');
   }
 

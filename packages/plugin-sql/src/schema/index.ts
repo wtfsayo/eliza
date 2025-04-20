@@ -7,12 +7,6 @@ export * from './log';
 export * from './memory';
 export * from './participant';
 export * from './relationship';
-export {
-  roomTable,
-  mapToRoom,
-  mapToDrizzleRoom,
-  type DrizzleRoom,
-  type DrizzleRoomInsert,
-} from './room';
-export { worldTable } from './world';
-export { taskTable } from './tasks';
+export * from './room';
+export * from './world';
+export * from './tasks';
