@@ -13,6 +13,7 @@ export * from './logger';
 export * from './messages';
 export * from './posts';
 export * from './runtime';
+export { isV1Plugin, wrapV1Plugin } from './wrappers';
 
 // TODO: Implement the remaining adapters:
 // - action/handler

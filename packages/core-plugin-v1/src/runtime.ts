@@ -154,231 +154,166 @@ export class CompatAgentRuntime implements V1IAgentRuntime {
   ): Promise<State> {
     console.log(`[Compat Layer] composeState called for message ${message.id}`);
 
-    const { userId, roomId } = message;
-
-    // Convert V1 memory to V2 format
+    // STEP 1: Convert V1 memory to V2 format
     const asV2Memory = translateV1MemoryToV2(message);
 
-    // First, get the V2 state from the underlying V2 runtime
-    const v2StateResult = await this._v2Runtime.composeState(asV2Memory);
+    // STEP 2: Check if we've already cached the state for this message
+    const cachedStateV2 = await this._v2Runtime.stateCache.get(asV2Memory.id);
 
-    // Create a base V2 state structure that our translator can understand
-    const v2State: StateV2 = {
-      values: {},
-      data: {},
-      text: '',
-      ...v2StateResult,
-    };
+    // STEP 3: Get V2 state (either fresh or use cached values as base)
+    // Use the existing V2 runtime's provider filtering capabilities
+    // If cached, we'll get additional providers as needed
+    const v2State = await this._v2Runtime.composeState(
+      asV2Memory,
+      // Pass filter list to control which providers to call
+      // This matches V1 behavior where all providers are called by default
+      null,
+      // Include any specifically requested providers from additionalKeys
+      Array.isArray(additionalKeys) ? additionalKeys : null
+    );
 
-    // Use our translator to get a basic V1 state
-    const baseState = translateV2StateToV1(v2State);
+    // STEP 4: Convert the V2 state to V1 format
+    const v1State = translateV2StateToV1(v2State);
 
-    // Fetch any additional data that's not already in the state
-    const [actorsData, goalsData] = await Promise.all([
-      // Only fetch if not already in the state
-      !baseState.actorsData?.length
-        ? this.databaseAdapter.getActorDetails({ roomId })
-        : baseState.actorsData,
-      !baseState.goalsData?.length
-        ? this.databaseAdapter.getGoals({
-            agentId: this.agentId,
-            roomId,
-            onlyInProgress: false,
-            count: 10,
-          })
-        : baseState.goalsData,
-    ]);
-
-    // Get conversation length setting
-    const conversationLength = this.getConversationLength();
-
-    // Fetch the latest messages if not already in the state
-    const recentMessagesData = !baseState.recentMessagesData?.length
-      ? await this.messageManager.getMemories({
-          roomId: roomId,
-          count: conversationLength,
-          unique: false,
+    // STEP 5: Run V1-specific providers that may not have V2 equivalents
+    // Process V1 context providers that aren't in V2 yet
+    if (this.providers.length > 0) {
+      const providerResults = await Promise.all(
+        this.providers.map(async (provider) => {
+          try {
+            // Call the provider's get method with the V1 runtime and state
+            return await provider.get(this, message, v1State);
+          } catch (error) {
+            console.error(
+              `[Compat Layer] Error executing V1 provider ${provider.name || 'unknown'}:`,
+              error
+            );
+            return null;
+          }
         })
-      : baseState.recentMessagesData;
+      );
 
-    // Format messages for display if not already in the state
-    const recentMessages = !baseState.recentMessages
-      ? formatMessages({
-          messages: recentMessagesData,
-          actors: actorsData || [],
-        })
-      : baseState.recentMessages;
+      // Filter valid results and add to state
+      const validResults = providerResults.filter(
+        (result) =>
+          result !== null &&
+          result !== undefined &&
+          (typeof result === 'string' ? result.trim().length > 0 : true)
+      );
 
-    // Format posts for display if not already in the state
-    const recentPosts = !baseState.recentPosts
-      ? formatPosts({
-          messages: recentMessagesData,
-          actors: actorsData || [],
-        })
-      : baseState.recentPosts;
+      // Format providers results into text
+      const providersText = validResults
+        .map((result) => (typeof result === 'string' ? result : JSON.stringify(result)))
+        .join('\n\n');
 
-    // Process context providers
-    const providersResult = await Promise.all(
-      this.providers.map(async (provider) => {
+      // Add providers to V1 state only if not already present
+      if (providersText && providersText.length > 0 && !v1State.providers) {
+        v1State.providers = addHeader(
+          `# Additional Information About ${v1State.agentName || this.character?.name || 'Agent'} and The World`,
+          providersText
+        );
+      }
+
+      // Merge any values from V1 providers
+      for (const result of validResults) {
+        if (result && result.values && typeof result.values === 'object') {
+          Object.assign(v1State, result.values);
+        }
+      }
+    }
+
+    // STEP 6: Process V1-specific actions and evaluators
+    // These might not have V2 equivalents or might need special handling
+    if (this.actions.length > 0 || this.evaluators.length > 0) {
+      // Process actions
+      const actionPromises = this.actions.map(async (action: Action) => {
         try {
-          // Call the provider's get method
-          return await provider.get(this, message, baseState);
+          const result = await action.validate(this, message, v1State);
+          return result ? action : null;
         } catch (error) {
-          console.error(
-            `[Compat Layer] Error executing provider ${provider.name || 'unknown'}:`,
-            error
-          );
+          console.error(`[Compat Layer] Error validating action ${action.name}:`, error);
           return null;
         }
-      })
-    );
+      });
 
-    // Filter out null/undefined/empty values and format results
-    const validResults = providersResult.filter(
-      (result) =>
-        result !== null &&
-        result !== undefined &&
-        (typeof result === 'string' ? result.trim().length > 0 : true)
-    );
+      // Process evaluators
+      const evaluatorPromises = this.evaluators.map(async (evaluator) => {
+        try {
+          const result = await evaluator.validate(this, message, v1State);
+          return result ? evaluator : null;
+        } catch (error) {
+          console.error(`[Compat Layer] Error validating evaluator ${evaluator.name}:`, error);
+          return null;
+        }
+      });
 
-    // Convert non-string results to strings if needed
-    const providers = validResults
-      .map((result) => (typeof result === 'string' ? result : JSON.stringify(result)))
-      .join('\n\n');
+      // Resolve all promises
+      const [resolvedActions, resolvedEvaluators] = await Promise.all([
+        Promise.all(actionPromises),
+        Promise.all(evaluatorPromises),
+      ]);
 
-    // Handle attachments with time window logic
-    let allAttachments = [];
-    if (recentMessagesData && Array.isArray(recentMessagesData)) {
-      // Find the last message with an attachment
-      const lastMessageWithAttachment = recentMessagesData.find(
-        (msg) => msg.content.attachments && msg.content.attachments.length > 0
-      );
+      // Filter out nulls
+      const actionsData = resolvedActions.filter(Boolean) as Action[];
+      const evaluatorsData = resolvedEvaluators.filter(Boolean) as Evaluator[];
 
-      if (lastMessageWithAttachment) {
-        // Create a time window (1 hour before the last message with attachment)
-        const lastMessageTime = lastMessageWithAttachment?.createdAt ?? Date.now();
-        const oneHourBeforeLastMessage = lastMessageTime - 60 * 60 * 1000; // 1 hour before last message
+      // Only update these if we have v1-specific actions/evaluators to add
+      if (actionsData.length > 0) {
+        // Format and add to state
+        v1State.actionsData = [...(v1State.actionsData || []), ...actionsData];
 
-        // Get all attachments within the time window
-        allAttachments = recentMessagesData
-          .filter((msg) => {
-            const msgTime = msg.createdAt ?? Date.now();
-            return msgTime >= oneHourBeforeLastMessage;
-          })
-          .flatMap((msg) => msg.content.attachments || []);
+        // Update the actions string representation if not already set
+        if (!v1State.actions) {
+          v1State.actions = addHeader('# Available Actions', formatActions(v1State.actionsData));
+        }
+
+        // Update action names if not already set
+        if (!v1State.actionNames) {
+          v1State.actionNames =
+            'Possible response actions: ' + formatActionNames(v1State.actionsData);
+        }
+
+        // Update action examples if not already set
+        if (!v1State.actionExamples) {
+          v1State.actionExamples = addHeader(
+            '# Action Examples',
+            composeActionExamples(v1State.actionsData, 10)
+          );
+        }
+      }
+
+      // Add evaluators to state
+      // TODO: not sure if this is gonna work.
+      if (evaluatorsData.length > 0) {
+        v1State.evaluatorsData = [
+          ...((v1State.evaluatorsData || []) as Evaluator[]),
+          ...evaluatorsData,
+        ];
+
+        // Update evaluator formatted strings if not already set
+        if (!v1State.evaluators) {
+          v1State.evaluators = formatEvaluators(v1State.evaluatorsData as Evaluator[]);
+        }
+
+        if (!v1State.evaluatorNames) {
+          v1State.evaluatorNames = formatEvaluatorNames(v1State.evaluatorsData as Evaluator[]);
+        }
+
+        if (!v1State.evaluatorExamples) {
+          v1State.evaluatorExamples = formatEvaluatorExamples(
+            v1State.evaluatorsData as Evaluator[]
+          );
+        }
       }
     }
 
-    // Format attachments
-    const formattedAttachments = allAttachments
-      .map(
-        (attachment) =>
-          `ID: ${attachment.id}
-Name: ${attachment.title}
-URL: ${attachment.url}
-Type: ${attachment.source}
-Description: ${attachment.description}
-Text: ${attachment.text}`
-      )
-      .join('\n\n');
-
-    // Process actions and evaluators
-    const actionPromises = this.actions.map(async (action: Action) => {
-      const result = await action.validate(this, message, baseState);
-      if (result) {
-        return action;
-      }
-      return null;
-    });
-
-    const evaluatorPromises = this.evaluators.map(async (evaluator) => {
-      const result = await evaluator.validate(this, message, baseState);
-      if (result) {
-        return evaluator;
-      }
-      return null;
-    });
-
-    const [resolvedEvaluators, resolvedActions] = await Promise.all([
-      Promise.all(evaluatorPromises),
-      Promise.all(actionPromises),
-    ]);
-
-    const evaluatorsData = resolvedEvaluators.filter(Boolean) as Evaluator[];
-    const actionsData = resolvedActions.filter(Boolean) as Action[];
-
-    // Format actions and evaluators
-    const formattedActionNames = formatActionNames(actionsData);
-    const formattedActions =
-      actionsData.length > 0 ? addHeader('# Available Actions', formatActions(actionsData)) : '';
-    const formattedActionExamples =
-      actionsData.length > 0
-        ? addHeader('# Action Examples', composeActionExamples(actionsData, 10))
-        : '';
-
-    const formattedEvaluatorNames = formatEvaluatorNames(evaluatorsData);
-    const formattedEvaluators =
-      evaluatorsData.length > 0
-        ? addHeader('# Available Evaluators', formatEvaluators(evaluatorsData))
-        : '';
-    const formattedEvaluatorExamples =
-      evaluatorsData.length > 0
-        ? addHeader('# Evaluator Examples', formatEvaluatorExamples(evaluatorsData))
-        : '';
-
-    // Format goals and actors if needed
-    const formattedGoals =
-      goalsData.length > 0
-        ? addHeader(
-            '# Goals\n{{agentName}} should prioritize accomplishing the objectives that are in progress.',
-            formatGoalsAsString({ goals: goalsData })
-          )
-        : '';
-
-    const formattedActors =
-      actorsData.length > 0 ? addHeader('# Actors', formatActors({ actors: actorsData })) : '';
-
-    // Add all the computed data to our state
-    const state: State = {
-      ...baseState,
-
-      // Update any fetched data
-      actorsData: baseState.actorsData?.length ? baseState.actorsData : actorsData,
-      goalsData: baseState.goalsData?.length ? baseState.goalsData : goalsData,
-      recentMessagesData,
-      recentMessages: recentMessages,
-      recentPosts: recentPosts,
-      actionsData,
-      evaluatorsData,
-
-      // Add formatted content
-      actionNames: baseState.actionNames || `Possible response actions: ${formattedActionNames}`,
-      actions: baseState.actions || formattedActions,
-      actionExamples: baseState.actionExamples || formattedActionExamples,
-      evaluators: baseState.evaluators || formattedEvaluators,
-      evaluatorNames: baseState.evaluatorNames || formattedEvaluatorNames,
-      evaluatorExamples: baseState.evaluatorExamples || formattedEvaluatorExamples,
-      goals: baseState.goals || formattedGoals,
-      actors: baseState.actors || formattedActors,
-
-      // Add additional keys
-      ...additionalKeys,
-    };
-
-    // Add the provider content if not already present
-    if (providers && providers.length > 0 && !state.providers) {
-      state.providers = addHeader(
-        `# Additional Information About ${state.agentName || this.character?.name || 'Agent'} and The World`,
-        providers
-      );
+    // STEP 7: Add any explicitly requested additionalKeys
+    // At this point we've merged v2 state and v1-specific providers/actions/evaluators
+    if (additionalKeys && typeof additionalKeys === 'object') {
+      Object.assign(v1State, additionalKeys);
     }
 
-    // Add attachments if not already present
-    if (formattedAttachments && formattedAttachments.length > 0 && !state.attachments) {
-      state.attachments = addHeader('# Attachments', formattedAttachments);
-    }
-
-    return state;
+    return v1State;
   }
 
   /**
