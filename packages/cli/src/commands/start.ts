@@ -8,11 +8,13 @@ import {
   stringToUuid,
   encryptedCharacter,
   RuntimeSettings,
-} from '@elizaos/core';
+} from '@elizaos/core-plugin-v2';
+import { isV1Plugin, wrapV1Plugin } from '@elizaos/core-plugin-v1';
 import { Command } from 'commander';
 import fs from 'node:fs';
 import path, { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import semver from 'semver';
 import { character, character as defaultCharacter } from '../characters/eliza';
 import { AgentServer } from '../server/index';
 import { jsonToCharacter, loadCharacterTryPath } from '../server/loader';
@@ -88,13 +90,13 @@ async function loadAndPreparePlugin(pluginName: string, version: string): Promis
   logger.debug(`Available exports: ${Object.keys(pluginModule).join(', ')}`);
   logger.debug(`Has default export: ${!!pluginModule.default}`);
 
-  // --- Improved Export Resolution Logic ---
+  // --- Plugin Export Resolution Logic ---
 
   // 1. Prioritize the expected named export if it exists
   const expectedExport = pluginModule[expectedFunctionName];
   if (isValidPluginShape(expectedExport)) {
     logger.debug(`Found valid plugin export using expected name: ${expectedFunctionName}`);
-    return expectedExport as Plugin;
+    return preparePluginForRuntime(expectedExport);
   }
 
   // 2. Check the default export if the named one wasn't found or valid
@@ -103,7 +105,7 @@ async function loadAndPreparePlugin(pluginName: string, version: string): Promis
     // Ensure it's not the same invalid object we might have checked above
     if (expectedExport !== defaultExport) {
       logger.debug('Found valid plugin export using default export');
-      return defaultExport as Plugin;
+      return preparePluginForRuntime(defaultExport);
     }
   }
 
@@ -112,7 +114,7 @@ async function loadAndPreparePlugin(pluginName: string, version: string): Promis
     `Primary exports (named: ${expectedFunctionName}, default) not found or invalid, searching all exports...`
   );
   for (const key of Object.keys(pluginModule)) {
-    // Skip keys we already checked (or might be checking)
+    // Skip keys we already checked
     if (key === expectedFunctionName || key === 'default') {
       continue;
     }
@@ -122,10 +124,9 @@ async function loadAndPreparePlugin(pluginName: string, version: string): Promis
       logger.debug(
         `Found alternative valid plugin export under key: ${key}, Name: ${potentialPlugin.name}`
       );
-      return potentialPlugin as Plugin;
+      return preparePluginForRuntime(potentialPlugin);
     }
   }
-  // --- End of Improved Logic ---
 
   logger.warn(
     `Could not find a valid plugin export in ${pluginName}. Checked exports: ${expectedFunctionName} (if exists), default (if exists), and others. Available exports: ${Object.keys(pluginModule).join(', ')}`
@@ -159,6 +160,87 @@ function isValidPluginShape(obj: any): obj is Plugin {
     obj.config ||
     obj.description // description is also mandatory technically
   );
+}
+
+/**
+ * Ensures a plugin is compatible with the v2 runtime.
+ * For v1 plugins, wraps them with a compatibility layer.
+ * For v2 plugins, returns them unchanged.
+ * @param plugin The plugin to check and potentially wrap
+ * @returns The plugin, either wrapped with v1 compatibility or unchanged if v2
+ */
+function preparePluginForRuntime(plugin: any): Plugin {
+  // Check if this is a v1 plugin based on various indicators
+  const isV1PluginType = detectV1Plugin(plugin);
+
+  if (isV1PluginType) {
+    logger.info(`Detected v1 plugin: ${plugin.name}, wrapping with compatibility layer`);
+
+    try {
+      // Use the wrapV1Plugin function from core-plugin-v1
+      const wrappedPlugin = wrapV1Plugin(plugin);
+      logger.debug(`Successfully wrapped v1 plugin: ${plugin.name}`);
+
+      // Store some metadata to help with debugging
+      (wrappedPlugin as any).__v1Original = plugin.name;
+      (wrappedPlugin as any).__v1Wrapped = true;
+
+      return wrappedPlugin;
+    } catch (error) {
+      // If wrapping fails, log detailed error and try to continue
+      // TODO: Not sure if this is needed, we should probably just throw an error
+      logger.error(`Failed to wrap v1 plugin ${plugin.name}: ${error.message}`);
+      logger.debug(`Wrapping error stack: ${error.stack}`);
+
+      // Create a minimal wrapper as fallback
+      return {
+        name: plugin.name,
+        description: `Partially wrapped v1 plugin: ${plugin.name} (wrapping error occurred)`,
+        init: async () => {
+          logger.warn(`Using fallback initialization for v1 plugin: ${plugin.name}`);
+          return { error: `Wrapping failed: ${error.message}` };
+        },
+        actions: [],
+        providers: [],
+        evaluators: [],
+        config: plugin.config || {},
+      };
+    }
+  }
+
+  logger.debug(`Detected v2 plugin: ${plugin.name}, using directly`);
+  return plugin as Plugin;
+}
+
+/**
+ * Determines if a plugin is a v1 plugin based on its structure and interface
+ * @param plugin The plugin to check
+ * @returns True if it's a v1 plugin, false otherwise
+ */
+function detectV1Plugin(plugin: any): boolean {
+  if (!plugin || typeof plugin !== 'object') {
+    return false;
+  }
+
+  // // First, use the core compatibility layer's detection
+  // if (isV1Plugin(plugin)) {
+  //   logger.debug(`Plugin detected as v1 by core compatibility layer: ${plugin.name}`);
+  //   return true;
+  // }
+
+  // Additional detection methods for better diagnostics and edge cases
+
+  // Check for semver version if available
+  if (plugin.version && semver.valid(plugin.version)) {
+    const isOlderVersion = semver.lt(plugin.version, '1.0.0');
+    if (isOlderVersion) {
+      logger.debug(`Plugin detected as v1 based on version: ${plugin.version}`);
+      return true;
+    }
+  }
+
+  // Not detected as v1
+  return false;
 }
 
 /**
@@ -416,12 +498,51 @@ export async function startAgent(
     plugins: [...characterPlugins, ...plugins], // Use the deduplicated list
     settings: loadEnvConfig(),
   });
+
+  // Track plugins that use compatibility layer
+  const v1PluginNames: string[] = [];
+
+  // Check for v1 plugins wrapped with compatibility layer
+  for (const plugin of characterPlugins) {
+    // Check for __v1Wrapped metadata property set during wrapping
+    if ((plugin as any).__v1Wrapped) {
+      v1PluginNames.push(plugin.name);
+      continue;
+    }
+
+    // Fallback to other detection methods
+    if (
+      plugin.init &&
+      (plugin.init.toString().includes('compatRuntime') ||
+        plugin.description?.includes('Wrapped v1 plugin'))
+    ) {
+      v1PluginNames.push(plugin.name);
+    }
+  }
+
+  if (v1PluginNames.length > 0) {
+    logger.info(`Using compatibility layer for v1 plugins: ${v1PluginNames.join(', ')}`);
+
+    // Log more detailed information in debug mode
+    logger.debug(`V1 compatibility details:`);
+    logger.debug(`- Total plugins: ${characterPlugins.length}`);
+    logger.debug(`- V1 plugins: ${v1PluginNames.length}`);
+    logger.debug(`- V2 plugins: ${characterPlugins.length - v1PluginNames.length}`);
+  }
+
   if (init) {
     await init(runtime);
   }
 
   // start services/plugins/process knowledge
   await runtime.initialize();
+
+  // Run a second initialization for any v1 plugins that need to interact with initialized services
+  if (v1PluginNames.length > 0) {
+    // TODO: see if this is needed.
+    logger.debug('Running post-initialization for v1 plugins');
+    // No additional action needed as the CompatAgentRuntime already handles proper initialization
+  }
 
   // add to container
   server.registerAgent(runtime);
