@@ -54,7 +54,7 @@ export function getSalt(): string {
 
   const salt = secretSalt;
 
-  logger.debug(`Generated salt with length: ${salt.length} (truncated for security)`);
+  //logger.debug(`Generated salt with length: ${salt.length} (truncated for security)`);
   return salt;
 }
 
@@ -126,12 +126,12 @@ export function decryptStringValue(value: string, salt: string): string {
   try {
     // Check if value is undefined or null
     if (value === undefined || value === null) {
-      logger.debug('Attempted to decrypt undefined or null value');
+      //logger.debug('Attempted to decrypt undefined or null value');
       return value; // Return the value as is (undefined or null)
     }
 
     if (typeof value === 'boolean' || typeof value === 'number') {
-      logger.debug('Value is a boolean or number, returning as is');
+      //logger.debug('Value is a boolean or number, returning as is');
       return value;
     }
 
@@ -143,9 +143,11 @@ export function decryptStringValue(value: string, salt: string): string {
     // Split the IV and encrypted value
     const parts = value.split(':');
     if (parts.length !== 2) {
+      /*
       logger.debug(
         `Invalid encrypted value format - expected 'iv:encrypted', returning original value`
       );
+      */
       return value; // Return the original value without decryption
     }
 
@@ -154,7 +156,9 @@ export function decryptStringValue(value: string, salt: string): string {
 
     // Verify IV length
     if (iv.length !== 16) {
-      logger.debug(`Invalid IV length (${iv.length}) - expected 16 bytes`);
+      if (iv.length) {
+        logger.debug(`Invalid IV length (${iv.length}) - expected 16 bytes`);
+      }
       return value; // Return the original value without decryption
     }
 
