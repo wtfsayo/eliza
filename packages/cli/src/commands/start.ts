@@ -317,6 +317,7 @@ export async function startAgent(
   }
 
   // Get the final array of loaded plugins
+  //const characterPlugins = Array.from(loadedPluginsMap.values());
   logger.debug(
     `Final loaded plugins (${loadedPluginsMap.size}): ${[...characterPlugins, ...plugins].map((p) => p.name).join(', ')}`
   );
