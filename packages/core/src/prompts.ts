@@ -6,19 +6,19 @@ import type { Content, Entity, IAgentRuntime, Memory, State, TemplateType } from
 import { ModelType } from './types';
 
 /**
- * Convert all double-brace bindings in a Handlebars template
- * to triple-brace bindings, so the output is NOT HTML-escaped.
+ * Convert all double-brace bindings ({{var}}) in a Handlebars template
+ * to triple-brace bindings ({{{var}}}), so the output is NOT HTML-escaped.
  *
  * - Ignores block/partial/comment tags that start with # / ! >.
- * - Ignores the else keyword.
+ * - Ignores the {{else}} keyword.
  * - Ignores bindings that are already triple-braced.
  *
- * @param  tpl  Handlebars template source
- * @return      Transformed template
+ * @param  {string} tpl  Handlebars template source
+ * @return {string}      Transformed template
  */
 export function upgradeDoubleToTriple(tpl) {
   return tpl.replace(
-    // ────────╮ negative-LB: not already "{{{"
+    // ────────╮ negative-LB: not already “{{{”
     //          │   {{     ─ opening braces
     //          │    ╰──── negative-LA: not {, #, /, !, >
     //          ▼
@@ -96,13 +96,13 @@ export const composePromptFromState = ({
   state: State;
   template: TemplateType;
 }) => {
+  // function templates is not a good direction
   const templateStr = typeof template === 'function' ? template({ state }) : template;
   const templateFunction = handlebars.compile(upgradeDoubleToTriple(templateStr));
 
   // get any keys that are in state but are not named text, values or data
   const stateKeys = Object.keys(state);
   const filteredKeys = stateKeys.filter((key) => !['text', 'values', 'data'].includes(key));
-
   // this flattens out key/values in text/values/data
   const filteredState = filteredKeys.reduce((acc, key) => {
     acc[key] = state[key];
@@ -205,6 +205,9 @@ export const formatPosts = ({
       .filter((message: Memory) => message.entityId)
       .map((message: Memory) => {
         const entity = entities.find((entity: Entity) => entity.id === message.entityId);
+        if (!entity) {
+          logger.warn('core::prompts:formatPosts - no entity for', message.entityId);
+        }
         // TODO: These are okay but not great
         const userName = entity?.names[0] || 'Unknown User';
         const displayName = entity?.names[0] || 'unknown';
@@ -404,7 +407,8 @@ Example task outputs:
 
 Write a post that is {{adjective}} about {{topic}} (without mentioning {{topic}} directly), from the perspective of {{agentName}}. Do not add commentary or acknowledge this request, just write the post.
 Your response should be 1, 2, or 3 sentences (choose the length at random).
-Your response should not contain any questions. Brief, concise statements only. The total character count MUST be less than 280. No emojis. Use \\n\\n (double spaces) between statements if there are multiple statements in your response.
+You do not have to continue old patterns, feel free to ignore past posts.
+Your response should not contain any questions. Brief, concise statements only. The total character count MUST be less than 280. No emojis. Use \\n\\n (double new line) between statements if there are multiple statements in your response.
 
 Your output should be formatted in XML like this:
 <response>
