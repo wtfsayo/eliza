@@ -741,6 +741,9 @@ const syncSingleUser = async (
   type: ChannelType,
   source: string
 ) => {
+  const entity = await runtime.getEntityById(entityId);
+  //logger.info(`Syncing user: ${entity.metadata[source].username || entity.id}`);
+
   try {
     const entity = await runtime.getEntityById(entityId);
     logger.info(`Syncing user: ${entity?.metadata[source]?.username || entityId}`);
