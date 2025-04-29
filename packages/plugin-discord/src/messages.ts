@@ -79,7 +79,6 @@ export class MessageManager {
     ) {
       return;
     }
-
     const entityId = createUniqueUuid(this.runtime, message.author.id);
 
     const userName = message.author.bot
@@ -96,9 +95,10 @@ export class MessageManager {
     if (message.guild) {
       const guild = await message.guild.fetch();
       type = await this.getChannelType(message.channel as Channel);
-      if (type === null) {
+      if (!type) {
         // usually a forum type post
-        logger.warn('null channel type, discord message', message);
+        logger.debug('empty channel type, marking a forum', typeof type, type);
+        type = DiscordChannelType.GuildForum;
       }
       serverId = guild.id;
     } else {
@@ -186,7 +186,6 @@ export class MessageManager {
         },
         metadata: {
           entityName: name,
-          type: 'message',
         },
         createdAt: message.createdTimestamp,
       };
