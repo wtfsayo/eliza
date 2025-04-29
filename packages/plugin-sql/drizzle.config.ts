@@ -11,7 +11,7 @@ export default defineConfig({
     schema: 'public',
   },
   dbCredentials: {
-    url: process.env.POSTGRES_URL || 'file://../../pglite',
+    url: 'postgres://postgres:postgres@localhost:5432/eliza',
   },
   breakpoints: true,
 });
