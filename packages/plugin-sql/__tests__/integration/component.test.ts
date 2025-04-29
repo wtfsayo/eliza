@@ -53,30 +53,30 @@ describe('Component Integration Tests', () => {
 
     try {
       // Use ensureAgentExists instead of createAgent
-      const agent = await adapter.ensureAgentExists(componentTestAgentSettings as Agent);
+      await adapter.createAgent(componentTestAgentSettings as Agent);
 
       // Create the test world
       const worldId = await adapter.createWorld({
         ...componentTestWorld,
-        agentId: agent.id,
+        agentId: testAgentId,
       } as World);
 
       // Create the test entity
-      const entityCreated = await adapter.createEntity({
+      await adapter.createEntity({
         ...componentTestEntity,
-        agentId: agent.id,
+        agentId: testAgentId,
       } as Entity);
 
       // Create the source entity
-      const sourceEntityCreated = await adapter.createEntity({
+      await adapter.createEntity({
         ...componentTestSourceEntity,
-        agentId: agent.id,
+        agentId: testAgentId,
       } as Entity);
 
       // Create the test room
-      const roomId = await adapter.createRoom({
+      await adapter.createRoom({
         ...componentTestRoom,
-        agentId: agent.id,
+        agentId: testAgentId,
         worldId: worldId,
       } as Room);
     } catch (error) {

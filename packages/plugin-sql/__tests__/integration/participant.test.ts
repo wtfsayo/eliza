@@ -43,7 +43,7 @@ describe('Participant Integration Tests', () => {
 
     try {
       // Step 1: Create test agent
-      await adapter.ensureAgentExists(participantTestAgent);
+      await adapter.createAgent(participantTestAgent);
 
       // Step 2: Create test world
       await adapter.createWorld({

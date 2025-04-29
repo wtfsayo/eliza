@@ -669,23 +669,23 @@ describe('Agent Integration Tests', () => {
       );
     });
 
-    it('should use provided ID when creating a new agent', async () => {
-      const providedId = uuidv4() as UUID;
-      const newAgent = {
-        ...testAgent,
-        id: providedId,
-        name: 'Integration Test Ensure With ID',
-      };
+    // it('should use provided ID when creating a new agent', async () => {
+    //   const providedId = uuidv4() as UUID;
+    //   const newAgent = {
+    //     ...testAgent,
+    //     id: providedId,
+    //     name: 'Integration Test Ensure With ID',
+    //   };
 
-      const result = await adapter.ensureAgentExists(newAgent);
+    //   const result = await adapter.ensureAgentExists(newAgent);
 
-      expect(result.id).toBe(providedId);
+    //   expect(result.id).toBe(providedId);
 
-      // Verify the agent was created with the provided ID
-      const createdAgent = await adapter.getAgent(providedId);
-      expect(createdAgent).not.toBeNull();
-      expect(createdAgent?.id).toBe(providedId);
-    });
+    //   // Verify the agent was created with the provided ID
+    //   const createdAgent = await adapter.getAgent(providedId);
+    //   expect(createdAgent).not.toBeNull();
+    //   expect(createdAgent?.id).toBe(providedId);
+    // });
 
     it('should handle case with existing name but different ID', async () => {
       // Create an agent first

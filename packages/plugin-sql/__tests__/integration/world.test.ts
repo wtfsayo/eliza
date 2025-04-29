@@ -40,7 +40,7 @@ describe('World Integration Tests', () => {
 
     try {
       // Create test agent
-      await adapter.ensureAgentExists(worldTestAgent);
+      await adapter.createAgent(worldTestAgent);
 
       // Create test entity
       await adapter.createEntity(worldTestEntity);

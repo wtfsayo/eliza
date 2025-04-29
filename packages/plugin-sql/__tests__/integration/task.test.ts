@@ -74,7 +74,7 @@ describe('Task Integration Tests', () => {
     try {
       // Set up test environment
       // Step 1: Create test agent
-      await adapter.ensureAgentExists(testAgent);
+      await adapter.createAgent(testAgent);
 
       // Step 2: Create test world
       await adapter.createWorld({

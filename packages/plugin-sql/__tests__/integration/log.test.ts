@@ -42,18 +42,18 @@ describe('Log Integration Tests', () => {
 
     try {
       // Use ensureAgentExists instead of createAgent
-      const agent = await adapter.ensureAgentExists(logTestAgentSettings as Agent);
+      await adapter.createAgent(logTestAgentSettings as Agent);
 
       // Create the test entity
       const entityCreated = await adapter.createEntity({
         ...logTestEntity,
-        agentId: agent.id,
+        agentId: testAgentId,
       } as Entity);
 
       // Create the test room
       const roomId = await adapter.createRoom({
         ...logTestRoom,
-        agentId: agent.id,
+        agentId: testAgentId,
       } as Room);
     } catch (error) {
       console.error('Error in setup:', error);

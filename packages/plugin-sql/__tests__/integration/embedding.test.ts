@@ -46,7 +46,7 @@ describe('Embedding Integration Tests', () => {
 
     try {
       // Step 1: Create test agent
-      const agent = await adapter.ensureAgentExists(embeddingTestAgent);
+      await adapter.createAgent(embeddingTestAgent);
 
       // Step 2: Create test world
       await adapter.createWorld({
@@ -57,10 +57,10 @@ describe('Embedding Integration Tests', () => {
       });
 
       // Step 3: Create test entity
-      const entityCreated = await adapter.createEntity(embeddingTestEntity);
+      await adapter.createEntity(embeddingTestEntity);
 
       // Step 4: Create test room
-      const roomId = await adapter.createRoom(embeddingTestRoom);
+      await adapter.createRoom(embeddingTestRoom);
 
       // Step 5: Add entity as participant in the room
       await adapter.addParticipant(embeddingTestEntityId, embeddingTestRoomId);

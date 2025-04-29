@@ -46,7 +46,7 @@ describe('Room Integration Tests', () => {
 
     try {
       // Step 1: Create test agent
-      const agent = await adapter.ensureAgentExists(roomTestAgent);
+      await adapter.createAgent(roomTestAgent);
 
       // Step 2: Create test world
       await adapter.createWorld({
@@ -55,7 +55,7 @@ describe('Room Integration Tests', () => {
       });
 
       // Step 3: Create test entity
-      const entityCreated = await adapter.createEntity(roomTestEntity);
+      await adapter.createEntity(roomTestEntity);
     } catch (error) {
       console.error('Error in setup:', error);
       throw error;

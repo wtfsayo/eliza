@@ -43,7 +43,7 @@ describe('Relationship Integration Tests', () => {
 
     try {
       // Step 1: Create test agent
-      const agent = await adapter.ensureAgentExists(relationshipTestAgent);
+      await adapter.createAgent(relationshipTestAgent);
 
       // Step 2: Create test source entity
       await adapter.createEntity(relationshipTestSourceEntity);

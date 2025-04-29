@@ -49,7 +49,7 @@ describe('Memory Integration Tests', () => {
 
     try {
       // Step 1: Create test agent
-      const agent = await adapter.ensureAgentExists(memoryTestAgent);
+      await adapter.createAgent(memoryTestAgent);
 
       // Step 2: Create test world
       await adapter.createWorld({
