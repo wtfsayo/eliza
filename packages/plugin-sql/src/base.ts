@@ -15,7 +15,7 @@ import {
   logger,
   stringToUuid,
 } from '@elizaos/core';
-import { and, cosineDistance, count, desc, eq, gte, inArray, lte, or, sql } from 'drizzle-orm';
+import { and, cosineDistance, count, desc, eq, gte, inArray, lte, not, or, sql } from 'drizzle-orm';
 import { v4 } from 'uuid';
 import { DIMENSION_MAP, type EmbeddingDimensionColumn } from './schema/embedding';
 import {
@@ -127,12 +127,6 @@ export abstract class BaseDrizzleAdapter<
    * @param {() => Promise<T>} operation - The operation to be executed
    * @param {string} operationName - Name of the operation being performed (for logging)
    * @returns {Promise<T>} A promise that resolves with the result of the operation
-   */
-  /**
-   * Executes the given operation with retry logic.
-   * @template T
-   * @param {() => Promise<T>} operation - The operation to be executed.
-   * @returns {Promise<T>} A promise that resolves with the result of the operation.
    */
   protected async withRetry<T>(operation: () => Promise<T>, operationName: string): Promise<T> {
     let lastError: Error = new Error('Unknown error');
@@ -296,34 +290,36 @@ export abstract class BaseDrizzleAdapter<
     return this.withDatabase(async () => {
       try {
         return await this.db.transaction(async (tx) => {
-          // Update agentInfo
+          // Prepare the payload for the update operation
+          const updatePayload: Partial<InsertAgent> = {};
+
+          // Map non-settings agent info
           const agentInfo: Partial<InsertAgent> = mapToAgentRow(agent);
 
-          // Delete settings from agentInfo if they exist, as we'll handle them separately
+          // Exclude settings from agentInfo initially
           if ('settings' in agentInfo) {
             delete agentInfo.settings;
           }
 
-          // Set updatedAt
-          agentInfo.updatedAt = Date.now();
-
-          // First update everything except settings
+          // Add non-settings fields to the payload
           if (Object.keys(agentInfo).length > 0) {
-            await tx
-              .update(agentTable)
-              .set(agentInfo)
-              .where(sql`${agentTable.id} = ${agentId}`);
+            Object.assign(updatePayload, agentInfo);
           }
 
-          // Then update settings if needed
+          // Handle settings update if provided
           if (agent.settings !== undefined) {
             const mergedSettings = await this.mergeAgentSettings(tx, agentId, agent.settings);
+            updatePayload.settings = mergedSettings;
+          }
 
+          // Only perform update if there's something to update
+          if (Object.keys(updatePayload).length > 0) {
             await tx
               .update(agentTable)
-              .set({ settings: mergedSettings, updatedAt: Date.now() })
+              .set(updatePayload)
               .where(sql`${agentTable.id} = ${agentId}`);
           }
+
           return true;
         });
       } catch (error) {
