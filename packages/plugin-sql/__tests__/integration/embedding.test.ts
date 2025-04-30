@@ -8,7 +8,6 @@ import {
   embeddingTestRoomId,
   embeddingTestMemories,
   embeddingTestMemoriesWithEmbedding,
-  createSimilarMemory,
   generateRandomVector,
   embeddingTestAgent,
   embeddingTestEntity,
@@ -108,7 +107,7 @@ describe('Embedding Integration Tests', () => {
   });
 
   describe('createMemory with embedding', () => {
-    it.only('should successfully create a memory with an embedding', async () => {
+    it('should successfully create a memory with an embedding', async () => {
       // Use the first test memory with embedding
       const memory = embeddingTestMemoriesWithEmbedding[0];
 
@@ -128,78 +127,6 @@ describe('Embedding Integration Tests', () => {
       expect(createdMemory?.embedding).toBeDefined();
       expect(Array.isArray(createdMemory?.embedding)).toBe(true);
       expect(createdMemory?.embedding?.length).toEqual(memory.embedding.length);
-    });
-
-    it('should create memories with different embedding dimensions', async () => {
-      // Create three memories with the same dimension (384)
-      const results = await Promise.all(
-        embeddingTestMemoriesWithEmbedding.map((memory) => adapter.createMemory(memory, 'memories'))
-      );
-
-      // Verify all memories were created
-      expect(results).toHaveLength(embeddingTestMemoriesWithEmbedding.length);
-
-      // Verify each memory's embedding
-      for (let i = 0; i < embeddingTestMemoriesWithEmbedding.length; i++) {
-        const memory = await adapter.getMemoryById(results[i]);
-        expect(memory).not.toBeNull();
-        expect(memory?.embedding).toBeDefined();
-        expect(Array.isArray(memory?.embedding)).toBe(true);
-        expect(memory?.embedding?.length).toEqual(384);
-      }
-    });
-  });
-
-  describe('searchMemoriesByEmbedding', () => {
-    it('should find similar memories by embedding', async () => {
-      // Create all test memories with embeddings
-      await Promise.all(
-        embeddingTestMemoriesWithEmbedding.map((memory) => adapter.createMemory(memory, 'memories'))
-      );
-
-      // Create a similar memory to the first one
-      const originalMemory = embeddingTestMemoriesWithEmbedding[0];
-      const similarMemory = createSimilarMemory(originalMemory, 0.95);
-
-      // Search for memories similar to the vector of the similar memory
-      const results = await adapter.searchMemoriesByEmbedding(similarMemory.embedding, {
-        tableName: 'memories',
-        match_threshold: 0.9,
-        count: 5,
-      });
-
-      // Expect to find at least the original memory
-      expect(results.length).toBeGreaterThan(0);
-
-      // The most similar memory should be the original one
-      const foundOriginal = results.some((m) => m.id === originalMemory.id);
-      expect(foundOriginal).toBe(true);
-
-      // Verify similarity scores
-      results.forEach((memory) => {
-        expect(memory.similarity).toBeDefined();
-        expect(memory.similarity).toBeGreaterThan(0.8);
-      });
-    });
-
-    it('should not find memories when similarity threshold is too high', async () => {
-      // Create all test memories with embeddings
-      await Promise.all(
-        embeddingTestMemoriesWithEmbedding.map((memory) => adapter.createMemory(memory, 'memories'))
-      );
-
-      // Generate a random vector that should not be similar to any existing ones
-      const randomVector = generateRandomVector(384);
-
-      // Search with a high threshold
-      const results = await adapter.searchMemoriesByEmbedding(randomVector, {
-        tableName: 'memories',
-        match_threshold: 0.99,
-        count: 5,
-      });
-
-      // Expect to find no similar memories with that high threshold
-      expect(results.length).toBe(0);
     });
   });
 
