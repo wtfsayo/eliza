@@ -15,7 +15,7 @@ interface CodeBlockPlaceholder {
 export interface ReconstructedResponse {
   type: 'reconstructed_response';
   thought?: string;
-  message?: string;
+  text?: string;
   codeBlocks?: Array<{
     language: string;
     code: string;
@@ -234,9 +234,9 @@ export const extractAndParseJSON = (text: string): ExtractedJSON => {
     const manuallyExtractStructure = (
       text: string
     ): ReconstructedResponse | ReflectionResponse | null => {
-      // Extract thought/message pattern if present
+      // Extract thought/text pattern if present
       const thoughtPattern = /"thought"\s*:\s*"([^"]*?)(?:"|$)/;
-      const messagePattern = /"message"\s*:\s*"([^"]*?)(?:"|$)/;
+      const messagePattern = /"text"\s*:\s*"([^"]*?)(?:"|$)/;
 
       const thoughtMatch = text.match(thoughtPattern);
       const messageMatch = text.match(messagePattern);
@@ -251,7 +251,7 @@ export const extractAndParseJSON = (text: string): ExtractedJSON => {
         }
 
         if (messageMatch) {
-          extractedContent.message = messageMatch[1].replace(/\\n/g, '\n');
+          extractedContent.text = messageMatch[1].replace(/\\n/g, '\n');
         } else {
           // If no message was found but we have a thought, try to use the rest of the content as message
           let remainingContent = text;
@@ -279,7 +279,7 @@ export const extractAndParseJSON = (text: string): ExtractedJSON => {
           }
 
           // Use the cleaned remaining content as message
-          extractedContent.message = remainingContent.trim();
+          extractedContent.text = remainingContent.trim();
         }
 
         return extractedContent;

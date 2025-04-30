@@ -63,6 +63,7 @@
     "@types/semver": "^7.5.8",
     "@typescript-eslint/eslint-plugin": "8.26.0",
     "@typescript-eslint/parser": "8.26.0",
+    "@playwright/test": "^1.40.0",
     "@vitejs/plugin-react-swc": "^3.8.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^9.22.0",

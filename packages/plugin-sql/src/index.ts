@@ -62,7 +62,6 @@ export function createDatabaseAdapter(
   if (config.dataDir) {
     config.dataDir = expandTildePath(config.dataDir);
   }
-
   if (config.postgresUrl) {
     if (!globalSingletons.postgresConnectionManager) {
       globalSingletons.postgresConnectionManager = new PostgresConnectionManager(

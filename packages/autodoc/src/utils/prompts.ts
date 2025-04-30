@@ -252,7 +252,7 @@ Format in markdown without adding any additional headers.`,
 ### Debugging Tips
 - [First debugging tip]
 - [Second debugging tip]
-- Ask your questions at https://eliza.gg/ 🚀 or in our discord
+- Ask your questions at https://eliza.how/ 🚀 or in our discord
 
 Format in markdown without adding any additional headers.`,
 };

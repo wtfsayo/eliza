@@ -23,15 +23,15 @@ const replyTemplate = `# Task: Generate dialog for the character {{agentName}}.
 {{providers}}
 # Instructions: Write the next message for {{agentName}}.
 "thought" should be a short description of what the agent is thinking about and planning.
-"message" should be the next message for {{agentName}} which they will send to the conversation.
+"text" should be the next message for {{agentName}} which they will send to the conversation.
 
 Response format should be formatted in a valid JSON block like this:
 \`\`\`json
 {
     "thought": "<string>",
-    "message": "<string>"
+    "text": "<string>"
 }
-\`\`\`
+\`\`\`w
 
 Your response should include the valid JSON block and nothing else.`;
 
@@ -66,7 +66,7 @@ export const replyAction = {
   ) => {
     // Find all responses with REPLY action and text
     const existingResponses = responses?.filter(
-      (response) => response.content.actions?.includes('REPLY') && response.content.message
+      (response) => response.content.actions?.includes('REPLY') && response.content.text
     );
 
     // If we found any existing responses, use them and skip LLM
@@ -74,7 +74,7 @@ export const replyAction = {
       for (const response of existingResponses) {
         const responseContent = {
           thought: response.content.thought || 'Using provided text for reply',
-          text: response.content.message as string,
+          text: response.content.text as string,
           actions: ['REPLY'],
         };
         await callback(responseContent);
@@ -99,7 +99,7 @@ export const replyAction = {
 
     const responseContent = {
       thought: response.thought,
-      text: (response.message as string) || '',
+      text: (response.text as string) || '',
       actions: ['REPLY'],
     };
 
