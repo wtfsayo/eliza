@@ -4,7 +4,7 @@
         <title>ElizaOS Updates</title>
         <link>https://docs.eliza.how/blog</link>
         <description>Stay up to date with the latest from ElizaOS</description>
-        <lastBuildDate>Sat, 26 Apr 2025 05:45:25 GMT</lastBuildDate>
+        <lastBuildDate>Wed, 30 Apr 2025 02:39:04 GMT</lastBuildDate>
         <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
         <generator>https://github.com/jpmonette/feed</generator>
         <language>en</language>
@@ -12,78 +12,85 @@
             <title><![CDATA[auto.fun: Where AI Projects Thrive, Not Just Launch]]></title>
             <link>https://docs.eliza.how/blog/autofun-intro</link>
             <guid>https://docs.eliza.how/blog/autofun-intro</guid>
-            <pubDate>Sat, 26 Apr 2025 05:45:25 GMT</pubDate>
+            <pubDate>Wed, 30 Apr 2025 02:39:04 GMT</pubDate>
             <description><![CDATA[The problem with token launches and how we fixed it]]></description>
             <content:encoded><![CDATA[<h2 class="anchor anchorWithStickyNavbar_fF9Z" id="the-problem-with-token-launches-and-how-we-fixed-it">The problem with token launches and how we fixed it<a href="https://docs.eliza.how/blog/autofun-intro#the-problem-with-token-launches-and-how-we-fixed-it" class="hash-link" aria-label="Direct link to The problem with token launches and how we fixed it" title="Direct link to The problem with token launches and how we fixed it">​</a></h2>
 <p>The era of pure speculation and disposable memecoins is giving way to a new generation of projects that blend AI, tokenomics, and long-term vision.</p>
-<p>When we launched our own project’s token, we did it the “right” way – a fair launch, open to the public, allowing anyone to participate from day one. And by all metrics, it was a success: massive interest, high engagement, and meta-changing adoption of the elizaOS framework.</p>
+<p><a href="https://x.com/autodotfun/article/1915776667995267360/media/1913313952894693378" target="_blank" rel="noopener noreferrer"><img decoding="async" loading="lazy" src="https://pbs.twimg.com/media/Go105yoWMAIZ15e?format=jpg&amp;name=900x900" alt="Image" class="img__Ss2"></a></p>
+<!-- -->
+<p>When we launched our own project's token, we did it the "right" way – a fair launch, open to the public, allowing anyone to participate from day one. And by all metrics, it was a success: massive interest, high engagement, and meta-changing adoption of the elizaOS framework.</p>
 <p>But there was a problem.</p>
-<p>Fair launches, while philosophically aligned with crypto’s ethos, often leave project teams struggling. We had no reserved supply to fund development. Selling tokens to cover expenses wasn’t an option – it creates FUD in the community, and for good reason: when a team is forced to dump its own token to survive, it could signal instability. The</p>
-<p><a href="https://x.com/shawmakesmagic/status/1886829695343161494" target="_blank" rel="noopener noreferrer">reality is</a> that when your project is only 2 months old and with no VC backing, you don’t have the basics covered, let alone revenue to fund progress.</p>
+<p>Fair launches, while philosophically aligned with crypto's ethos, often leave project teams struggling. We had no reserved supply to fund development. Selling tokens to cover expenses wasn't an option – it creates FUD in the community, and for good reason: when a team is forced to dump its own token to survive, it could signal instability. The</p>
+<p><a href="https://x.com/shawmakesmagic/status/1886829695343161494" target="_blank" rel="noopener noreferrer">reality is</a> that when your project is only 2 months old and with no VC backing, you don't have the basics covered, let alone revenue to fund progress.</p>
 <p>At the same time, we knew all too well about the opposite extreme: closed-door, insider-led token launches that benefited only a select few. Low float, high FDV launches that price out regular users. Bundled deals where insiders control supply and the community is left as exit liquidity.</p>
 <p>Neither of these models work in the long term. So we built</p>
 <p><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a></p>
 <p>– an AI-native, creator-first launchpad that finds the balance between truly fair access and long-term sustainability.</p>
-<p><a href="https://x.com/autodotfun/article/1915776667995267360/media/1913313952894693378" target="_blank" rel="noopener noreferrer"><img decoding="async" loading="lazy" src="https://pbs.twimg.com/media/Go105yoWMAIZ15e?format=jpg&amp;name=900x900" alt="Image" class="img__Ss2"></a></p>
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="the-next-evolution-of-crypto-launches-ai-native-creator-first">The next evolution of crypto launches: AI-native, creator-first<a href="https://docs.eliza.how/blog/autofun-intro#the-next-evolution-of-crypto-launches-ai-native-creator-first" class="hash-link" aria-label="Direct link to The next evolution of crypto launches: AI-native, creator-first" title="Direct link to The next evolution of crypto launches: AI-native, creator-first">​</a></h2>
 <p>We designed <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> to support the entire lifecycle of projects – from inception to launch, and beyond:</p>
 <ul>
-<li>Fairer than fair launch: A bonding curve mechanism that lets teams secure up to 50% of their token supply before market listing, avoiding the pitfalls of a pure fair launch while ensuring community access isn’t gated by insiders.</li>
+<li>Fairer than fair launch: A bonding curve mechanism that lets teams secure up to 50% of their token supply before market listing, avoiding the pitfalls of a pure fair launch while ensuring community access isn't gated by insiders.</li>
 <li>No-code agent builder: <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> allows creators to launch agents alongside their token with the Fleek integration, or to connect an existing agent to their token in a couple of clicks.</li>
 <li>AI-generated marketing: Create tokens, content, and assets from a single prompt.</li>
 <li>Sustainable project funding – The liquidity NFT mechanism ensures that projects earn ongoing revenue from trading fees, reducing reliance on token sales to fund development.</li>
 </ul>
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="why-autofun-is-the-best-place-to-launch-your-project">Why <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> is the best place to launch your project<a href="https://docs.eliza.how/blog/autofun-intro#why-autofun-is-the-best-place-to-launch-your-project" class="hash-link" aria-label="Direct link to why-autofun-is-the-best-place-to-launch-your-project" title="Direct link to why-autofun-is-the-best-place-to-launch-your-project">​</a></h2>
-<p>Launching a project isn’t just about putting a token on the market – it’s about building a community and sustaining it.</p>
-<p>We know the power of strong messaging and community engagement. Our own project took off in part because of its memetic origins, capturing attention in a crowded market. But visibility alone isn’t enough.</p>
+<p>Launching a project isn't just about putting a token on the market – it's about building a community and sustaining it.</p>
+<p>We know the power of strong messaging and community engagement. Our own project took off in part because of its memetic origins, capturing attention in a crowded market. But visibility alone isn't enough.</p>
 <p><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a></p>
 <p>ensures that projects launching on our platform have the tools to not just attract an audience, but to retain and grow it sustainably.</p>
 <p>This is why the best projects are launching on <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a>.</p>
-<p>We’re working with cutting-edge teams building AI-powered agents, innovative agent-native tokens, and projects that are pushing the boundaries of what’s possible in crypto. Some are launching entirely new tokens and agents, while others are bringing existing AI tools to integrate with our launchpad.</p>
-<p>Here’s what’s coming:</p>
+<p>We're working with cutting-edge teams building AI-powered agents, innovative agent-native tokens, and projects that are pushing the boundaries of what's possible in crypto. Some are launching entirely new tokens and agents, while others are bringing existing AI tools to integrate with our launchpad.</p>
+<p>Here's what's coming:</p>
 <ul>
 <li><a href="https://x.com/@MakeFight_Great" target="_blank" rel="noopener noreferrer">@MakeFight_Great</a>
 – AI-powered social agents BrawlChain and The Algorithm will battle it out on X, each with its own token.</li>
 <li><a href="https://x.com/@AlloraNetwork" target="_blank" rel="noopener noreferrer">@AlloraNetwork</a>
-– Launching <a href="https://x.com/@Squidllora" target="_blank" rel="noopener noreferrer">@Squidllora</a>, leveraging the Allora Network’s predictive inferences and advanced trading signals to manage a portfolio.</li>
+– Launching <a href="https://x.com/@Squidllora" target="_blank" rel="noopener noreferrer">@Squidllora</a>, leveraging the Allora Network's predictive inferences and advanced trading signals to manage a portfolio.</li>
 <li><a href="https://x.com/@drpepeai" target="_blank" rel="noopener noreferrer">@drpepeai</a>
 – Launching	<a href="https://x.com/@DogLifeAI" target="_blank" rel="noopener noreferrer">@DogLifeAI</a>, a medical AI agent providing detailed advice and services for dog owners, with a token that grants access to this and future agents in their ecosystem.</li>
 <li><a href="https://x.com/@kingczai" target="_blank" rel="noopener noreferrer">@kingczai</a>
-– With their token they’re set to unlock exclusive perks and community access—no secret handshake needed.</li>
+– With their token they're set to unlock exclusive perks and community access—no secret handshake needed.</li>
 <li><a href="https://x.com/@comput3ai" target="_blank" rel="noopener noreferrer">@comput3ai</a>
 – Launching	<a href="https://x.com/search?q=%24COM&amp;src=cashtag_click" target="_blank" rel="noopener noreferrer">$COM</a>, that will act as credits for their decentralized compute services.</li>
 </ul>
 <p>These are just a few of the projects joining us at launch, each leveraging the AI-native tooling and sustainable tokenomics that make <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> the best place to launch.</p>
 <p><a href="https://x.com/autodotfun/article/1915776667995267360/media/1913314087741558785" target="_blank" rel="noopener noreferrer"><img decoding="async" loading="lazy" src="https://pbs.twimg.com/media/Go11Bo-WEAEIRur?format=jpg&amp;name=900x900" alt="Image" class="img__Ss2"></a></p>
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="autofun-is-yours"><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> is YOURS<a href="https://docs.eliza.how/blog/autofun-intro#autofun-is-yours" class="hash-link" aria-label="Direct link to autofun-is-yours" title="Direct link to autofun-is-yours">​</a></h2>
-<p>Every token that graduates through <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> feeds the flywheel for $ai16z holders: our portion of swap fees of graduated Agent Tokens (ATs) is routed into open‑market buybacks of $ai16z. And once the upcoming $ai16z : AT secondary pools go live, they’ll be paired with the very ATs that generated the revenue, deepening liquidity on both sides and capturing a perpetual share of trading fees. The result is a compounding loop where every launch, swap, and routing path strengthens $ai16z’s liquidity and steadily channels platform value back to long‑term holders.</p>
+<p>Every token that graduates through <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> feeds the flywheel for $ai16z holders: our portion of swap fees of graduated Agent Tokens (ATs) is routed into open‑market buybacks of $ai16z. And once the upcoming $ai16z : AT secondary pools go live, they'll be paired with the very ATs that generated the revenue, deepening liquidity on both sides and capturing a perpetual share of trading fees. The result is a compounding loop where every launch, swap, and routing path strengthens $ai16z's liquidity and steadily channels platform value back to long‑term holders.</p>
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="a-truly-ai-empowered-future">A truly AI-empowered future<a href="https://docs.eliza.how/blog/autofun-intro#a-truly-ai-empowered-future" class="hash-link" aria-label="Direct link to A truly AI-empowered future" title="Direct link to A truly AI-empowered future">​</a></h2>
-<p><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> isn’t just about launching tokens – it’s about creating the most advanced AI-enhanced platform for new projects. As elizaOS evolves, so will <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a>. Here’s what the short-term roadmap looks like:</p>
+<p><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> isn't just about launching tokens – it's about creating the most advanced AI-enhanced platform for new projects. As elizaOS evolves, so will <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a>. Here's what the short-term roadmap looks like:</p>
 <ul>
 <li>v2 of the Eliza framework will bring more sophisticated agent creation tools, allowing users to build agents with real utility.</li>
 <li>AI-powered tools will enable creators to generate more images, videos, and marketing content for their social agent to promote.</li>
 <li>Expanded integrations will allow for even more complex AI-powered interactions and tokenomics customization.</li>
 </ul>
-<p>With <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a>, you don’t just launch a token—you launch an AI-native ecosystem, designed for long-term sustainability and growth.</p>
+<p>With <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a>, you don't just launch a token—you launch an AI-native ecosystem, designed for long-term sustainability and growth.</p>
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="join-the-next-wave-of-ai-native-crypto">Join the next wave of AI-native crypto<a href="https://docs.eliza.how/blog/autofun-intro#join-the-next-wave-of-ai-native-crypto" class="hash-link" aria-label="Direct link to Join the next wave of AI-native crypto" title="Direct link to Join the next wave of AI-native crypto">​</a></h2>
 <p><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> is built for the next chapter of crypto. The era of launching purely memetic tokens with no utility is fading. The next generation of projects need to be AI-forward and built to last.</p>
-<p><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> is at the forefront of this movement. If you’re building any kind of project – whether it’s an agent, a service, meme, or a new form of digital interaction – there’s no better place to launch.</p>
-<p>We’re not just another launchpad. We’re the AI-native creator-first platform that finally gets it right.</p>
+<p><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> is at the forefront of this movement. If you're building any kind of project – whether it's an agent, a service, meme, or a new form of digital interaction – there's no better place to launch.</p>
+<p>We're not just another launchpad. We're the AI-native creator-first platform that finally gets it right.</p>
 <p>Welcome to the future of AI-powered token launches.</p>
 <p>press the fun button.</p>
 <p><a href="https://x.com/autodotfun/article/1915776667995267360/media/1913314306264862720" target="_blank" rel="noopener noreferrer"><img decoding="async" loading="lazy" src="https://pbs.twimg.com/media/Go11OXCXEAApjJx?format=png&amp;name=900x900" alt="Image" class="img__Ss2"></a></p>]]></content:encoded>
+            <category>autofun</category>
+            <category>launchpad</category>
+            <category>ai</category>
+            <category>tokenomics</category>
+            <category>elizaos</category>
         </item>
         <item>
             <title><![CDATA[Autofun Tokenomics]]></title>
             <link>https://docs.eliza.how/blog/autofun-tokenomics</link>
             <guid>https://docs.eliza.how/blog/autofun-tokenomics</guid>
-            <pubDate>Sat, 26 Apr 2025 05:45:12 GMT</pubDate>
+            <pubDate>Wed, 30 Apr 2025 02:39:04 GMT</pubDate>
             <description><![CDATA[auto.fun tokenomics: value accrual is fun]]></description>
             <content:encoded><![CDATA[<p>auto.fun tokenomics: value accrual is fun</p>
-<p>[toc]</p>
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="overview">Overview<a href="https://docs.eliza.how/blog/autofun-tokenomics#overview" class="hash-link" aria-label="Direct link to Overview" title="Direct link to Overview">​</a></h2>
-<p><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a></p>
-<p>is the first token launch platform purpose-built for agent-native ecosystems. Designed and maintained by Eliza Labs, it offers a low-friction, high-alignment environment for launching new tokens and/or autonomous agents built on the ElizaOS stack.</p>
+<p><a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> is the first token launch platform purpose-built for agent-native ecosystems. Designed and maintained by Eliza Labs, it offers a low-friction, high-alignment environment for launching new tokens and/or autonomous agents built on the ElizaOS stack.</p>
+<p><img decoding="async" loading="lazy" src="https://pbs.twimg.com/media/Go5bNx5XsAAlIIs?format=jpg&amp;name=900x900" alt="Image" class="img__Ss2">
+(<a href="https://x.com/autodotfun/article/1915889326484766781/media/1913567183969431552" target="_blank" rel="noopener noreferrer">https://x.com/autodotfun/article/1915889326484766781/media/1913567183969431552</a>)</p>
+<!-- -->
 <p>Our long-term tokenomics architecture centers around a dual-pool system that compounds value as more agents are deployed. While some components are still being actively developed, key mechanisms are already operational—most notably a swap fee-sharing system collaboratively built with Raydium, and buybacks that directly convert platform revenue into $ai16z buybacks.</p>
 <p>This document outlines both the current tokenomic mechanics and the roadmap toward full activation of our tokenomics architecture.</p>
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="current-mechanics">Current Mechanics<a href="https://docs.eliza.how/blog/autofun-tokenomics#current-mechanics" class="hash-link" aria-label="Direct link to Current Mechanics" title="Direct link to Current Mechanics">​</a></h2>
@@ -115,8 +122,6 @@
 </ol>
 <p>10% of the burned LP (collected in SOL) is set aside when tokens graduate, and the fees generated are used to buyback $ai16z from the open market.</p>
 <p>This forms a direct link between platform activity and value accrual for $ai16z holders—without imposing any friction on creators or users.</p>
-<p><img decoding="async" loading="lazy" src="https://pbs.twimg.com/media/Go5bANPX0AALoiZ?format=jpg&amp;name=900x900" alt="Image" class="img__Ss2">
-(<a href="https://x.com/autodotfun/article/1915889326484766781/media/1913566950791303168" target="_blank" rel="noopener noreferrer">https://x.com/autodotfun/article/1915889326484766781/media/1913566950791303168</a>)</p>
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="future-phase-secondary-pools--ai16z">Future Phase: Secondary Pools ( $ai16z<!-- -->:AT<!-- -->)<a href="https://docs.eliza.how/blog/autofun-tokenomics#future-phase-secondary-pools--ai16z" class="hash-link" aria-label="Direct link to future-phase-secondary-pools--ai16z" title="Direct link to future-phase-secondary-pools--ai16z">​</a></h2>
 <p>The next major evolution in our architecture introduces a secondary layer of liquidity: the $ai16z<!-- -->:AT<!-- --> pools. These are not yet live, but their function is defined and development will soon be underway.</p>
 <p>When launched, these pools will:</p>
@@ -125,9 +130,9 @@
 <li>This automatically deepens liquidity for both $ai16z and the successful ATs over their lifetime</li>
 <li>Deeper liquidity unlocks new routing paths, arbitrage opportunities, and composable LP dynamics. Creating a more sustainable and liquid $ai16z ecosystem</li>
 </ul>
-<p><img decoding="async" loading="lazy" src="https://pbs.twimg.com/media/Go5bNx5XsAAlIIs?format=jpg&amp;name=900x900" alt="Image" class="img__Ss2">
-(<a href="https://x.com/autodotfun/article/1915889326484766781/media/1913567183969431552" target="_blank" rel="noopener noreferrer">https://x.com/autodotfun/article/1915889326484766781/media/1913567183969431552</a>)</p>
 <p>These pools will be abstracted away from the user interface, operating as invisible infrastructure that enhances overall trading depth and price stability.</p>
+<p><img decoding="async" loading="lazy" src="https://pbs.twimg.com/media/Go5bANPX0AALoiZ?format=jpg&amp;name=900x900" alt="Image" class="img__Ss2">
+(<a href="https://x.com/autodotfun/article/1915889326484766781/media/1913566950791303168" target="_blank" rel="noopener noreferrer">https://x.com/autodotfun/article/1915889326484766781/media/1913566950791303168</a>)</p>
 <p>Future Flow Diagram (Under Development)</p>
 <ol>
 <li>Fees collected in SOL and AT from SOL<!-- -->:AT<!-- --> pools</li>
@@ -147,8 +152,14 @@
 </ul>
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="the-long-term-vision">The Long-Term Vision<a href="https://docs.eliza.how/blog/autofun-tokenomics#the-long-term-vision" class="hash-link" aria-label="Direct link to The Long-Term Vision" title="Direct link to The Long-Term Vision">​</a></h2>
 <p>The current phase of <a href="https://auto.fun/" target="_blank" rel="noopener noreferrer">auto.fun</a> represents the foundation of a generative economic system. Agent developers gain tools and incentives to launch sustainably; traders benefit from deep liquidity and clean UX; and the broader Eliza ecosystem sees value compounded into $ai16z.</p>
-<p>By partnering closely with Raydium, we’ve ensured that liquidity is not only deep, but modular—anchored in assets creators actually control, and governed by onchain primitives like NFTs and LP tokens. As we roll out the next phase of dual-pool mechanics, this foundation will allow for seamless compounding of fees, routing complexity, and capital efficiency—without introducing user friction.</p>
+<p>By partnering closely with Raydium, we've ensured that liquidity is not only deep, but modular—anchored in assets creators actually control, and governed by onchain primitives like NFTs and LP tokens. As we roll out the next phase of dual-pool mechanics, this foundation will allow for seamless compounding of fees, routing complexity, and capital efficiency—without introducing user friction.</p>
 <p>In short: each new token strengthens the network. Each trade reinforces the system. And each builder becomes an owner in the economy they're helping create.</p>]]></content:encoded>
+            <category>autofun</category>
+            <category>tokenomics</category>
+            <category>ai16z</category>
+            <category>liquidity</category>
+            <category>launchpad</category>
+            <category>elizaos</category>
         </item>
         <item>
             <title><![CDATA[Using OpenAI Plugin Envs for Any OpenAI-Compatible Provider]]></title>
@@ -157,6 +168,7 @@
             <pubDate>Thu, 24 Apr 2025 00:00:00 GMT</pubDate>
             <description><![CDATA[Learn how to configure the OpenAI plugin to work with any OpenAI-compatible provider using environment variables.]]></description>
             <content:encoded><![CDATA[<p>The <code>plugin-openai</code> package in this project can connect to any OpenAI-compatible API provider—not just OpenAI itself! Thanks to flexible environment variable support, you can swap between providers like Azure, OpenRouter, or even your own local LLM with just a few tweaks. It’s that easy!</p>
+<!-- -->
 <h2 class="anchor anchorWithStickyNavbar_fF9Z" id="-what-is-an-openai-compatible-provider">🤔 What is an OpenAI-Compatible Provider?<a href="https://docs.eliza.how/blog/openai-plugin-envs#-what-is-an-openai-compatible-provider" class="hash-link" aria-label="Direct link to 🤔 What is an OpenAI-Compatible Provider?" title="Direct link to 🤔 What is an OpenAI-Compatible Provider?">​</a></h2>
 <p>An OpenAI-compatible provider is any service that implements the OpenAI API spec. Popular examples include:</p>
 <ul>
