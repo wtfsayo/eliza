@@ -3,20 +3,24 @@ This file is a merged representation of a subset of the codebase, containing spe
 # File Summary
 
 ## Purpose
+
 This file contains a packed representation of the entire repository's contents.
 It is designed to be easily consumable by AI systems for analysis, code review,
 or other automated processes.
 
 ## File Format
+
 The content is organized as follows:
+
 1. This summary section
 2. Repository information
 3. Directory structure
 4. Multiple file entries, each consisting of:
-  a. A header with the file path (## File: path/to/file)
-  b. The full contents of the file in a code block
+   a. A header with the file path (## File: path/to/file)
+   b. The full contents of the file in a code block
 
 ## Usage Guidelines
+
 - This file should be treated as read-only. Any changes should be made to the
   original repository files, not this packed version.
 - When processing this file, use the file path to distinguish
@@ -25,157 +29,164 @@ The content is organized as follows:
   the same level of security as you would the original repository.
 
 ## Notes
+
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Only files matching these patterns are included: api/**/*.md
+- Only files matching these patterns are included: packages/docs/api/\*_/_.md
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
 
 ## Additional Info
 
 # Directory Structure
+
 ```
-api/
-  classes/
-    AgentRuntime.md
-    DatabaseAdapter.md
-    Service.md
-  enumerations/
-    EventType.md
-    PlatformPrefix.md
-    SOCKET_MESSAGE_TYPE.md
-  functions/
-    addHeader.md
-    asUUID.md
-    cleanJsonResponse.md
-    composeActionExamples.md
-    composePrompt.md
-    composePromptFromState.md
-    composeRandomUser.md
-    createMessageMemory.md
-    createServiceError.md
-    createSettingFromConfig.md
-    createUniqueUuid.md
-    decryptedCharacter.md
-    decryptObjectValues.md
-    decryptStringValue.md
-    encryptedCharacter.md
-    encryptObjectValues.md
-    encryptStringValue.md
-    extractAttributes.md
-    findEntityByName.md
-    findWorldsForOwner.md
-    formatActionNames.md
-    formatActions.md
-    formatEntities.md
-    formatMessages.md
-    getBrowserService.md
-    getEntityDetails.md
-    getFileService.md
-    getMemoryText.md
-    getPdfService.md
-    getSalt.md
-    getTypedService.md
-    getUserServerRole.md
-    getVideoService.md
-    getWavHeader.md
-    getWorldSettings.md
-    initializeOnboarding.md
-    isCustomMetadata.md
-    isDescriptionMetadata.md
-    isDocumentMemory.md
-    isDocumentMetadata.md
-    isFragmentMemory.md
-    isFragmentMetadata.md
-    isMessageMetadata.md
-    normalizeJsonString.md
-    parseBooleanFromText.md
-    parseJsonArrayFromText.md
-    parseJSONObjectFromText.md
-    prependWavHeader.md
-    saltSettingValue.md
-    saltWorldSettings.md
-    stringToUuid.md
-    trimTokens.md
-    truncateToCompleteSentence.md
-    unsaltSettingValue.md
-    unsaltWorldSettings.md
-    updateWorldSettings.md
-    validateUuid.md
-  interfaces/
-    Action.md
-    ActionEventPayload.md
-    ActionExample.md
-    AudioProcessingParams.md
-    BaseMetadata.md
-    BaseModelParams.md
-    Character.md
-    Content.md
-    DetokenizeTextParams.md
-    EmbeddingSearchResult.md
-    EnhancedState.md
-    Entity.md
-    EntityPayload.md
-    EvaluationExample.md
-    Evaluator.md
-    EvaluatorEventPayload.md
-    EventPayload.md
-    EventPayloadMap.md
-    IDatabaseAdapter.md
-    ImageDescriptionParams.md
-    ImageGenerationParams.md
-    InvokePayload.md
-    Log.md
-    Memory.md
-    MemoryRetrievalOptions.md
-    MemorySearchOptions.md
-    MessageExample.md
-    MessageMemory.md
-    MessagePayload.md
-    ModelParamsMap.md
-    ModelResultMap.md
-    MultiRoomMemoryOptions.md
-    ObjectGenerationParams.md
-    Participant.md
-    Plugin.md
-    Provider.md
-    Relationship.md
-    RunEventPayload.md
-    RuntimeSettings.md
-    ServerOwnershipState.md
-    ServiceError.md
-    State.md
-    TextEmbeddingParams.md
-    TextGenerationParams.md
-    TextToSpeechParams.md
-    TokenizeTextParams.md
-    TranscriptionParams.md
-    TypedService.md
-    UnifiedMemoryOptions.md
-    UnifiedSearchOptions.md
-    VideoProcessingParams.md
-    WorldPayload.md
-  type-aliases/
-    EventHandler.md
-    Handler.md
-    HandlerCallback.md
-    JSONSchema.md
-    Media.md
-    MemoryTypeAlias.md
-    MessageReceivedHandlerParams.md
-    StateValue.md
-    UUID.md
-    Validator.md
-  variables/
-    ModelType.md
-  index.md
+packages/
+  docs/
+    api/
+      classes/
+        AgentRuntime.md
+        DatabaseAdapter.md
+        Service.md
+      enumerations/
+        EventType.md
+        PlatformPrefix.md
+        SOCKET_MESSAGE_TYPE.md
+      functions/
+        addHeader.md
+        asUUID.md
+        cleanJsonResponse.md
+        composeActionExamples.md
+        composePrompt.md
+        composePromptFromState.md
+        composeRandomUser.md
+        createMessageMemory.md
+        createServiceError.md
+        createSettingFromConfig.md
+        createUniqueUuid.md
+        decryptedCharacter.md
+        decryptObjectValues.md
+        decryptStringValue.md
+        encryptedCharacter.md
+        encryptObjectValues.md
+        encryptStringValue.md
+        extractAttributes.md
+        findEntityByName.md
+        findWorldsForOwner.md
+        formatActionNames.md
+        formatActions.md
+        formatEntities.md
+        formatMessages.md
+        getBrowserService.md
+        getEntityDetails.md
+        getFileService.md
+        getMemoryText.md
+        getPdfService.md
+        getSalt.md
+        getTypedService.md
+        getUserServerRole.md
+        getVideoService.md
+        getWavHeader.md
+        getWorldSettings.md
+        initializeOnboarding.md
+        isCustomMetadata.md
+        isDescriptionMetadata.md
+        isDocumentMemory.md
+        isDocumentMetadata.md
+        isFragmentMemory.md
+        isFragmentMetadata.md
+        isMessageMetadata.md
+        normalizeJsonString.md
+        parseBooleanFromText.md
+        parseJsonArrayFromText.md
+        parseJSONObjectFromText.md
+        prependWavHeader.md
+        saltSettingValue.md
+        saltWorldSettings.md
+        stringToUuid.md
+        trimTokens.md
+        truncateToCompleteSentence.md
+        unsaltSettingValue.md
+        unsaltWorldSettings.md
+        updateWorldSettings.md
+        validateUuid.md
+      interfaces/
+        Action.md
+        ActionEventPayload.md
+        ActionExample.md
+        AudioProcessingParams.md
+        BaseMetadata.md
+        BaseModelParams.md
+        Character.md
+        Content.md
+        ControlMessage.md
+        DetokenizeTextParams.md
+        EmbeddingSearchResult.md
+        EnhancedState.md
+        Entity.md
+        EntityPayload.md
+        EvaluationExample.md
+        Evaluator.md
+        EvaluatorEventPayload.md
+        EventPayload.md
+        EventPayloadMap.md
+        IDatabaseAdapter.md
+        ImageDescriptionParams.md
+        ImageGenerationParams.md
+        InvokePayload.md
+        Log.md
+        Memory.md
+        MemoryRetrievalOptions.md
+        MemorySearchOptions.md
+        MessageExample.md
+        MessageMemory.md
+        MessagePayload.md
+        ModelEventPayload.md
+        ModelParamsMap.md
+        ModelResultMap.md
+        MultiRoomMemoryOptions.md
+        ObjectGenerationParams.md
+        Participant.md
+        Plugin.md
+        Provider.md
+        Relationship.md
+        RunEventPayload.md
+        RuntimeSettings.md
+        ServerOwnershipState.md
+        ServiceError.md
+        State.md
+        TextEmbeddingParams.md
+        TextGenerationParams.md
+        TextToSpeechParams.md
+        TokenizeTextParams.md
+        TranscriptionParams.md
+        TypedService.md
+        UnifiedMemoryOptions.md
+        UnifiedSearchOptions.md
+        VideoProcessingParams.md
+        WorldPayload.md
+      type-aliases/
+        EventHandler.md
+        Handler.md
+        HandlerCallback.md
+        JSONSchema.md
+        Media.md
+        MemoryTypeAlias.md
+        MessageReceivedHandlerParams.md
+        StateValue.md
+        UUID.md
+        Validator.md
+      variables/
+        ModelType.md
+      index.md
 ```
 
 # Files
 
-## File: api/classes/AgentRuntime.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / AgentRuntime
+## File: packages/docs/api/classes/AgentRuntime.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / AgentRuntime
 
 # Class: AgentRuntime
 
@@ -207,7 +218,7 @@ Database instance
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1467](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1467)
+[packages/core/src/runtime.ts:1475](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1475)
 
 ## Methods
 
@@ -235,7 +246,7 @@ The plugin to register
 
 [packages/core/src/runtime.ts:189](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L189)
 
-***
+---
 
 ### getConversationLength()
 
@@ -255,9 +266,9 @@ The number of recent messages to be kept in memory.
 
 #### Defined in
 
-[packages/core/src/runtime.ts:644](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L644)
+[packages/core/src/runtime.ts:632](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L632)
 
-***
+---
 
 ### registerProvider()
 
@@ -281,9 +292,9 @@ The provider to register.
 
 #### Defined in
 
-[packages/core/src/runtime.ts:663](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L663)
+[packages/core/src/runtime.ts:651](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L651)
 
-***
+---
 
 ### registerAction()
 
@@ -307,9 +318,9 @@ The action to register.
 
 #### Defined in
 
-[packages/core/src/runtime.ts:672](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L672)
+[packages/core/src/runtime.ts:660](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L660)
 
-***
+---
 
 ### registerEvaluator()
 
@@ -333,9 +344,9 @@ The evaluator to register.
 
 #### Defined in
 
-[packages/core/src/runtime.ts:693](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L693)
+[packages/core/src/runtime.ts:681](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L681)
 
-***
+---
 
 ### registerContextProvider()
 
@@ -355,9 +366,9 @@ The context provider to register.
 
 #### Defined in
 
-[packages/core/src/runtime.ts:701](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L701)
+[packages/core/src/runtime.ts:689](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L689)
 
-***
+---
 
 ### processActions()
 
@@ -393,9 +404,9 @@ Optional callback handler for action results.
 
 #### Defined in
 
-[packages/core/src/runtime.ts:712](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L712)
+[packages/core/src/runtime.ts:700](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L700)
 
-***
+---
 
 ### evaluate()
 
@@ -435,9 +446,9 @@ The results of the evaluation.
 
 #### Defined in
 
-[packages/core/src/runtime.ts:808](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L808)
+[packages/core/src/runtime.ts:796](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L796)
 
-***
+---
 
 ### ensureParticipantInRoom()
 
@@ -461,9 +472,9 @@ Ensures a participant is added to a room, checking that the entity exists first
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1011](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1011)
+[packages/core/src/runtime.ts:999](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L999)
 
-***
+---
 
 ### ensureWorldExists()
 
@@ -485,9 +496,9 @@ Ensure the existence of a world.
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1066](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1066)
+[packages/core/src/runtime.ts:1054](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1054)
 
-***
+---
 
 ### ensureRoomExists()
 
@@ -518,9 +529,9 @@ An error if the room cannot be created.
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1102](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1102)
+[packages/core/src/runtime.ts:1090](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1090)
 
-***
+---
 
 ### composeState()
 
@@ -554,9 +565,9 @@ A State object containing provider data, values, and text
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1127](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1127)
+[packages/core/src/runtime.ts:1115](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1115)
 
-***
+---
 
 ### useModel()
 
@@ -566,7 +577,7 @@ Use a model with strongly typed parameters and return values based on model type
 
 #### Type Parameters
 
-• **T** *extends* `string`
+• **T** _extends_ `string`
 
 The model type to use
 
@@ -596,9 +607,9 @@ The parameters for the model, typed based on model type
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1302](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1302)
+[packages/core/src/runtime.ts:1290](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1290)
 
-***
+---
 
 ### getTaskWorker()
 
@@ -620,9 +631,9 @@ Get a task worker by name
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1461](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1461)
+[packages/core/src/runtime.ts:1469](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1469)
 
-***
+---
 
 ### init()
 
@@ -640,9 +651,9 @@ Initialize database connection
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1471](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1471)
+[packages/core/src/runtime.ts:1479](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1479)
 
-***
+---
 
 ### close()
 
@@ -660,9 +671,9 @@ Close database connection
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1475](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1475)
+[packages/core/src/runtime.ts:1483](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1483)
 
-***
+---
 
 ### getAgents()
 
@@ -680,9 +691,9 @@ Get all agents
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1483](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1483)
+[packages/core/src/runtime.ts:1491](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1491)
 
-***
+---
 
 ### getEntityById()
 
@@ -704,9 +715,9 @@ Get entity by ID
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1503](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1503)
+[packages/core/src/runtime.ts:1511](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1511)
 
-***
+---
 
 ### getEntitiesForRoom()
 
@@ -730,9 +741,9 @@ Get entities for room
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1507](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1507)
+[packages/core/src/runtime.ts:1515](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1515)
 
-***
+---
 
 ### createEntity()
 
@@ -754,9 +765,9 @@ Create new entity
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1511](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1511)
+[packages/core/src/runtime.ts:1519](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1519)
 
-***
+---
 
 ### updateEntity()
 
@@ -778,9 +789,9 @@ Update entity
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1518](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1518)
+[packages/core/src/runtime.ts:1526](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1526)
 
-***
+---
 
 ### getComponent()
 
@@ -808,9 +819,9 @@ Get component by ID
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1522](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1522)
+[packages/core/src/runtime.ts:1530](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1530)
 
-***
+---
 
 ### getComponents()
 
@@ -836,9 +847,9 @@ Get all components for an entity
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1531](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1531)
+[packages/core/src/runtime.ts:1539](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1539)
 
-***
+---
 
 ### createComponent()
 
@@ -860,9 +871,9 @@ Create component
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1535](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1535)
+[packages/core/src/runtime.ts:1543](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1543)
 
-***
+---
 
 ### updateComponent()
 
@@ -884,9 +895,9 @@ Update component
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1539](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1539)
+[packages/core/src/runtime.ts:1547](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1547)
 
-***
+---
 
 ### deleteComponent()
 
@@ -908,9 +919,9 @@ Delete component
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1543](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1543)
+[packages/core/src/runtime.ts:1551](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1551)
 
-***
+---
 
 ### getMemories()
 
@@ -948,9 +959,9 @@ Get memories matching criteria
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1574](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1574)
+[packages/core/src/runtime.ts:1582](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1582)
 
-***
+---
 
 ### createRelationship()
 
@@ -984,9 +995,9 @@ Promise resolving to boolean indicating success
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1737](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1737)
+[packages/core/src/runtime.ts:1745](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1745)
 
-***
+---
 
 ### updateRelationship()
 
@@ -1012,9 +1023,9 @@ Promise resolving to void
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1746](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1746)
+[packages/core/src/runtime.ts:1754](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1754)
 
-***
+---
 
 ### getRelationship()
 
@@ -1044,9 +1055,9 @@ Promise resolving to the Relationship object or null if not found
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1750](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1750)
+[packages/core/src/runtime.ts:1758](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1758)
 
-***
+---
 
 ### getRelationships()
 
@@ -1076,12 +1087,47 @@ Promise resolving to an array of Relationship objects
 
 #### Defined in
 
-[packages/core/src/runtime.ts:1757](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1757)
-````
+[packages/core/src/runtime.ts:1765](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1765)
 
-## File: api/classes/DatabaseAdapter.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / DatabaseAdapter
+---
+
+### sendControlMessage()
+
+> **sendControlMessage**(`params`): `Promise`\<`void`\>
+
+Sends a control message to the frontend to enable or disable input
+
+#### Parameters
+
+• **params**
+
+Parameters for the control message
+
+• **params.roomId**: \`$\{string\}-$\{string\}-$\{string\}-$\{string\}-$\{string\}\`
+
+The ID of the room to send the control message to
+
+• **params.action**: `"disable_input"` \| `"enable_input"`
+
+The action to perform
+
+• **params.target?**: `string`
+
+Optional target element identifier
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Defined in
+
+[packages/core/src/runtime.ts:1841](https://github.com/elizaOS/eliza/blob/main/packages/core/src/runtime.ts#L1841)
+```
+
+## File: packages/docs/api/classes/DatabaseAdapter.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / DatabaseAdapter
 
 # Class: `abstract` DatabaseAdapter\<DB\>
 
@@ -1137,7 +1183,7 @@ A Promise that resolves when initialization is complete.
 
 [packages/core/src/database.ts:38](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L38)
 
-***
+---
 
 ### close()
 
@@ -1159,7 +1205,7 @@ A Promise that resolves when closing is complete.
 
 [packages/core/src/database.ts:44](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L44)
 
-***
+---
 
 ### getEntityById()
 
@@ -1187,7 +1233,7 @@ A Promise that resolves to the Entity object or null if not found.
 
 [packages/core/src/database.ts:51](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L51)
 
-***
+---
 
 ### getEntitiesForRoom()
 
@@ -1213,7 +1259,7 @@ Get entities for room
 
 [packages/core/src/database.ts:53](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L53)
 
-***
+---
 
 ### createEntity()
 
@@ -1241,7 +1287,7 @@ A Promise that resolves when the account creation is complete.
 
 [packages/core/src/database.ts:60](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L60)
 
-***
+---
 
 ### updateEntity()
 
@@ -1269,7 +1315,7 @@ A Promise that resolves when the account update is complete.
 
 [packages/core/src/database.ts:67](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L67)
 
-***
+---
 
 ### getComponent()
 
@@ -1309,7 +1355,7 @@ Promise resolving to the Component if found, null otherwise
 
 [packages/core/src/database.ts:77](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L77)
 
-***
+---
 
 ### getComponents()
 
@@ -1345,7 +1391,7 @@ Promise resolving to array of Component objects
 
 [packages/core/src/database.ts:91](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L91)
 
-***
+---
 
 ### createComponent()
 
@@ -1373,7 +1419,7 @@ Promise resolving to true if creation was successful
 
 [packages/core/src/database.ts:102](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L102)
 
-***
+---
 
 ### updateComponent()
 
@@ -1401,7 +1447,7 @@ Promise that resolves when the update is complete
 
 [packages/core/src/database.ts:109](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L109)
 
-***
+---
 
 ### deleteComponent()
 
@@ -1429,7 +1475,7 @@ Promise that resolves when the deletion is complete
 
 [packages/core/src/database.ts:116](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L116)
 
-***
+---
 
 ### getMemories()
 
@@ -1473,7 +1519,7 @@ A Promise that resolves to an array of Memory objects.
 
 [packages/core/src/database.ts:123](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L123)
 
-***
+---
 
 ### getMemoriesByIds()
 
@@ -1505,7 +1551,7 @@ Promise resolving to array of Memory objects
 
 [packages/core/src/database.ts:148](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L148)
 
-***
+---
 
 ### getCachedEmbeddings()
 
@@ -1519,17 +1565,17 @@ Retrieves cached embeddings based on the specified query parameters.
 
 An object containing parameters for the embedding retrieval.
 
-• **params.query\_table\_name**: `string`
+• **params.query_table_name**: `string`
 
-• **params.query\_threshold**: `number`
+• **params.query_threshold**: `number`
 
-• **params.query\_input**: `string`
+• **params.query_input**: `string`
 
-• **params.query\_field\_name**: `string`
+• **params.query_field_name**: `string`
 
-• **params.query\_field\_sub\_name**: `string`
+• **params.query_field_sub_name**: `string`
 
-• **params.query\_match\_count**: `number`
+• **params.query_match_count**: `number`
 
 #### Returns
 
@@ -1545,7 +1591,7 @@ A Promise that resolves to an array of objects containing embeddings and levensh
 
 [packages/core/src/database.ts:155](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L155)
 
-***
+---
 
 ### log()
 
@@ -1581,7 +1627,7 @@ A Promise that resolves when the log entry has been saved.
 
 [packages/core/src/database.ts:181](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L181)
 
-***
+---
 
 ### getLogs()
 
@@ -1619,7 +1665,7 @@ A Promise that resolves to an array of Log objects.
 
 [packages/core/src/database.ts:193](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L193)
 
-***
+---
 
 ### deleteLog()
 
@@ -1647,7 +1693,7 @@ A Promise that resolves when the log has been deleted.
 
 [packages/core/src/database.ts:206](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L206)
 
-***
+---
 
 ### searchMemories()
 
@@ -1667,7 +1713,7 @@ An object containing parameters for the memory search.
 
 • **params.embedding**: `number`[]
 
-• **params.match\_threshold**: `number`
+• **params.match_threshold**: `number`
 
 • **params.count**: `number`
 
@@ -1687,7 +1733,7 @@ A Promise that resolves to an array of Memory objects.
 
 [packages/core/src/database.ts:213](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L213)
 
-***
+---
 
 ### createMemory()
 
@@ -1723,7 +1769,7 @@ A Promise that resolves when the memory has been created.
 
 [packages/core/src/database.ts:229](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L229)
 
-***
+---
 
 ### updateMemory()
 
@@ -1751,7 +1797,7 @@ Promise resolving to boolean indicating success
 
 [packages/core/src/database.ts:236](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L236)
 
-***
+---
 
 ### deleteMemory()
 
@@ -1779,7 +1825,7 @@ A Promise that resolves when the memory has been removed.
 
 [packages/core/src/database.ts:245](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L245)
 
-***
+---
 
 ### deleteAllMemories()
 
@@ -1811,7 +1857,7 @@ A Promise that resolves when all memories have been removed.
 
 [packages/core/src/database.ts:253](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L253)
 
-***
+---
 
 ### countMemories()
 
@@ -1847,7 +1893,7 @@ A Promise that resolves to the number of memories.
 
 [packages/core/src/database.ts:262](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L262)
 
-***
+---
 
 ### getWorld()
 
@@ -1875,7 +1921,7 @@ A Promise that resolves to the World object or null if not found.
 
 [packages/core/src/database.ts:269](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L269)
 
-***
+---
 
 ### getAllWorlds()
 
@@ -1897,7 +1943,7 @@ A Promise that resolves to an array of World objects.
 
 [packages/core/src/database.ts:275](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L275)
 
-***
+---
 
 ### createWorld()
 
@@ -1925,7 +1971,7 @@ A Promise that resolves to the UUID of the created world.
 
 [packages/core/src/database.ts:282](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L282)
 
-***
+---
 
 ### updateWorld()
 
@@ -1953,7 +1999,7 @@ A Promise that resolves when the world has been updated.
 
 [packages/core/src/database.ts:289](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L289)
 
-***
+---
 
 ### removeWorld()
 
@@ -1977,7 +2023,7 @@ A Promise that resolves when the world has been removed.
 
 [packages/core/src/database.ts:296](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L296)
 
-***
+---
 
 ### getRoom()
 
@@ -2005,7 +2051,7 @@ A Promise that resolves to the room ID or null if not found.
 
 [packages/core/src/database.ts:303](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L303)
 
-***
+---
 
 ### getRooms()
 
@@ -2033,7 +2079,7 @@ A Promise that resolves to an array of Room objects.
 
 [packages/core/src/database.ts:310](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L310)
 
-***
+---
 
 ### createRoom()
 
@@ -2061,7 +2107,7 @@ A Promise that resolves to the UUID of the created room.
 
 [packages/core/src/database.ts:317](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L317)
 
-***
+---
 
 ### updateRoom()
 
@@ -2089,7 +2135,7 @@ A Promise that resolves when the room has been updated.
 
 [packages/core/src/database.ts:324](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L324)
 
-***
+---
 
 ### deleteRoom()
 
@@ -2117,7 +2163,7 @@ A Promise that resolves when the room has been removed.
 
 [packages/core/src/database.ts:331](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L331)
 
-***
+---
 
 ### getRoomsForParticipant()
 
@@ -2145,7 +2191,7 @@ A Promise that resolves to an array of room IDs.
 
 [packages/core/src/database.ts:338](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L338)
 
-***
+---
 
 ### getRoomsForParticipants()
 
@@ -2173,7 +2219,7 @@ A Promise that resolves to an array of room IDs.
 
 [packages/core/src/database.ts:345](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L345)
 
-***
+---
 
 ### addParticipant()
 
@@ -2205,7 +2251,7 @@ A Promise that resolves to a boolean indicating success or failure.
 
 [packages/core/src/database.ts:353](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L353)
 
-***
+---
 
 ### removeParticipant()
 
@@ -2237,7 +2283,7 @@ A Promise that resolves to a boolean indicating success or failure.
 
 [packages/core/src/database.ts:361](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L361)
 
-***
+---
 
 ### getParticipantsForEntity()
 
@@ -2265,7 +2311,7 @@ A Promise that resolves to an array of Participant objects.
 
 [packages/core/src/database.ts:368](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L368)
 
-***
+---
 
 ### getParticipantsForRoom()
 
@@ -2293,7 +2339,7 @@ A Promise that resolves to an array of UUIDs representing the participants.
 
 [packages/core/src/database.ts:375](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L375)
 
-***
+---
 
 ### createRelationship()
 
@@ -2329,7 +2375,7 @@ A Promise that resolves to a boolean indicating success or failure of the creati
 
 [packages/core/src/database.ts:393](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L393)
 
-***
+---
 
 ### getRelationship()
 
@@ -2361,7 +2407,7 @@ A Promise that resolves to the Relationship object or null if not found.
 
 [packages/core/src/database.ts:405](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L405)
 
-***
+---
 
 ### getRelationships()
 
@@ -2393,7 +2439,7 @@ A Promise that resolves to an array of Relationship objects.
 
 [packages/core/src/database.ts:415](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L415)
 
-***
+---
 
 ### updateRelationship()
 
@@ -2429,7 +2475,7 @@ A Promise that resolves to a boolean indicating success or failure of the update
 
 [packages/core/src/database.ts:422](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L422)
 
-***
+---
 
 ### getAgent()
 
@@ -2457,7 +2503,7 @@ A Promise that resolves to the Agent object or null if not found.
 
 [packages/core/src/database.ts:434](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L434)
 
-***
+---
 
 ### getAgents()
 
@@ -2479,7 +2525,7 @@ A Promise that resolves to an array of Agent objects.
 
 [packages/core/src/database.ts:440](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L440)
 
-***
+---
 
 ### createAgent()
 
@@ -2507,7 +2553,7 @@ A Promise that resolves to a boolean indicating success or failure of the creati
 
 [packages/core/src/database.ts:447](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L447)
 
-***
+---
 
 ### updateAgent()
 
@@ -2539,7 +2585,7 @@ A Promise that resolves to a boolean indicating success or failure of the update
 
 [packages/core/src/database.ts:455](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L455)
 
-***
+---
 
 ### deleteAgent()
 
@@ -2567,11 +2613,11 @@ A Promise that resolves to a boolean indicating success or failure of the deleti
 
 [packages/core/src/database.ts:462](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L462)
 
-***
+---
 
 ### ensureAgentExists()
 
-> `abstract` **ensureAgentExists**(`agent`): `Promise`\<`void`\>
+> `abstract` **ensureAgentExists**(`agent`): `Promise`\<`Agent`\>
 
 Ensures an agent exists in the database.
 
@@ -2583,7 +2629,7 @@ The agent object to ensure exists.
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`Agent`\>
 
 A Promise that resolves when the agent has been ensured to exist.
 
@@ -2595,7 +2641,7 @@ A Promise that resolves when the agent has been ensured to exist.
 
 [packages/core/src/database.ts:469](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L469)
 
-***
+---
 
 ### ensureEmbeddingDimension()
 
@@ -2623,7 +2669,7 @@ A Promise that resolves when the embedding dimension has been ensured to exist.
 
 [packages/core/src/database.ts:476](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L476)
 
-***
+---
 
 ### getCache()
 
@@ -2655,7 +2701,7 @@ Promise resolving to the cached string value
 
 [packages/core/src/database.ts:483](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L483)
 
-***
+---
 
 ### setCache()
 
@@ -2691,7 +2737,7 @@ Promise resolving to true if the cache was set successfully
 
 [packages/core/src/database.ts:492](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L492)
 
-***
+---
 
 ### deleteCache()
 
@@ -2719,7 +2765,7 @@ Promise resolving to true if the value was successfully deleted
 
 [packages/core/src/database.ts:499](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L499)
 
-***
+---
 
 ### createTask()
 
@@ -2747,7 +2793,7 @@ Promise resolving to the UUID of the created task
 
 [packages/core/src/database.ts:506](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L506)
 
-***
+---
 
 ### getTasks()
 
@@ -2779,7 +2825,7 @@ Promise resolving to an array of Task objects
 
 [packages/core/src/database.ts:513](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L513)
 
-***
+---
 
 ### getTask()
 
@@ -2807,7 +2853,7 @@ Promise resolving to the Task object if found, null otherwise
 
 [packages/core/src/database.ts:520](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L520)
 
-***
+---
 
 ### getTasksByName()
 
@@ -2835,7 +2881,7 @@ Promise resolving to the Task object if found, null otherwise
 
 [packages/core/src/database.ts:527](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L527)
 
-***
+---
 
 ### updateTask()
 
@@ -2867,7 +2913,7 @@ Promise resolving when the update is complete
 
 [packages/core/src/database.ts:535](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L535)
 
-***
+---
 
 ### deleteTask()
 
@@ -2894,11 +2940,12 @@ Promise resolving when the deletion is complete
 #### Defined in
 
 [packages/core/src/database.ts:542](https://github.com/elizaOS/eliza/blob/main/packages/core/src/database.ts#L542)
-````
+```
 
-## File: api/classes/Service.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Service
+## File: packages/docs/api/classes/Service.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Service
 
 # Class: `abstract` Service
 
@@ -2920,7 +2967,7 @@ Runtime instance
 
 [packages/core/src/types.ts:519](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L519)
 
-***
+---
 
 ### serviceType
 
@@ -2932,7 +2979,7 @@ Service type
 
 [packages/core/src/types.ts:530](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L530)
 
-***
+---
 
 ### capabilityDescription
 
@@ -2944,7 +2991,7 @@ Service name
 
 [packages/core/src/types.ts:533](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L533)
 
-***
+---
 
 ### config?
 
@@ -2954,7 +3001,7 @@ Service configuration
 
 #### Index Signature
 
- \[`key`: `string`\]: `any`
+\[`key`: `string`\]: `any`
 
 #### Defined in
 
@@ -2980,7 +3027,7 @@ Start service connection
 
 [packages/core/src/types.ts:539](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L539)
 
-***
+---
 
 ### stop()
 
@@ -2999,11 +3046,12 @@ Stop service connection
 #### Defined in
 
 [packages/core/src/types.ts:544](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L544)
-````
+```
 
-## File: api/enumerations/EventType.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / EventType
+## File: packages/docs/api/enumerations/EventType.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / EventType
 
 # Enumeration: EventType
 
@@ -3011,228 +3059,239 @@ Standard event types across all platforms
 
 ## Enumeration Members
 
-### WORLD\_JOINED
+### WORLD_JOINED
 
-> **WORLD\_JOINED**: `"WORLD_JOINED"`
-
-#### Defined in
-
-[packages/core/src/types.ts:1503](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1503)
-
-***
-
-### WORLD\_CONNECTED
-
-> **WORLD\_CONNECTED**: `"WORLD_CONNECTED"`
+> **WORLD_JOINED**: `"WORLD_JOINED"`
 
 #### Defined in
 
-[packages/core/src/types.ts:1504](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1504)
+[packages/core/src/types.ts:1507](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1507)
 
-***
+---
 
-### WORLD\_LEFT
+### WORLD_CONNECTED
 
-> **WORLD\_LEFT**: `"WORLD_LEFT"`
-
-#### Defined in
-
-[packages/core/src/types.ts:1505](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1505)
-
-***
-
-### ENTITY\_JOINED
-
-> **ENTITY\_JOINED**: `"ENTITY_JOINED"`
+> **WORLD_CONNECTED**: `"WORLD_CONNECTED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1508](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1508)
 
-***
+---
 
-### ENTITY\_LEFT
+### WORLD_LEFT
 
-> **ENTITY\_LEFT**: `"ENTITY_LEFT"`
+> **WORLD_LEFT**: `"WORLD_LEFT"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1509](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1509)
 
-***
+---
 
-### ENTITY\_UPDATED
+### ENTITY_JOINED
 
-> **ENTITY\_UPDATED**: `"ENTITY_UPDATED"`
+> **ENTITY_JOINED**: `"ENTITY_JOINED"`
 
 #### Defined in
 
-[packages/core/src/types.ts:1510](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1510)
+[packages/core/src/types.ts:1512](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1512)
 
-***
+---
 
-### ROOM\_JOINED
+### ENTITY_LEFT
 
-> **ROOM\_JOINED**: `"ROOM_JOINED"`
+> **ENTITY_LEFT**: `"ENTITY_LEFT"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1513](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1513)
 
-***
+---
 
-### ROOM\_LEFT
+### ENTITY_UPDATED
 
-> **ROOM\_LEFT**: `"ROOM_LEFT"`
+> **ENTITY_UPDATED**: `"ENTITY_UPDATED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1514](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1514)
 
-***
+---
 
-### MESSAGE\_RECEIVED
+### ROOM_JOINED
 
-> **MESSAGE\_RECEIVED**: `"MESSAGE_RECEIVED"`
+> **ROOM_JOINED**: `"ROOM_JOINED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1517](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1517)
 
-***
+---
 
-### MESSAGE\_SENT
+### ROOM_LEFT
 
-> **MESSAGE\_SENT**: `"MESSAGE_SENT"`
+> **ROOM_LEFT**: `"ROOM_LEFT"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1518](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1518)
 
-***
+---
 
-### VOICE\_MESSAGE\_RECEIVED
+### MESSAGE_RECEIVED
 
-> **VOICE\_MESSAGE\_RECEIVED**: `"VOICE_MESSAGE_RECEIVED"`
+> **MESSAGE_RECEIVED**: `"MESSAGE_RECEIVED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1521](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1521)
 
-***
+---
 
-### VOICE\_MESSAGE\_SENT
+### MESSAGE_SENT
 
-> **VOICE\_MESSAGE\_SENT**: `"VOICE_MESSAGE_SENT"`
+> **MESSAGE_SENT**: `"MESSAGE_SENT"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1522](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1522)
 
-***
+---
 
-### REACTION\_RECEIVED
+### VOICE_MESSAGE_RECEIVED
 
-> **REACTION\_RECEIVED**: `"REACTION_RECEIVED"`
+> **VOICE_MESSAGE_RECEIVED**: `"VOICE_MESSAGE_RECEIVED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1525](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1525)
 
-***
+---
 
-### POST\_GENERATED
+### VOICE_MESSAGE_SENT
 
-> **POST\_GENERATED**: `"POST_GENERATED"`
+> **VOICE_MESSAGE_SENT**: `"VOICE_MESSAGE_SENT"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1526](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1526)
 
-***
+---
 
-### INTERACTION\_RECEIVED
+### REACTION_RECEIVED
 
-> **INTERACTION\_RECEIVED**: `"INTERACTION_RECEIVED"`
+> **REACTION_RECEIVED**: `"REACTION_RECEIVED"`
 
 #### Defined in
 
-[packages/core/src/types.ts:1527](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1527)
+[packages/core/src/types.ts:1529](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1529)
 
-***
+---
 
-### RUN\_STARTED
+### POST_GENERATED
 
-> **RUN\_STARTED**: `"RUN_STARTED"`
+> **POST_GENERATED**: `"POST_GENERATED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1530](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1530)
 
-***
+---
 
-### RUN\_ENDED
+### INTERACTION_RECEIVED
 
-> **RUN\_ENDED**: `"RUN_ENDED"`
+> **INTERACTION_RECEIVED**: `"INTERACTION_RECEIVED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1531](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1531)
 
-***
+---
 
-### RUN\_TIMEOUT
+### RUN_STARTED
 
-> **RUN\_TIMEOUT**: `"RUN_TIMEOUT"`
+> **RUN_STARTED**: `"RUN_STARTED"`
 
 #### Defined in
 
-[packages/core/src/types.ts:1532](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1532)
+[packages/core/src/types.ts:1534](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1534)
 
-***
+---
 
-### ACTION\_STARTED
+### RUN_ENDED
 
-> **ACTION\_STARTED**: `"ACTION_STARTED"`
+> **RUN_ENDED**: `"RUN_ENDED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1535](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1535)
 
-***
+---
 
-### ACTION\_COMPLETED
+### RUN_TIMEOUT
 
-> **ACTION\_COMPLETED**: `"ACTION_COMPLETED"`
+> **RUN_TIMEOUT**: `"RUN_TIMEOUT"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1536](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1536)
 
-***
+---
 
-### EVALUATOR\_STARTED
+### ACTION_STARTED
 
-> **EVALUATOR\_STARTED**: `"EVALUATOR_STARTED"`
+> **ACTION_STARTED**: `"ACTION_STARTED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1539](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1539)
 
-***
+---
 
-### EVALUATOR\_COMPLETED
+### ACTION_COMPLETED
 
-> **EVALUATOR\_COMPLETED**: `"EVALUATOR_COMPLETED"`
+> **ACTION_COMPLETED**: `"ACTION_COMPLETED"`
 
 #### Defined in
 
 [packages/core/src/types.ts:1540](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1540)
-````
 
-## File: api/enumerations/PlatformPrefix.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / PlatformPrefix
+---
+
+### EVALUATOR_STARTED
+
+> **EVALUATOR_STARTED**: `"EVALUATOR_STARTED"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1543](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1543)
+
+---
+
+### EVALUATOR_COMPLETED
+
+> **EVALUATOR_COMPLETED**: `"EVALUATOR_COMPLETED"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1544](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1544)
+
+---
+
+### MODEL_USED
+
+> **MODEL_USED**: `"MODEL_USED"`
+
+#### Defined in
+
+[packages/core/src/types.ts:1547](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1547)
+```
+
+## File: packages/docs/api/enumerations/PlatformPrefix.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / PlatformPrefix
 
 # Enumeration: PlatformPrefix
 
@@ -3246,9 +3305,9 @@ Platform-specific event type prefix
 
 #### Defined in
 
-[packages/core/src/types.ts:1547](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1547)
+[packages/core/src/types.ts:1554](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1554)
 
-***
+---
 
 ### TELEGRAM
 
@@ -3256,9 +3315,9 @@ Platform-specific event type prefix
 
 #### Defined in
 
-[packages/core/src/types.ts:1548](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1548)
+[packages/core/src/types.ts:1555](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1555)
 
-***
+---
 
 ### TWITTER
 
@@ -3266,38 +3325,39 @@ Platform-specific event type prefix
 
 #### Defined in
 
-[packages/core/src/types.ts:1549](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1549)
-````
+[packages/core/src/types.ts:1556](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1556)
+```
 
-## File: api/enumerations/SOCKET_MESSAGE_TYPE.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / SOCKET\_MESSAGE\_TYPE
+## File: packages/docs/api/enumerations/SOCKET_MESSAGE_TYPE.md
 
-# Enumeration: SOCKET\_MESSAGE\_TYPE
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / SOCKET_MESSAGE_TYPE
+
+# Enumeration: SOCKET_MESSAGE_TYPE
 
 Update the Plugin interface with typed events
 
 ## Enumeration Members
 
-### ROOM\_JOINING
+### ROOM_JOINING
 
-> **ROOM\_JOINING**: `1`
-
-#### Defined in
-
-[packages/core/src/types.ts:1692](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1692)
-
-***
-
-### SEND\_MESSAGE
-
-> **SEND\_MESSAGE**: `2`
+> **ROOM_JOINING**: `1`
 
 #### Defined in
 
-[packages/core/src/types.ts:1693](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1693)
+[packages/core/src/types.ts:1714](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1714)
 
-***
+---
+
+### SEND_MESSAGE
+
+> **SEND_MESSAGE**: `2`
+
+#### Defined in
+
+[packages/core/src/types.ts:1715](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1715)
+
+---
 
 ### MESSAGE
 
@@ -3305,9 +3365,9 @@ Update the Plugin interface with typed events
 
 #### Defined in
 
-[packages/core/src/types.ts:1694](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1694)
+[packages/core/src/types.ts:1716](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1716)
 
-***
+---
 
 ### ACK
 
@@ -3315,9 +3375,9 @@ Update the Plugin interface with typed events
 
 #### Defined in
 
-[packages/core/src/types.ts:1695](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1695)
+[packages/core/src/types.ts:1717](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1717)
 
-***
+---
 
 ### THINKING
 
@@ -3325,12 +3385,23 @@ Update the Plugin interface with typed events
 
 #### Defined in
 
-[packages/core/src/types.ts:1696](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1696)
-````
+[packages/core/src/types.ts:1718](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1718)
 
-## File: api/functions/addHeader.md
+---
+
+### CONTROL
+
+> **CONTROL**: `6`
+
+#### Defined in
+
+[packages/core/src/types.ts:1719](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1719)
+```
+
+## File: packages/docs/api/functions/addHeader.md
+
 ````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / addHeader
+[@elizaos/core v1.0.0-beta.34](../index.md) / addHeader
 
 # Function: addHeader()
 
@@ -3361,8 +3432,8 @@ The body with the header prepended.
 
 ```ts
 // Given a header and a body
-const header = "Header";
-const body = "Body";
+const header = 'Header';
+const body = 'Body';
 
 // Adding the header to the body will result in:
 // "Header\nBody"
@@ -3374,9 +3445,10 @@ const text = addHeader(header, body);
 [packages/core/src/prompts.ts:107](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L107)
 ````
 
-## File: api/functions/asUUID.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / asUUID
+## File: packages/docs/api/functions/asUUID.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / asUUID
 
 # Function: asUUID()
 
@@ -3399,11 +3471,12 @@ The same UUID with branded type information
 ## Defined in
 
 [packages/core/src/types.ts:15](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L15)
-````
+```
 
-## File: api/functions/cleanJsonResponse.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / cleanJsonResponse
+## File: packages/docs/api/functions/cleanJsonResponse.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / cleanJsonResponse
 
 # Function: cleanJsonResponse()
 
@@ -3427,11 +3500,12 @@ The cleaned string, ready for parsing or further processing.
 ## Defined in
 
 [packages/core/src/prompts.ts:576](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L576)
-````
+```
 
-## File: api/functions/composeActionExamples.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / composeActionExamples
+## File: packages/docs/api/functions/composeActionExamples.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / composeActionExamples
 
 # Function: composeActionExamples()
 
@@ -3458,11 +3532,12 @@ The formatted action examples.
 ## Defined in
 
 [packages/core/src/actions.ts:18](https://github.com/elizaOS/eliza/blob/main/packages/core/src/actions.ts#L18)
-````
+```
 
-## File: api/functions/composePrompt.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / composePrompt
+## File: packages/docs/api/functions/composePrompt.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / composePrompt
 
 # Function: composePrompt()
 
@@ -3493,11 +3568,12 @@ The composed prompt output.
 ## Defined in
 
 [packages/core/src/prompts.ts:45](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L45)
-````
+```
 
-## File: api/functions/composePromptFromState.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / composePromptFromState
+## File: packages/docs/api/functions/composePromptFromState.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / composePromptFromState
 
 # Function: composePromptFromState()
 
@@ -3528,11 +3604,12 @@ The composed prompt output.
 ## Defined in
 
 [packages/core/src/prompts.ts:66](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L66)
-````
+```
 
-## File: api/functions/composeRandomUser.md
+## File: packages/docs/api/functions/composeRandomUser.md
+
 ````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / composeRandomUser
+[@elizaos/core v1.0.0-beta.34](../index.md) / composeRandomUser
 
 # Function: composeRandomUser()
 
@@ -3564,7 +3641,7 @@ The template string with placeholders replaced by random user names.
 
 ```ts
 // Given a template and a length
-const template = "Hello, {{name1}}! Meet {{name2}} and {{name3}}.";
+const template = 'Hello, {{name1}}! Meet {{name2}} and {{name3}}.';
 const length = 3;
 
 // Composing the random user string will result in:
@@ -3577,9 +3654,10 @@ const result = composeRandomUser(template, length);
 [packages/core/src/prompts.ts:131](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L131)
 ````
 
-## File: api/functions/createMessageMemory.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / createMessageMemory
+## File: packages/docs/api/functions/createMessageMemory.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / createMessageMemory
 
 # Function: createMessageMemory()
 
@@ -3609,12 +3687,13 @@ Factory function to create a new message memory with proper defaults
 
 ## Defined in
 
-[packages/core/src/types.ts:1712](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1712)
-````
+[packages/core/src/types.ts:1735](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1735)
+```
 
-## File: api/functions/createServiceError.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / createServiceError
+## File: packages/docs/api/functions/createServiceError.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / createServiceError
 
 # Function: createServiceError()
 
@@ -3634,12 +3713,13 @@ Safely create a ServiceError from any caught error
 
 ## Defined in
 
-[packages/core/src/types.ts:1882](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1882)
-````
+[packages/core/src/types.ts:1905](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1905)
+```
 
-## File: api/functions/createSettingFromConfig.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / createSettingFromConfig
+## File: packages/docs/api/functions/createSettingFromConfig.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / createSettingFromConfig
 
 # Function: createSettingFromConfig()
 
@@ -3662,11 +3742,12 @@ A new Setting object created from the provided configSetting object.
 ## Defined in
 
 [packages/core/src/settings.ts:24](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L24)
-````
+```
 
-## File: api/functions/createUniqueUuid.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / createUniqueUuid
+## File: packages/docs/api/functions/createUniqueUuid.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / createUniqueUuid
 
 # Function: createUniqueUuid()
 
@@ -3693,11 +3774,12 @@ The base user ID to use in generating the UUID.
 ## Defined in
 
 [packages/core/src/entities.ts:300](https://github.com/elizaOS/eliza/blob/main/packages/core/src/entities.ts#L300)
-````
+```
 
-## File: api/functions/decryptedCharacter.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / decryptedCharacter
+## File: packages/docs/api/functions/decryptedCharacter.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / decryptedCharacter
 
 # Function: decryptedCharacter()
 
@@ -3724,11 +3806,12 @@ The runtime information needed for salt generation
 ## Defined in
 
 [packages/core/src/settings.ts:365](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L365)
-````
+```
 
-## File: api/functions/decryptObjectValues.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / decryptObjectValues
+## File: packages/docs/api/functions/decryptObjectValues.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / decryptObjectValues
 
 # Function: decryptObjectValues()
 
@@ -3755,11 +3838,12 @@ The salt to use for decryption
 ## Defined in
 
 [packages/core/src/settings.ts:409](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L409)
-````
+```
 
-## File: api/functions/decryptStringValue.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / decryptStringValue
+## File: packages/docs/api/functions/decryptStringValue.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / decryptStringValue
 
 # Function: decryptStringValue()
 
@@ -3786,11 +3870,12 @@ The salt to use for decryption
 ## Defined in
 
 [packages/core/src/settings.ts:120](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L120)
-````
+```
 
-## File: api/functions/encryptedCharacter.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / encryptedCharacter
+## File: packages/docs/api/functions/encryptedCharacter.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / encryptedCharacter
 
 # Function: encryptedCharacter()
 
@@ -3813,11 +3898,12 @@ The character object to encrypt secrets for
 ## Defined in
 
 [packages/core/src/settings.ts:341](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L341)
-````
+```
 
-## File: api/functions/encryptObjectValues.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / encryptObjectValues
+## File: packages/docs/api/functions/encryptObjectValues.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / encryptObjectValues
 
 # Function: encryptObjectValues()
 
@@ -3844,11 +3930,12 @@ The salt to use for encryption
 ## Defined in
 
 [packages/core/src/settings.ts:389](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L389)
-````
+```
 
-## File: api/functions/encryptStringValue.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / encryptStringValue
+## File: packages/docs/api/functions/encryptStringValue.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / encryptStringValue
 
 # Function: encryptStringValue()
 
@@ -3875,11 +3962,12 @@ The salt to use for encryption
 ## Defined in
 
 [packages/core/src/settings.ts:67](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L67)
-````
+```
 
-## File: api/functions/extractAttributes.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / extractAttributes
+## File: packages/docs/api/functions/extractAttributes.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / extractAttributes
 
 # Function: extractAttributes()
 
@@ -3906,11 +3994,12 @@ An object containing the extracted attributes.
 ## Defined in
 
 [packages/core/src/prompts.ts:510](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L510)
-````
+```
 
-## File: api/functions/findEntityByName.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / findEntityByName
+## File: packages/docs/api/functions/findEntityByName.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / findEntityByName
 
 # Function: findEntityByName()
 
@@ -3941,11 +4030,12 @@ A promise that resolves to the found entity or null if not found.
 ## Defined in
 
 [packages/core/src/entities.ts:134](https://github.com/elizaOS/eliza/blob/main/packages/core/src/entities.ts#L134)
-````
+```
 
-## File: api/functions/findWorldsForOwner.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / findWorldsForOwner
+## File: packages/docs/api/functions/findWorldsForOwner.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / findWorldsForOwner
 
 # Function: findWorldsForOwner()
 
@@ -3966,11 +4056,12 @@ Finds a server where the given user is the owner
 ## Defined in
 
 [packages/core/src/roles.ts:64](https://github.com/elizaOS/eliza/blob/main/packages/core/src/roles.ts#L64)
-````
+```
 
-## File: api/functions/formatActionNames.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / formatActionNames
+## File: packages/docs/api/functions/formatActionNames.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / formatActionNames
 
 # Function: formatActionNames()
 
@@ -3993,11 +4084,12 @@ A comma-separated string of action names.
 ## Defined in
 
 [packages/core/src/actions.ts:63](https://github.com/elizaOS/eliza/blob/main/packages/core/src/actions.ts#L63)
-````
+```
 
-## File: api/functions/formatActions.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / formatActions
+## File: packages/docs/api/functions/formatActions.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / formatActions
 
 # Function: formatActions()
 
@@ -4020,11 +4112,12 @@ A detailed string of actions, including names and descriptions.
 ## Defined in
 
 [packages/core/src/actions.ts:75](https://github.com/elizaOS/eliza/blob/main/packages/core/src/actions.ts#L75)
-````
+```
 
-## File: api/functions/formatEntities.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / formatEntities
+## File: packages/docs/api/functions/formatEntities.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / formatEntities
 
 # Function: formatEntities()
 
@@ -4051,11 +4144,12 @@ A formatted string representing the entities.
 ## Defined in
 
 [packages/core/src/entities.ts:391](https://github.com/elizaOS/eliza/blob/main/packages/core/src/entities.ts#L391)
-````
+```
 
-## File: api/functions/formatMessages.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / formatMessages
+## File: packages/docs/api/functions/formatMessages.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / formatMessages
 
 # Function: formatMessages()
 
@@ -4086,11 +4180,12 @@ Formatted message string with timestamps and user information
 ## Defined in
 
 [packages/core/src/prompts.ts:204](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L204)
-````
+```
 
-## File: api/functions/getBrowserService.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getBrowserService
+## File: packages/docs/api/functions/getBrowserService.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getBrowserService
 
 # Function: getBrowserService()
 
@@ -4108,12 +4203,13 @@ Type-safe helper for accessing the browser service
 
 ## Defined in
 
-[packages/core/src/types.ts:1833](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1833)
-````
+[packages/core/src/types.ts:1856](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1856)
+```
 
-## File: api/functions/getEntityDetails.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getEntityDetails
+## File: packages/docs/api/functions/getEntityDetails.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getEntityDetails
 
 # Function: getEntityDetails()
 
@@ -4144,11 +4240,12 @@ The ID of the room to retrieve entity details for
 ## Defined in
 
 [packages/core/src/entities.ts:325](https://github.com/elizaOS/eliza/blob/main/packages/core/src/entities.ts#L325)
-````
+```
 
-## File: api/functions/getFileService.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getFileService
+## File: packages/docs/api/functions/getFileService.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getFileService
 
 # Function: getFileService()
 
@@ -4166,12 +4263,13 @@ Type-safe helper for accessing the file service
 
 ## Defined in
 
-[packages/core/src/types.ts:1847](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1847)
-````
+[packages/core/src/types.ts:1870](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1870)
+```
 
-## File: api/functions/getMemoryText.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getMemoryText
+## File: packages/docs/api/functions/getMemoryText.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getMemoryText
 
 # Function: getMemoryText()
 
@@ -4197,12 +4295,13 @@ The text content or default value
 
 ## Defined in
 
-[packages/core/src/types.ts:1875](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1875)
-````
+[packages/core/src/types.ts:1898](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1898)
+```
 
-## File: api/functions/getPdfService.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getPdfService
+## File: packages/docs/api/functions/getPdfService.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getPdfService
 
 # Function: getPdfService()
 
@@ -4220,12 +4319,13 @@ Type-safe helper for accessing the PDF service
 
 ## Defined in
 
-[packages/core/src/types.ts:1840](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1840)
-````
+[packages/core/src/types.ts:1863](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1863)
+```
 
-## File: api/functions/getSalt.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getSalt
+## File: packages/docs/api/functions/getSalt.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getSalt
 
 # Function: getSalt()
 
@@ -4242,11 +4342,12 @@ The salt for the agent.
 ## Defined in
 
 [packages/core/src/settings.ts:45](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L45)
-````
+```
 
-## File: api/functions/getTypedService.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getTypedService
+## File: packages/docs/api/functions/getTypedService.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getTypedService
 
 # Function: getTypedService()
 
@@ -4256,7 +4357,7 @@ Generic factory function to create a typed service instance
 
 ## Type Parameters
 
-• **T** *extends* [`TypedService`](../interfaces/TypedService.md)\<`any`, `any`\>
+• **T** _extends_ [`TypedService`](../interfaces/TypedService.md)\<`any`, `any`\>
 
 ## Parameters
 
@@ -4276,12 +4377,13 @@ The service instance or null if not available
 
 ## Defined in
 
-[packages/core/src/types.ts:1756](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1756)
-````
+[packages/core/src/types.ts:1779](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1779)
+```
 
-## File: api/functions/getUserServerRole.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getUserServerRole
+## File: packages/docs/api/functions/getUserServerRole.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getUserServerRole
 
 # Function: getUserServerRole()
 
@@ -4312,11 +4414,12 @@ The role of the user entity within the server, resolved as a Promise.
 ## Defined in
 
 [packages/core/src/roles.ts:32](https://github.com/elizaOS/eliza/blob/main/packages/core/src/roles.ts#L32)
-````
+```
 
-## File: api/functions/getVideoService.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getVideoService
+## File: packages/docs/api/functions/getVideoService.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getVideoService
 
 # Function: getVideoService()
 
@@ -4334,12 +4437,13 @@ Type-safe helper for accessing the video service
 
 ## Defined in
 
-[packages/core/src/types.ts:1826](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1826)
-````
+[packages/core/src/types.ts:1849](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1849)
+```
 
-## File: api/functions/getWavHeader.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getWavHeader
+## File: packages/docs/api/functions/getWavHeader.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getWavHeader
 
 # Function: getWavHeader()
 
@@ -4374,11 +4478,12 @@ The WAV file header as a Buffer object.
 ## Defined in
 
 [packages/core/src/audioUtils.ts:13](https://github.com/elizaOS/eliza/blob/main/packages/core/src/audioUtils.ts#L13)
-````
+```
 
-## File: api/functions/getWorldSettings.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / getWorldSettings
+## File: packages/docs/api/functions/getWorldSettings.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / getWorldSettings
 
 # Function: getWorldSettings()
 
@@ -4399,11 +4504,12 @@ Gets settings state from world metadata
 ## Defined in
 
 [packages/core/src/settings.ts:265](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L265)
-````
+```
 
-## File: api/functions/initializeOnboarding.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / initializeOnboarding
+## File: packages/docs/api/functions/initializeOnboarding.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / initializeOnboarding
 
 # Function: initializeOnboarding()
 
@@ -4426,11 +4532,12 @@ Initializes settings configuration for a server
 ## Defined in
 
 [packages/core/src/settings.ts:292](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L292)
-````
+```
 
-## File: api/functions/isCustomMetadata.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / isCustomMetadata
+## File: packages/docs/api/functions/isCustomMetadata.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / isCustomMetadata
 
 # Function: isCustomMetadata()
 
@@ -4452,12 +4559,13 @@ True if the metadata is a CustomMetadata
 
 ## Defined in
 
-[packages/core/src/types.ts:1804](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1804)
-````
+[packages/core/src/types.ts:1827](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1827)
+```
 
-## File: api/functions/isDescriptionMetadata.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / isDescriptionMetadata
+## File: packages/docs/api/functions/isDescriptionMetadata.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / isDescriptionMetadata
 
 # Function: isDescriptionMetadata()
 
@@ -4479,12 +4587,13 @@ True if the metadata is a DescriptionMetadata
 
 ## Defined in
 
-[packages/core/src/types.ts:1795](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1795)
-````
+[packages/core/src/types.ts:1818](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1818)
+```
 
-## File: api/functions/isDocumentMemory.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / isDocumentMemory
+## File: packages/docs/api/functions/isDocumentMemory.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / isDocumentMemory
 
 # Function: isDocumentMemory()
 
@@ -4502,12 +4611,13 @@ Memory type guard for document memories
 
 ## Defined in
 
-[packages/core/src/types.ts:1854](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1854)
-````
+[packages/core/src/types.ts:1877](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1877)
+```
 
-## File: api/functions/isDocumentMetadata.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / isDocumentMetadata
+## File: packages/docs/api/functions/isDocumentMetadata.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / isDocumentMetadata
 
 # Function: isDocumentMetadata()
 
@@ -4529,12 +4639,13 @@ True if the metadata is a DocumentMetadata
 
 ## Defined in
 
-[packages/core/src/types.ts:1768](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1768)
-````
+[packages/core/src/types.ts:1791](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1791)
+```
 
-## File: api/functions/isFragmentMemory.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / isFragmentMemory
+## File: packages/docs/api/functions/isFragmentMemory.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / isFragmentMemory
 
 # Function: isFragmentMemory()
 
@@ -4552,12 +4663,13 @@ Memory type guard for fragment memories
 
 ## Defined in
 
-[packages/core/src/types.ts:1863](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1863)
-````
+[packages/core/src/types.ts:1886](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1886)
+```
 
-## File: api/functions/isFragmentMetadata.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / isFragmentMetadata
+## File: packages/docs/api/functions/isFragmentMetadata.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / isFragmentMetadata
 
 # Function: isFragmentMetadata()
 
@@ -4579,12 +4691,13 @@ True if the metadata is a FragmentMetadata
 
 ## Defined in
 
-[packages/core/src/types.ts:1777](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1777)
-````
+[packages/core/src/types.ts:1800](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1800)
+```
 
-## File: api/functions/isMessageMetadata.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / isMessageMetadata
+## File: packages/docs/api/functions/isMessageMetadata.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / isMessageMetadata
 
 # Function: isMessageMetadata()
 
@@ -4606,18 +4719,20 @@ True if the metadata is a MessageMetadata
 
 ## Defined in
 
-[packages/core/src/types.ts:1786](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1786)
-````
+[packages/core/src/types.ts:1809](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1809)
+```
 
-## File: api/functions/normalizeJsonString.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / normalizeJsonString
+## File: packages/docs/api/functions/normalizeJsonString.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / normalizeJsonString
 
 # Function: normalizeJsonString()
 
 > **normalizeJsonString**(`str`): `string`
 
 Normalizes a JSON-like string by correcting formatting issues:
+
 - Removes extra spaces after '{' and before '}'.
 - Wraps unquoted values in double quotes.
 - Converts single-quoted values to double-quoted.
@@ -4642,11 +4757,12 @@ A properly formatted JSON string.
 ## Defined in
 
 [packages/core/src/prompts.ts:550](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L550)
-````
+```
 
-## File: api/functions/parseBooleanFromText.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / parseBooleanFromText
+## File: packages/docs/api/functions/parseBooleanFromText.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / parseBooleanFromText
 
 # Function: parseBooleanFromText()
 
@@ -4672,11 +4788,12 @@ The input text to parse
 ## Defined in
 
 [packages/core/src/prompts.ts:390](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L390)
-````
+```
 
-## File: api/functions/parseJsonArrayFromText.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / parseJsonArrayFromText
+## File: packages/docs/api/functions/parseJsonArrayFromText.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / parseJsonArrayFromText
 
 # Function: parseJsonArrayFromText()
 
@@ -4702,11 +4819,12 @@ An array parsed from the JSON string if successful; otherwise, null.
 ## Defined in
 
 [packages/core/src/prompts.ts:428](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L428)
-````
+```
 
-## File: api/functions/parseJSONObjectFromText.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / parseJSONObjectFromText
+## File: packages/docs/api/functions/parseJSONObjectFromText.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / parseJSONObjectFromText
 
 # Function: parseJSONObjectFromText()
 
@@ -4733,11 +4851,12 @@ An object parsed from the JSON string if successful; otherwise, null or the resu
 ## Defined in
 
 [packages/core/src/prompts.ts:477](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L477)
-````
+```
 
-## File: api/functions/prependWavHeader.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / prependWavHeader
+## File: packages/docs/api/functions/prependWavHeader.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / prependWavHeader
 
 # Function: prependWavHeader()
 
@@ -4776,11 +4895,12 @@ A new readable stream with the WAV header prepended to the audio data.
 ## Defined in
 
 [packages/core/src/audioUtils.ts:46](https://github.com/elizaOS/eliza/blob/main/packages/core/src/audioUtils.ts#L46)
-````
+```
 
-## File: api/functions/saltSettingValue.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / saltSettingValue
+## File: packages/docs/api/functions/saltSettingValue.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / saltSettingValue
 
 # Function: saltSettingValue()
 
@@ -4802,11 +4922,12 @@ Only applies to secret settings with string values
 ## Defined in
 
 [packages/core/src/settings.ts:171](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L171)
-````
+```
 
-## File: api/functions/saltWorldSettings.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / saltWorldSettings
+## File: packages/docs/api/functions/saltWorldSettings.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / saltWorldSettings
 
 # Function: saltWorldSettings()
 
@@ -4827,11 +4948,12 @@ Applies salt to all settings in a WorldSettings object
 ## Defined in
 
 [packages/core/src/settings.ts:200](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L200)
-````
+```
 
-## File: api/functions/stringToUuid.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / stringToUuid
+## File: packages/docs/api/functions/stringToUuid.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / stringToUuid
 
 # Function: stringToUuid()
 
@@ -4858,11 +4980,12 @@ Throws an error if the input target is not a string.
 ## Defined in
 
 [packages/core/src/uuid.ts:31](https://github.com/elizaOS/eliza/blob/main/packages/core/src/uuid.ts#L31)
-````
+```
 
-## File: api/functions/trimTokens.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / trimTokens
+## File: packages/docs/api/functions/trimTokens.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / trimTokens
 
 # Function: trimTokens()
 
@@ -4885,11 +5008,12 @@ Trims the provided text prompt to a specified token limit using a tokenizer mode
 ## Defined in
 
 [packages/core/src/prompts.ts:683](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L683)
-````
+```
 
-## File: api/functions/truncateToCompleteSentence.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / truncateToCompleteSentence
+## File: packages/docs/api/functions/truncateToCompleteSentence.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / truncateToCompleteSentence
 
 # Function: truncateToCompleteSentence()
 
@@ -4910,11 +5034,12 @@ Truncate text to fit within the character limit, ensuring it ends at a complete 
 ## Defined in
 
 [packages/core/src/prompts.ts:630](https://github.com/elizaOS/eliza/blob/main/packages/core/src/prompts.ts#L630)
-````
+```
 
-## File: api/functions/unsaltSettingValue.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / unsaltSettingValue
+## File: packages/docs/api/functions/unsaltSettingValue.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / unsaltSettingValue
 
 # Function: unsaltSettingValue()
 
@@ -4936,11 +5061,12 @@ Only applies to secret settings with string values
 ## Defined in
 
 [packages/core/src/settings.ts:186](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L186)
-````
+```
 
-## File: api/functions/unsaltWorldSettings.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / unsaltWorldSettings
+## File: packages/docs/api/functions/unsaltWorldSettings.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / unsaltWorldSettings
 
 # Function: unsaltWorldSettings()
 
@@ -4961,11 +5087,12 @@ Removes salt from all settings in a WorldSettings object
 ## Defined in
 
 [packages/core/src/settings.ts:213](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L213)
-````
+```
 
-## File: api/functions/updateWorldSettings.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / updateWorldSettings
+## File: packages/docs/api/functions/updateWorldSettings.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / updateWorldSettings
 
 # Function: updateWorldSettings()
 
@@ -4988,11 +5115,12 @@ Updates settings state in world metadata
 ## Defined in
 
 [packages/core/src/settings.ts:226](https://github.com/elizaOS/eliza/blob/main/packages/core/src/settings.ts#L226)
-````
+```
 
-## File: api/functions/validateUuid.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / validateUuid
+## File: packages/docs/api/functions/validateUuid.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / validateUuid
 
 # Function: validateUuid()
 
@@ -5015,11 +5143,12 @@ The validated UUID value or null if validation fails.
 ## Defined in
 
 [packages/core/src/uuid.ts:19](https://github.com/elizaOS/eliza/blob/main/packages/core/src/uuid.ts#L19)
-````
+```
 
-## File: api/interfaces/Action.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Action
+## File: packages/docs/api/interfaces/Action.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Action
 
 # Interface: Action
 
@@ -5037,7 +5166,7 @@ Similar action descriptions
 
 [packages/core/src/types.ts:279](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L279)
 
-***
+---
 
 ### description
 
@@ -5049,7 +5178,7 @@ Detailed description
 
 [packages/core/src/types.ts:282](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L282)
 
-***
+---
 
 ### examples?
 
@@ -5061,7 +5190,7 @@ Example usages
 
 [packages/core/src/types.ts:285](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L285)
 
-***
+---
 
 ### handler
 
@@ -5073,7 +5202,7 @@ Handler function
 
 [packages/core/src/types.ts:288](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L288)
 
-***
+---
 
 ### name
 
@@ -5085,7 +5214,7 @@ Action name
 
 [packages/core/src/types.ts:291](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L291)
 
-***
+---
 
 ### validate
 
@@ -5096,11 +5225,12 @@ Validation function
 #### Defined in
 
 [packages/core/src/types.ts:294](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L294)
-````
+```
 
-## File: api/interfaces/ActionEventPayload.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ActionEventPayload
+## File: packages/docs/api/interfaces/ActionEventPayload.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ActionEventPayload
 
 # Interface: ActionEventPayload
 
@@ -5109,11 +5239,12 @@ Action event payload type
 ## Extends
 
 - [`EventPayload`](EventPayload.md)
-````
+```
 
-## File: api/interfaces/ActionExample.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ActionExample
+## File: packages/docs/api/interfaces/ActionExample.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ActionExample
 
 # Interface: ActionExample
 
@@ -5131,7 +5262,7 @@ User associated with the example
 
 [packages/core/src/types.ts:62](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L62)
 
-***
+---
 
 ### content
 
@@ -5142,11 +5273,12 @@ Content of the example
 #### Defined in
 
 [packages/core/src/types.ts:65](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L65)
-````
+```
 
-## File: api/interfaces/AudioProcessingParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / AudioProcessingParams
+## File: packages/docs/api/interfaces/AudioProcessingParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / AudioProcessingParams
 
 # Interface: AudioProcessingParams
 
@@ -5170,9 +5302,9 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
 
-***
+---
 
 ### audioUrl
 
@@ -5182,9 +5314,9 @@ The URL or path of the audio file to process
 
 #### Defined in
 
-[packages/core/src/types.ts:1405](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1405)
+[packages/core/src/types.ts:1409](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1409)
 
-***
+---
 
 ### processingType
 
@@ -5194,21 +5326,23 @@ The type of audio processing to perform
 
 #### Defined in
 
-[packages/core/src/types.ts:1407](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1407)
-````
+[packages/core/src/types.ts:1411](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1411)
+```
 
-## File: api/interfaces/BaseMetadata.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / BaseMetadata
+## File: packages/docs/api/interfaces/BaseMetadata.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / BaseMetadata
 
 # Interface: BaseMetadata
 
 Base interface for all memory metadata types
-````
+```
 
-## File: api/interfaces/BaseModelParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / BaseModelParams
+## File: packages/docs/api/interfaces/BaseModelParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / BaseModelParams
 
 # Interface: BaseModelParams
 
@@ -5238,12 +5372,13 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
-````
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
+```
 
-## File: api/interfaces/Character.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Character
+## File: packages/docs/api/interfaces/Character.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Character
 
 # Interface: Character
 
@@ -5261,7 +5396,7 @@ Optional unique identifier
 
 [packages/core/src/types.ts:615](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L615)
 
-***
+---
 
 ### name
 
@@ -5273,7 +5408,7 @@ Character name
 
 [packages/core/src/types.ts:618](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L618)
 
-***
+---
 
 ### username?
 
@@ -5285,7 +5420,7 @@ Optional username
 
 [packages/core/src/types.ts:621](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L621)
 
-***
+---
 
 ### system?
 
@@ -5297,7 +5432,7 @@ Optional system prompt
 
 [packages/core/src/types.ts:624](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L624)
 
-***
+---
 
 ### templates?
 
@@ -5307,13 +5442,13 @@ Optional prompt templates
 
 #### Index Signature
 
- \[`key`: `string`\]: `TemplateType`
+\[`key`: `string`\]: `TemplateType`
 
 #### Defined in
 
 [packages/core/src/types.ts:627](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L627)
 
-***
+---
 
 ### bio
 
@@ -5325,7 +5460,7 @@ Character biography
 
 [packages/core/src/types.ts:632](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L632)
 
-***
+---
 
 ### messageExamples?
 
@@ -5337,7 +5472,7 @@ Example messages
 
 [packages/core/src/types.ts:635](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L635)
 
-***
+---
 
 ### postExamples?
 
@@ -5349,7 +5484,7 @@ Example posts
 
 [packages/core/src/types.ts:638](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L638)
 
-***
+---
 
 ### topics?
 
@@ -5361,7 +5496,7 @@ Known topics
 
 [packages/core/src/types.ts:641](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L641)
 
-***
+---
 
 ### adjectives?
 
@@ -5373,11 +5508,11 @@ Character traits
 
 [packages/core/src/types.ts:644](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L644)
 
-***
+---
 
 ### knowledge?
 
-> `optional` **knowledge**: (`string` \| `object`)[]
+> `optional` **knowledge**: (`string` \| `object` \| `object`)[]
 
 Optional knowledge base
 
@@ -5385,7 +5520,7 @@ Optional knowledge base
 
 [packages/core/src/types.ts:647](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L647)
 
-***
+---
 
 ### plugins?
 
@@ -5395,9 +5530,9 @@ Available plugins
 
 #### Defined in
 
-[packages/core/src/types.ts:650](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L650)
+[packages/core/src/types.ts:654](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L654)
 
-***
+---
 
 ### settings?
 
@@ -5407,13 +5542,13 @@ Optional configuration
 
 #### Index Signature
 
- \[`key`: `string`\]: `any`
+\[`key`: `string`\]: `any`
 
 #### Defined in
 
-[packages/core/src/types.ts:653](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L653)
+[packages/core/src/types.ts:657](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L657)
 
-***
+---
 
 ### secrets?
 
@@ -5423,13 +5558,13 @@ Optional secrets
 
 #### Index Signature
 
- \[`key`: `string`\]: `string` \| `number` \| `boolean`
+\[`key`: `string`\]: `string` \| `number` \| `boolean`
 
 #### Defined in
 
-[packages/core/src/types.ts:658](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L658)
+[packages/core/src/types.ts:662](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L662)
 
-***
+---
 
 ### style?
 
@@ -5451,12 +5586,13 @@ Writing style guides
 
 #### Defined in
 
-[packages/core/src/types.ts:663](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L663)
-````
+[packages/core/src/types.ts:667](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L667)
+```
 
-## File: api/interfaces/Content.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Content
+## File: packages/docs/api/interfaces/Content.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Content
 
 # Interface: Content
 
@@ -5464,7 +5600,7 @@ Represents the content of a memory, message, or other information
 
 ## Indexable
 
- \[`key`: `string`\]: `unknown`
+\[`key`: `string`\]: `unknown`
 
 ## Properties
 
@@ -5478,7 +5614,7 @@ The agent's internal thought process
 
 [packages/core/src/types.ts:27](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L27)
 
-***
+---
 
 ### text?
 
@@ -5490,7 +5626,7 @@ The main text content visible to users
 
 [packages/core/src/types.ts:30](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L30)
 
-***
+---
 
 ### actions?
 
@@ -5502,7 +5638,7 @@ Optional actions to be performed
 
 [packages/core/src/types.ts:33](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L33)
 
-***
+---
 
 ### providers?
 
@@ -5514,7 +5650,7 @@ Optional providers to use for context generation
 
 [packages/core/src/types.ts:36](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L36)
 
-***
+---
 
 ### source?
 
@@ -5526,7 +5662,7 @@ Optional source/origin of the content
 
 [packages/core/src/types.ts:39](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L39)
 
-***
+---
 
 ### url?
 
@@ -5538,7 +5674,7 @@ URL of the original message/post (e.g. tweet URL, Discord message link)
 
 [packages/core/src/types.ts:42](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L42)
 
-***
+---
 
 ### inReplyTo?
 
@@ -5550,7 +5686,7 @@ UUID of parent message if this is a reply/thread
 
 [packages/core/src/types.ts:45](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L45)
 
-***
+---
 
 ### attachments?
 
@@ -5561,11 +5697,75 @@ Array of media attachments
 #### Defined in
 
 [packages/core/src/types.ts:48](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L48)
-````
+```
 
-## File: api/interfaces/DetokenizeTextParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / DetokenizeTextParams
+## File: packages/docs/api/interfaces/ControlMessage.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ControlMessage
+
+# Interface: ControlMessage
+
+Interface for control messages sent from the backend to the frontend
+to manage UI state and interaction capabilities
+
+## Properties
+
+### type
+
+> **type**: `"control"`
+
+Message type identifier
+
+#### Defined in
+
+[packages/core/src/types.ts:1977](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1977)
+
+---
+
+### payload
+
+> **payload**: `object`
+
+Control message payload
+
+#### Index Signature
+
+\[`key`: `string`\]: `unknown`
+
+#### action
+
+> **action**: `"disable_input"` \| `"enable_input"`
+
+Action to perform
+
+#### target?
+
+> `optional` **target**: `string`
+
+Optional target element identifier
+
+#### Defined in
+
+[packages/core/src/types.ts:1980](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1980)
+
+---
+
+### roomId
+
+> **roomId**: \`$\{string\}-$\{string\}-$\{string\}-$\{string\}-$\{string\}\`
+
+Room ID to ensure signal is directed to the correct chat window
+
+#### Defined in
+
+[packages/core/src/types.ts:1992](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1992)
+```
+
+## File: packages/docs/api/interfaces/DetokenizeTextParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / DetokenizeTextParams
 
 # Interface: DetokenizeTextParams
 
@@ -5585,9 +5785,9 @@ The tokens to convert back to text
 
 #### Defined in
 
-[packages/core/src/types.ts:1143](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1143)
+[packages/core/src/types.ts:1147](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1147)
 
-***
+---
 
 ### modelType
 
@@ -5597,9 +5797,9 @@ The model type to use for detokenization
 
 #### Defined in
 
-[packages/core/src/types.ts:1144](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1144)
+[packages/core/src/types.ts:1148](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1148)
 
-***
+---
 
 ### runtime
 
@@ -5613,30 +5813,33 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
-````
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
+```
 
-## File: api/interfaces/EmbeddingSearchResult.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / EmbeddingSearchResult
+## File: packages/docs/api/interfaces/EmbeddingSearchResult.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / EmbeddingSearchResult
 
 # Interface: EmbeddingSearchResult
 
 Result interface for embedding similarity searches
-````
+```
 
-## File: api/interfaces/EnhancedState.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / EnhancedState
+## File: packages/docs/api/interfaces/EnhancedState.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / EnhancedState
 
 # Interface: EnhancedState
 
 Enhanced State interface with more specific types
-````
+```
 
-## File: api/interfaces/Entity.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Entity
+## File: packages/docs/api/interfaces/Entity.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Entity
 
 # Interface: Entity
 
@@ -5654,7 +5857,7 @@ Unique identifier, optional on creation
 
 [packages/core/src/types.ts:420](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L420)
 
-***
+---
 
 ### names
 
@@ -5666,7 +5869,7 @@ Names of the entity
 
 [packages/core/src/types.ts:423](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L423)
 
-***
+---
 
 ### metadata?
 
@@ -5676,13 +5879,13 @@ Optional additional metadata
 
 #### Index Signature
 
- \[`key`: `string`\]: `any`
+\[`key`: `string`\]: `any`
 
 #### Defined in
 
 [packages/core/src/types.ts:426](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L426)
 
-***
+---
 
 ### agentId
 
@@ -5694,7 +5897,7 @@ Agent ID this account is related to, for agents should be themselves
 
 [packages/core/src/types.ts:429](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L429)
 
-***
+---
 
 ### components?
 
@@ -5705,11 +5908,12 @@ Optional array of components
 #### Defined in
 
 [packages/core/src/types.ts:432](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L432)
-````
+```
 
-## File: api/interfaces/EntityPayload.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / EntityPayload
+## File: packages/docs/api/interfaces/EntityPayload.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / EntityPayload
 
 # Interface: EntityPayload
 
@@ -5718,11 +5922,12 @@ Payload for entity-related events
 ## Extends
 
 - [`EventPayload`](EventPayload.md)
-````
+```
 
-## File: api/interfaces/EvaluationExample.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / EvaluationExample
+## File: packages/docs/api/interfaces/EvaluationExample.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / EvaluationExample
 
 # Interface: EvaluationExample
 
@@ -5740,7 +5945,7 @@ Evaluation context
 
 [packages/core/src/types.ts:302](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L302)
 
-***
+---
 
 ### messages
 
@@ -5752,7 +5957,7 @@ Example messages
 
 [packages/core/src/types.ts:305](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L305)
 
-***
+---
 
 ### outcome
 
@@ -5763,11 +5968,12 @@ Expected outcome
 #### Defined in
 
 [packages/core/src/types.ts:308](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L308)
-````
+```
 
-## File: api/interfaces/Evaluator.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Evaluator
+## File: packages/docs/api/interfaces/Evaluator.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Evaluator
 
 # Interface: Evaluator
 
@@ -5785,7 +5991,7 @@ Whether to always run
 
 [packages/core/src/types.ts:316](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L316)
 
-***
+---
 
 ### description
 
@@ -5797,7 +6003,7 @@ Detailed description
 
 [packages/core/src/types.ts:319](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L319)
 
-***
+---
 
 ### similes?
 
@@ -5809,7 +6015,7 @@ Similar evaluator descriptions
 
 [packages/core/src/types.ts:322](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L322)
 
-***
+---
 
 ### examples
 
@@ -5821,7 +6027,7 @@ Example evaluations
 
 [packages/core/src/types.ts:325](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L325)
 
-***
+---
 
 ### handler
 
@@ -5833,7 +6039,7 @@ Handler function
 
 [packages/core/src/types.ts:328](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L328)
 
-***
+---
 
 ### name
 
@@ -5845,7 +6051,7 @@ Evaluator name
 
 [packages/core/src/types.ts:331](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L331)
 
-***
+---
 
 ### validate
 
@@ -5856,11 +6062,12 @@ Validation function
 #### Defined in
 
 [packages/core/src/types.ts:334](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L334)
-````
+```
 
-## File: api/interfaces/EvaluatorEventPayload.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / EvaluatorEventPayload
+## File: packages/docs/api/interfaces/EvaluatorEventPayload.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / EvaluatorEventPayload
 
 # Interface: EvaluatorEventPayload
 
@@ -5869,11 +6076,12 @@ Evaluator event payload type
 ## Extends
 
 - [`EventPayload`](EventPayload.md)
-````
+```
 
-## File: api/interfaces/EventPayload.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / EventPayload
+## File: packages/docs/api/interfaces/EventPayload.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / EventPayload
 
 # Interface: EventPayload
 
@@ -5888,20 +6096,23 @@ Base payload interface for all events
 - [`RunEventPayload`](RunEventPayload.md)
 - [`ActionEventPayload`](ActionEventPayload.md)
 - [`EvaluatorEventPayload`](EvaluatorEventPayload.md)
-````
+- [`ModelEventPayload`](ModelEventPayload.md)
+```
 
-## File: api/interfaces/EventPayloadMap.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / EventPayloadMap
+## File: packages/docs/api/interfaces/EventPayloadMap.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / EventPayloadMap
 
 # Interface: EventPayloadMap
 
 Maps event types to their corresponding payload types
-````
+```
 
-## File: api/interfaces/IDatabaseAdapter.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / IDatabaseAdapter
+## File: packages/docs/api/interfaces/IDatabaseAdapter.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / IDatabaseAdapter
 
 # Interface: IDatabaseAdapter
 
@@ -5917,7 +6128,7 @@ Database instance
 
 #### Defined in
 
-[packages/core/src/types.ts:687](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L687)
+[packages/core/src/types.ts:691](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L691)
 
 ## Methods
 
@@ -5933,9 +6144,9 @@ Initialize database connection
 
 #### Defined in
 
-[packages/core/src/types.ts:690](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L690)
+[packages/core/src/types.ts:694](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L694)
 
-***
+---
 
 ### close()
 
@@ -5949,9 +6160,9 @@ Close database connection
 
 #### Defined in
 
-[packages/core/src/types.ts:693](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L693)
+[packages/core/src/types.ts:697](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L697)
 
-***
+---
 
 ### getAgents()
 
@@ -5965,9 +6176,9 @@ Get all agents
 
 #### Defined in
 
-[packages/core/src/types.ts:698](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L698)
+[packages/core/src/types.ts:702](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L702)
 
-***
+---
 
 ### getEntityById()
 
@@ -5985,9 +6196,9 @@ Get entity by ID
 
 #### Defined in
 
-[packages/core/src/types.ts:711](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L711)
+[packages/core/src/types.ts:715](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L715)
 
-***
+---
 
 ### getEntitiesForRoom()
 
@@ -6007,9 +6218,9 @@ Get entities for room
 
 #### Defined in
 
-[packages/core/src/types.ts:714](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L714)
+[packages/core/src/types.ts:718](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L718)
 
-***
+---
 
 ### createEntity()
 
@@ -6027,9 +6238,9 @@ Create new entity
 
 #### Defined in
 
-[packages/core/src/types.ts:717](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L717)
+[packages/core/src/types.ts:721](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L721)
 
-***
+---
 
 ### updateEntity()
 
@@ -6047,9 +6258,9 @@ Update entity
 
 #### Defined in
 
-[packages/core/src/types.ts:720](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L720)
+[packages/core/src/types.ts:724](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L724)
 
-***
+---
 
 ### getComponent()
 
@@ -6073,9 +6284,9 @@ Get component by ID
 
 #### Defined in
 
-[packages/core/src/types.ts:723](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L723)
+[packages/core/src/types.ts:727](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L727)
 
-***
+---
 
 ### getComponents()
 
@@ -6097,9 +6308,9 @@ Get all components for an entity
 
 #### Defined in
 
-[packages/core/src/types.ts:731](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L731)
+[packages/core/src/types.ts:735](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L735)
 
-***
+---
 
 ### createComponent()
 
@@ -6117,9 +6328,9 @@ Create component
 
 #### Defined in
 
-[packages/core/src/types.ts:734](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L734)
+[packages/core/src/types.ts:738](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L738)
 
-***
+---
 
 ### updateComponent()
 
@@ -6137,9 +6348,9 @@ Update component
 
 #### Defined in
 
-[packages/core/src/types.ts:737](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L737)
+[packages/core/src/types.ts:741](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L741)
 
-***
+---
 
 ### deleteComponent()
 
@@ -6157,9 +6368,9 @@ Delete component
 
 #### Defined in
 
-[packages/core/src/types.ts:740](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L740)
+[packages/core/src/types.ts:744](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L744)
 
-***
+---
 
 ### getMemories()
 
@@ -6193,9 +6404,9 @@ Get memories matching criteria
 
 #### Defined in
 
-[packages/core/src/types.ts:743](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L743)
+[packages/core/src/types.ts:747](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L747)
 
-***
+---
 
 ### createRelationship()
 
@@ -6225,9 +6436,9 @@ Promise resolving to boolean indicating success
 
 #### Defined in
 
-[packages/core/src/types.ts:852](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L852)
+[packages/core/src/types.ts:856](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L856)
 
-***
+---
 
 ### updateRelationship()
 
@@ -6249,9 +6460,9 @@ Promise resolving to void
 
 #### Defined in
 
-[packages/core/src/types.ts:864](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L864)
+[packages/core/src/types.ts:868](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L868)
 
-***
+---
 
 ### getRelationship()
 
@@ -6277,9 +6488,9 @@ Promise resolving to the Relationship object or null if not found
 
 #### Defined in
 
-[packages/core/src/types.ts:871](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L871)
+[packages/core/src/types.ts:875](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L875)
 
-***
+---
 
 ### getRelationships()
 
@@ -6305,12 +6516,13 @@ Promise resolving to an array of Relationship objects
 
 #### Defined in
 
-[packages/core/src/types.ts:881](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L881)
-````
+[packages/core/src/types.ts:885](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L885)
+```
 
-## File: api/interfaces/ImageDescriptionParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ImageDescriptionParams
+## File: packages/docs/api/interfaces/ImageDescriptionParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ImageDescriptionParams
 
 # Interface: ImageDescriptionParams
 
@@ -6334,9 +6546,9 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
 
-***
+---
 
 ### imageUrl
 
@@ -6346,9 +6558,9 @@ The URL or path of the image to describe
 
 #### Defined in
 
-[packages/core/src/types.ts:1373](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1373)
+[packages/core/src/types.ts:1377](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1377)
 
-***
+---
 
 ### prompt?
 
@@ -6358,12 +6570,13 @@ Optional prompt to guide the description
 
 #### Defined in
 
-[packages/core/src/types.ts:1375](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1375)
-````
+[packages/core/src/types.ts:1379](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1379)
+```
 
-## File: api/interfaces/ImageGenerationParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ImageGenerationParams
+## File: packages/docs/api/interfaces/ImageGenerationParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ImageGenerationParams
 
 # Interface: ImageGenerationParams
 
@@ -6387,9 +6600,9 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
 
-***
+---
 
 ### prompt
 
@@ -6399,9 +6612,9 @@ The prompt describing the image to generate
 
 #### Defined in
 
-[packages/core/src/types.ts:1361](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1361)
+[packages/core/src/types.ts:1365](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1365)
 
-***
+---
 
 ### size?
 
@@ -6411,9 +6624,9 @@ The dimensions of the image to generate
 
 #### Defined in
 
-[packages/core/src/types.ts:1363](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1363)
+[packages/core/src/types.ts:1367](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1367)
 
-***
+---
 
 ### count?
 
@@ -6423,12 +6636,13 @@ Number of images to generate
 
 #### Defined in
 
-[packages/core/src/types.ts:1365](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1365)
-````
+[packages/core/src/types.ts:1369](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1369)
+```
 
-## File: api/interfaces/InvokePayload.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / InvokePayload
+## File: packages/docs/api/interfaces/InvokePayload.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / InvokePayload
 
 # Interface: InvokePayload
 
@@ -6437,11 +6651,12 @@ Payload for events that are invoked without a message
 ## Extends
 
 - [`EventPayload`](EventPayload.md)
-````
+```
 
-## File: api/interfaces/Log.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Log
+## File: packages/docs/api/interfaces/Log.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Log
 
 # Interface: Log
 
@@ -6459,7 +6674,7 @@ Optional unique identifier
 
 [packages/core/src/types.ts:219](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L219)
 
-***
+---
 
 ### entityId
 
@@ -6471,7 +6686,7 @@ Associated entity ID
 
 [packages/core/src/types.ts:222](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L222)
 
-***
+---
 
 ### roomId?
 
@@ -6483,7 +6698,7 @@ Associated room ID
 
 [packages/core/src/types.ts:225](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L225)
 
-***
+---
 
 ### body
 
@@ -6493,13 +6708,13 @@ Log body
 
 #### Index Signature
 
- \[`key`: `string`\]: `unknown`
+\[`key`: `string`\]: `unknown`
 
 #### Defined in
 
 [packages/core/src/types.ts:228](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L228)
 
-***
+---
 
 ### type
 
@@ -6511,7 +6726,7 @@ Log type
 
 [packages/core/src/types.ts:231](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L231)
 
-***
+---
 
 ### createdAt
 
@@ -6522,11 +6737,12 @@ Log creation timestamp
 #### Defined in
 
 [packages/core/src/types.ts:234](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L234)
-````
+```
 
-## File: api/interfaces/Memory.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Memory
+## File: packages/docs/api/interfaces/Memory.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Memory
 
 # Interface: Memory
 
@@ -6548,7 +6764,7 @@ Optional unique identifier
 
 [packages/core/src/types.ts:184](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L184)
 
-***
+---
 
 ### entityId
 
@@ -6560,7 +6776,7 @@ Associated user ID
 
 [packages/core/src/types.ts:187](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L187)
 
-***
+---
 
 ### agentId?
 
@@ -6572,7 +6788,7 @@ Associated agent ID
 
 [packages/core/src/types.ts:190](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L190)
 
-***
+---
 
 ### createdAt?
 
@@ -6584,7 +6800,7 @@ Optional creation timestamp in milliseconds since epoch
 
 [packages/core/src/types.ts:193](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L193)
 
-***
+---
 
 ### content
 
@@ -6596,7 +6812,7 @@ Memory content
 
 [packages/core/src/types.ts:196](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L196)
 
-***
+---
 
 ### embedding?
 
@@ -6608,7 +6824,7 @@ Optional embedding vector for semantic search
 
 [packages/core/src/types.ts:199](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L199)
 
-***
+---
 
 ### roomId
 
@@ -6620,7 +6836,7 @@ Associated room ID
 
 [packages/core/src/types.ts:202](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L202)
 
-***
+---
 
 ### unique?
 
@@ -6632,7 +6848,7 @@ Whether memory is unique (used to prevent duplicates)
 
 [packages/core/src/types.ts:205](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L205)
 
-***
+---
 
 ### similarity?
 
@@ -6644,7 +6860,7 @@ Embedding similarity score (set when retrieved via search)
 
 [packages/core/src/types.ts:208](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L208)
 
-***
+---
 
 ### metadata?
 
@@ -6655,29 +6871,32 @@ Metadata for the memory
 #### Defined in
 
 [packages/core/src/types.ts:211](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L211)
-````
+```
 
-## File: api/interfaces/MemoryRetrievalOptions.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / MemoryRetrievalOptions
+## File: packages/docs/api/interfaces/MemoryRetrievalOptions.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / MemoryRetrievalOptions
 
 # Interface: MemoryRetrievalOptions
 
 Options for memory retrieval operations
-````
+```
 
-## File: api/interfaces/MemorySearchOptions.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / MemorySearchOptions
+## File: packages/docs/api/interfaces/MemorySearchOptions.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / MemorySearchOptions
 
 # Interface: MemorySearchOptions
 
 Options for memory search operations
-````
+```
 
-## File: api/interfaces/MessageExample.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / MessageExample
+## File: packages/docs/api/interfaces/MessageExample.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / MessageExample
 
 # Interface: MessageExample
 
@@ -6695,7 +6914,7 @@ Associated user
 
 [packages/core/src/types.ts:242](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L242)
 
-***
+---
 
 ### content
 
@@ -6706,11 +6925,12 @@ Message content
 #### Defined in
 
 [packages/core/src/types.ts:245](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L245)
-````
+```
 
-## File: api/interfaces/MessageMemory.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / MessageMemory
+## File: packages/docs/api/interfaces/MessageMemory.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / MessageMemory
 
 # Interface: MessageMemory
 
@@ -6736,7 +6956,7 @@ Optional unique identifier
 
 [packages/core/src/types.ts:184](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L184)
 
-***
+---
 
 ### entityId
 
@@ -6752,7 +6972,7 @@ Associated user ID
 
 [packages/core/src/types.ts:187](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L187)
 
-***
+---
 
 ### agentId?
 
@@ -6768,7 +6988,7 @@ Associated agent ID
 
 [packages/core/src/types.ts:190](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L190)
 
-***
+---
 
 ### createdAt?
 
@@ -6784,7 +7004,7 @@ Optional creation timestamp in milliseconds since epoch
 
 [packages/core/src/types.ts:193](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L193)
 
-***
+---
 
 ### embedding?
 
@@ -6800,7 +7020,7 @@ Optional embedding vector for semantic search
 
 [packages/core/src/types.ts:199](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L199)
 
-***
+---
 
 ### roomId
 
@@ -6816,7 +7036,7 @@ Associated room ID
 
 [packages/core/src/types.ts:202](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L202)
 
-***
+---
 
 ### unique?
 
@@ -6832,7 +7052,7 @@ Whether memory is unique (used to prevent duplicates)
 
 [packages/core/src/types.ts:205](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L205)
 
-***
+---
 
 ### similarity?
 
@@ -6848,7 +7068,7 @@ Embedding similarity score (set when retrieved via search)
 
 [packages/core/src/types.ts:208](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L208)
 
-***
+---
 
 ### metadata
 
@@ -6862,9 +7082,9 @@ Metadata for the memory
 
 #### Defined in
 
-[packages/core/src/types.ts:1703](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1703)
+[packages/core/src/types.ts:1726](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1726)
 
-***
+---
 
 ### content
 
@@ -6884,12 +7104,13 @@ Memory content
 
 #### Defined in
 
-[packages/core/src/types.ts:1704](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1704)
-````
+[packages/core/src/types.ts:1727](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1727)
+```
 
-## File: api/interfaces/MessagePayload.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / MessagePayload
+## File: packages/docs/api/interfaces/MessagePayload.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / MessagePayload
 
 # Interface: MessagePayload
 
@@ -6898,38 +7119,56 @@ Payload for reaction-related events
 ## Extends
 
 - [`EventPayload`](EventPayload.md)
-````
+```
 
-## File: api/interfaces/ModelParamsMap.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ModelParamsMap
+## File: packages/docs/api/interfaces/ModelEventPayload.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ModelEventPayload
+
+# Interface: ModelEventPayload
+
+Model event payload type
+
+## Extends
+
+- [`EventPayload`](EventPayload.md)
+```
+
+## File: packages/docs/api/interfaces/ModelParamsMap.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ModelParamsMap
 
 # Interface: ModelParamsMap
 
 Map of model types to their parameter types
-````
+```
 
-## File: api/interfaces/ModelResultMap.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ModelResultMap
+## File: packages/docs/api/interfaces/ModelResultMap.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ModelResultMap
 
 # Interface: ModelResultMap
 
 Map of model types to their return value types
-````
+```
 
-## File: api/interfaces/MultiRoomMemoryOptions.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / MultiRoomMemoryOptions
+## File: packages/docs/api/interfaces/MultiRoomMemoryOptions.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / MultiRoomMemoryOptions
 
 # Interface: MultiRoomMemoryOptions
 
 Options for multi-room memory retrieval
-````
+```
 
-## File: api/interfaces/ObjectGenerationParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ObjectGenerationParams
+## File: packages/docs/api/interfaces/ObjectGenerationParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ObjectGenerationParams
 
 # Interface: ObjectGenerationParams\<T\>
 
@@ -6959,9 +7198,9 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
 
-***
+---
 
 ### prompt
 
@@ -6971,9 +7210,9 @@ The prompt describing the object to generate
 
 #### Defined in
 
-[packages/core/src/types.ts:1437](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1437)
+[packages/core/src/types.ts:1441](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1441)
 
-***
+---
 
 ### schema?
 
@@ -6983,9 +7222,9 @@ Optional JSON schema for validation
 
 #### Defined in
 
-[packages/core/src/types.ts:1439](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1439)
+[packages/core/src/types.ts:1443](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1443)
 
-***
+---
 
 ### output?
 
@@ -6995,9 +7234,9 @@ Type of object to generate
 
 #### Defined in
 
-[packages/core/src/types.ts:1441](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1441)
+[packages/core/src/types.ts:1445](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1445)
 
-***
+---
 
 ### enumValues?
 
@@ -7007,9 +7246,9 @@ For enum type, the allowed values
 
 #### Defined in
 
-[packages/core/src/types.ts:1443](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1443)
+[packages/core/src/types.ts:1447](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1447)
 
-***
+---
 
 ### modelType?
 
@@ -7019,9 +7258,9 @@ Model type to use
 
 #### Defined in
 
-[packages/core/src/types.ts:1445](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1445)
+[packages/core/src/types.ts:1449](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1449)
 
-***
+---
 
 ### temperature?
 
@@ -7031,9 +7270,9 @@ Model temperature (0.0 to 1.0)
 
 #### Defined in
 
-[packages/core/src/types.ts:1447](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1447)
+[packages/core/src/types.ts:1451](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1451)
 
-***
+---
 
 ### stopSequences?
 
@@ -7043,12 +7282,13 @@ Sequences that should stop generation
 
 #### Defined in
 
-[packages/core/src/types.ts:1449](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1449)
-````
+[packages/core/src/types.ts:1453](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1453)
+```
 
-## File: api/interfaces/Participant.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Participant
+## File: packages/docs/api/interfaces/Participant.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Participant
 
 # Interface: Participant
 
@@ -7066,7 +7306,7 @@ Unique identifier
 
 [packages/core/src/types.ts:468](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L468)
 
-***
+---
 
 ### entity
 
@@ -7077,20 +7317,22 @@ Associated account
 #### Defined in
 
 [packages/core/src/types.ts:471](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L471)
-````
+```
 
-## File: api/interfaces/Plugin.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Plugin
+## File: packages/docs/api/interfaces/Plugin.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Plugin
 
 # Interface: Plugin
 
 Plugin for extending agent functionality
-````
+```
 
-## File: api/interfaces/Provider.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Provider
+## File: packages/docs/api/interfaces/Provider.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Provider
 
 # Interface: Provider
 
@@ -7108,7 +7350,7 @@ Provider name
 
 [packages/core/src/types.ts:352](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L352)
 
-***
+---
 
 ### description?
 
@@ -7120,7 +7362,7 @@ Description of the provider
 
 [packages/core/src/types.ts:355](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L355)
 
-***
+---
 
 ### dynamic?
 
@@ -7132,7 +7374,7 @@ Whether the provider is dynamic
 
 [packages/core/src/types.ts:358](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L358)
 
-***
+---
 
 ### position?
 
@@ -7144,7 +7386,7 @@ Position of the provider in the provider list, positive or negative
 
 [packages/core/src/types.ts:361](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L361)
 
-***
+---
 
 ### private?
 
@@ -7158,7 +7400,7 @@ Private providers are not displayed in the regular provider list, they have to b
 
 [packages/core/src/types.ts:368](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L368)
 
-***
+---
 
 ### get()
 
@@ -7181,11 +7423,12 @@ Data retrieval function
 #### Defined in
 
 [packages/core/src/types.ts:371](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L371)
-````
+```
 
-## File: api/interfaces/Relationship.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Relationship
+## File: packages/docs/api/interfaces/Relationship.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Relationship
 
 # Interface: Relationship
 
@@ -7203,7 +7446,7 @@ Unique identifier
 
 [packages/core/src/types.ts:379](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L379)
 
-***
+---
 
 ### sourceEntityId
 
@@ -7215,7 +7458,7 @@ First user ID
 
 [packages/core/src/types.ts:382](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L382)
 
-***
+---
 
 ### targetEntityId
 
@@ -7227,7 +7470,7 @@ Second user ID
 
 [packages/core/src/types.ts:385](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L385)
 
-***
+---
 
 ### agentId
 
@@ -7239,7 +7482,7 @@ Agent ID
 
 [packages/core/src/types.ts:388](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L388)
 
-***
+---
 
 ### tags
 
@@ -7251,7 +7494,7 @@ Tags for filtering/categorizing relationships
 
 [packages/core/src/types.ts:391](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L391)
 
-***
+---
 
 ### metadata
 
@@ -7261,13 +7504,13 @@ Additional metadata about the relationship
 
 #### Index Signature
 
- \[`key`: `string`\]: `any`
+\[`key`: `string`\]: `any`
 
 #### Defined in
 
 [packages/core/src/types.ts:394](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L394)
 
-***
+---
 
 ### createdAt?
 
@@ -7278,11 +7521,12 @@ Optional creation timestamp
 #### Defined in
 
 [packages/core/src/types.ts:399](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L399)
-````
+```
 
-## File: api/interfaces/RunEventPayload.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / RunEventPayload
+## File: packages/docs/api/interfaces/RunEventPayload.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / RunEventPayload
 
 # Interface: RunEventPayload
 
@@ -7291,38 +7535,42 @@ Run event payload type
 ## Extends
 
 - [`EventPayload`](EventPayload.md)
-````
+```
 
-## File: api/interfaces/RuntimeSettings.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / RuntimeSettings
+## File: packages/docs/api/interfaces/RuntimeSettings.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / RuntimeSettings
 
 # Interface: RuntimeSettings
 
 Interface representing settings with string key-value pairs.
-````
+```
 
-## File: api/interfaces/ServerOwnershipState.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ServerOwnershipState
+## File: packages/docs/api/interfaces/ServerOwnershipState.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ServerOwnershipState
 
 # Interface: ServerOwnershipState
 
 Interface representing the ownership state of servers.
-````
+```
 
-## File: api/interfaces/ServiceError.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ServiceError
+## File: packages/docs/api/interfaces/ServiceError.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ServiceError
 
 # Interface: ServiceError
 
 Standardized service error type for consistent error handling
-````
+```
 
-## File: api/interfaces/State.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / State
+## File: packages/docs/api/interfaces/State.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / State
 
 # Interface: State
 
@@ -7330,12 +7578,13 @@ Represents the current state/context of a conversation
 
 ## Indexable
 
- \[`key`: `string`\]: `any`
-````
+\[`key`: `string`\]: `any`
+```
 
-## File: api/interfaces/TextEmbeddingParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / TextEmbeddingParams
+## File: packages/docs/api/interfaces/TextEmbeddingParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / TextEmbeddingParams
 
 # Interface: TextEmbeddingParams
 
@@ -7359,9 +7608,9 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
 
-***
+---
 
 ### text
 
@@ -7371,12 +7620,13 @@ The text to create embeddings for
 
 #### Defined in
 
-[packages/core/src/types.ts:1333](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1333)
-````
+[packages/core/src/types.ts:1337](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1337)
+```
 
-## File: api/interfaces/TextGenerationParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / TextGenerationParams
+## File: packages/docs/api/interfaces/TextGenerationParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / TextGenerationParams
 
 # Interface: TextGenerationParams
 
@@ -7400,9 +7650,9 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
 
-***
+---
 
 ### prompt
 
@@ -7412,9 +7662,9 @@ The prompt to generate text from
 
 #### Defined in
 
-[packages/core/src/types.ts:1315](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1315)
+[packages/core/src/types.ts:1319](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1319)
 
-***
+---
 
 ### temperature?
 
@@ -7424,9 +7674,9 @@ Model temperature (0.0 to 1.0, lower is more deterministic)
 
 #### Defined in
 
-[packages/core/src/types.ts:1317](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1317)
+[packages/core/src/types.ts:1321](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1321)
 
-***
+---
 
 ### maxTokens?
 
@@ -7436,9 +7686,9 @@ Maximum number of tokens to generate
 
 #### Defined in
 
-[packages/core/src/types.ts:1319](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1319)
+[packages/core/src/types.ts:1323](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1323)
 
-***
+---
 
 ### stopSequences?
 
@@ -7448,9 +7698,9 @@ Sequences that should stop generation when encountered
 
 #### Defined in
 
-[packages/core/src/types.ts:1321](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1321)
+[packages/core/src/types.ts:1325](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1325)
 
-***
+---
 
 ### frequencyPenalty?
 
@@ -7460,9 +7710,9 @@ Frequency penalty to apply
 
 #### Defined in
 
-[packages/core/src/types.ts:1323](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1323)
+[packages/core/src/types.ts:1327](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1327)
 
-***
+---
 
 ### presencePenalty?
 
@@ -7472,12 +7722,13 @@ Presence penalty to apply
 
 #### Defined in
 
-[packages/core/src/types.ts:1325](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1325)
-````
+[packages/core/src/types.ts:1329](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1329)
+```
 
-## File: api/interfaces/TextToSpeechParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / TextToSpeechParams
+## File: packages/docs/api/interfaces/TextToSpeechParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / TextToSpeechParams
 
 # Interface: TextToSpeechParams
 
@@ -7501,9 +7752,9 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
 
-***
+---
 
 ### text
 
@@ -7513,9 +7764,9 @@ The text to convert to speech
 
 #### Defined in
 
-[packages/core/src/types.ts:1393](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1393)
+[packages/core/src/types.ts:1397](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1397)
 
-***
+---
 
 ### voice?
 
@@ -7525,9 +7776,9 @@ The voice to use
 
 #### Defined in
 
-[packages/core/src/types.ts:1395](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1395)
+[packages/core/src/types.ts:1399](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1399)
 
-***
+---
 
 ### speed?
 
@@ -7537,12 +7788,13 @@ The speaking speed
 
 #### Defined in
 
-[packages/core/src/types.ts:1397](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1397)
-````
+[packages/core/src/types.ts:1401](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1401)
+```
 
-## File: api/interfaces/TokenizeTextParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / TokenizeTextParams
+## File: packages/docs/api/interfaces/TokenizeTextParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / TokenizeTextParams
 
 # Interface: TokenizeTextParams
 
@@ -7562,9 +7814,9 @@ The text to tokenize
 
 #### Defined in
 
-[packages/core/src/types.ts:1138](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1138)
+[packages/core/src/types.ts:1142](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1142)
 
-***
+---
 
 ### modelType
 
@@ -7574,9 +7826,9 @@ The model type to use for tokenization
 
 #### Defined in
 
-[packages/core/src/types.ts:1139](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1139)
+[packages/core/src/types.ts:1143](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1143)
 
-***
+---
 
 ### runtime
 
@@ -7590,12 +7842,13 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
-````
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
+```
 
-## File: api/interfaces/TranscriptionParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / TranscriptionParams
+## File: packages/docs/api/interfaces/TranscriptionParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / TranscriptionParams
 
 # Interface: TranscriptionParams
 
@@ -7619,9 +7872,9 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
 
-***
+---
 
 ### audioUrl
 
@@ -7631,9 +7884,9 @@ The URL or path of the audio file to transcribe
 
 #### Defined in
 
-[packages/core/src/types.ts:1383](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1383)
+[packages/core/src/types.ts:1387](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1387)
 
-***
+---
 
 ### prompt?
 
@@ -7643,12 +7896,13 @@ Optional prompt to guide transcription
 
 #### Defined in
 
-[packages/core/src/types.ts:1385](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1385)
-````
+[packages/core/src/types.ts:1389](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1389)
+```
 
-## File: api/interfaces/TypedService.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / TypedService
+## File: packages/docs/api/interfaces/TypedService.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / TypedService
 
 # Interface: TypedService\<ConfigType, ResultType\>
 
@@ -7684,7 +7938,7 @@ Runtime instance
 
 [packages/core/src/types.ts:519](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L519)
 
-***
+---
 
 ### capabilityDescription
 
@@ -7700,7 +7954,7 @@ Service name
 
 [packages/core/src/types.ts:533](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L533)
 
-***
+---
 
 ### config
 
@@ -7714,7 +7968,7 @@ The configuration for this service instance
 
 #### Defined in
 
-[packages/core/src/types.ts:1740](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1740)
+[packages/core/src/types.ts:1763](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1763)
 
 ## Methods
 
@@ -7738,12 +7992,13 @@ A promise resolving to the result
 
 #### Defined in
 
-[packages/core/src/types.ts:1747](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1747)
-````
+[packages/core/src/types.ts:1770](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1770)
+```
 
-## File: api/interfaces/UnifiedMemoryOptions.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / UnifiedMemoryOptions
+## File: packages/docs/api/interfaces/UnifiedMemoryOptions.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / UnifiedMemoryOptions
 
 # Interface: UnifiedMemoryOptions
 
@@ -7753,11 +8008,12 @@ Provides a simpler, more consistent interface
 ## Extended by
 
 - [`UnifiedSearchOptions`](UnifiedSearchOptions.md)
-````
+```
 
-## File: api/interfaces/UnifiedSearchOptions.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / UnifiedSearchOptions
+## File: packages/docs/api/interfaces/UnifiedSearchOptions.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / UnifiedSearchOptions
 
 # Interface: UnifiedSearchOptions
 
@@ -7766,11 +8022,12 @@ Specialized memory search options
 ## Extends
 
 - [`UnifiedMemoryOptions`](UnifiedMemoryOptions.md)
-````
+```
 
-## File: api/interfaces/VideoProcessingParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / VideoProcessingParams
+## File: packages/docs/api/interfaces/VideoProcessingParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / VideoProcessingParams
 
 # Interface: VideoProcessingParams
 
@@ -7794,9 +8051,9 @@ The agent runtime for accessing services and utilities
 
 #### Defined in
 
-[packages/core/src/types.ts:1307](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1307)
+[packages/core/src/types.ts:1311](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1311)
 
-***
+---
 
 ### videoUrl
 
@@ -7806,9 +8063,9 @@ The URL or path of the video file to process
 
 #### Defined in
 
-[packages/core/src/types.ts:1415](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1415)
+[packages/core/src/types.ts:1419](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1419)
 
-***
+---
 
 ### processingType
 
@@ -7818,12 +8075,13 @@ The type of video processing to perform
 
 #### Defined in
 
-[packages/core/src/types.ts:1417](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1417)
-````
+[packages/core/src/types.ts:1421](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1421)
+```
 
-## File: api/interfaces/WorldPayload.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / WorldPayload
+## File: packages/docs/api/interfaces/WorldPayload.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / WorldPayload
 
 # Interface: WorldPayload
 
@@ -7832,11 +8090,12 @@ Payload for world-related events
 ## Extends
 
 - [`EventPayload`](EventPayload.md)
-````
+```
 
-## File: api/type-aliases/EventHandler.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / EventHandler
+## File: packages/docs/api/type-aliases/EventHandler.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / EventHandler
 
 # Type Alias: EventHandler()\<T\>
 
@@ -7846,7 +8105,7 @@ Event handler function type
 
 ## Type Parameters
 
-• **T** *extends* keyof [`EventPayloadMap`](../interfaces/EventPayloadMap.md)
+• **T** _extends_ keyof [`EventPayloadMap`](../interfaces/EventPayloadMap.md)
 
 ## Parameters
 
@@ -7858,12 +8117,13 @@ Event handler function type
 
 ## Defined in
 
-[packages/core/src/types.ts:1683](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1683)
-````
+[packages/core/src/types.ts:1705](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1705)
+```
 
-## File: api/type-aliases/Handler.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Handler
+## File: packages/docs/api/type-aliases/Handler.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Handler
 
 # Type Alias: Handler()
 
@@ -7892,11 +8152,12 @@ Handler function type for processing messages
 ## Defined in
 
 [packages/core/src/types.ts:251](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L251)
-````
+```
 
-## File: api/type-aliases/HandlerCallback.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / HandlerCallback
+## File: packages/docs/api/type-aliases/HandlerCallback.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / HandlerCallback
 
 # Type Alias: HandlerCallback()
 
@@ -7917,11 +8178,12 @@ Callback function type for handlers
 ## Defined in
 
 [packages/core/src/types.ts:263](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L263)
-````
+```
 
-## File: api/type-aliases/JSONSchema.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / JSONSchema
+## File: packages/docs/api/type-aliases/JSONSchema.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / JSONSchema
 
 # Type Alias: JSONSchema
 
@@ -7931,7 +8193,7 @@ Optional JSON schema for validating generated objects
 
 ## Index Signature
 
- \[`key`: `string`\]: `any`
+\[`key`: `string`\]: `any`
 
 ## Type declaration
 
@@ -7953,12 +8215,13 @@ Optional JSON schema for validating generated objects
 
 ## Defined in
 
-[packages/core/src/types.ts:1423](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1423)
-````
+[packages/core/src/types.ts:1427](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1427)
+```
 
-## File: api/type-aliases/Media.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Media
+## File: packages/docs/api/type-aliases/Media.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Media
 
 # Type Alias: Media
 
@@ -8013,11 +8276,12 @@ Content type
 ## Defined in
 
 [packages/core/src/types.ts:477](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L477)
-````
+```
 
-## File: api/type-aliases/MemoryTypeAlias.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / MemoryTypeAlias
+## File: packages/docs/api/type-aliases/MemoryTypeAlias.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / MemoryTypeAlias
 
 # Type Alias: MemoryTypeAlias
 
@@ -8028,11 +8292,12 @@ Memory type enumeration for built-in memory types
 ## Defined in
 
 [packages/core/src/types.ts:127](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L127)
-````
+```
 
-## File: api/type-aliases/MessageReceivedHandlerParams.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / MessageReceivedHandlerParams
+## File: packages/docs/api/type-aliases/MessageReceivedHandlerParams.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / MessageReceivedHandlerParams
 
 # Type Alias: MessageReceivedHandlerParams
 
@@ -8064,12 +8329,13 @@ Represents the parameters for a message received handler.
 
 ## Defined in
 
-[packages/core/src/types.ts:1649](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1649)
-````
+[packages/core/src/types.ts:1670](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1670)
+```
 
-## File: api/type-aliases/StateValue.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / StateValue
+## File: packages/docs/api/type-aliases/StateValue.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / StateValue
 
 # Type Alias: StateValue
 
@@ -8079,12 +8345,13 @@ Replace 'any' types with more specific types
 
 ## Defined in
 
-[packages/core/src/types.ts:1902](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1902)
-````
+[packages/core/src/types.ts:1925](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L1925)
+```
 
-## File: api/type-aliases/UUID.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / UUID
+## File: packages/docs/api/type-aliases/UUID.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / UUID
 
 # Type Alias: UUID
 
@@ -8095,11 +8362,12 @@ Defines a custom type UUID representing a universally unique identifier
 ## Defined in
 
 [packages/core/src/types.ts:8](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L8)
-````
+```
 
-## File: api/type-aliases/Validator.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / Validator
+## File: packages/docs/api/type-aliases/Validator.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / Validator
 
 # Type Alias: Validator()
 
@@ -8122,11 +8390,12 @@ Validator function type for actions/evaluators
 ## Defined in
 
 [packages/core/src/types.ts:268](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L268)
-````
+```
 
-## File: api/variables/ModelType.md
-````markdown
-[@elizaos/core v1.0.0-beta.32](../index.md) / ModelType
+## File: packages/docs/api/variables/ModelType.md
+
+```markdown
+[@elizaos/core v1.0.0-beta.34](../index.md) / ModelType
 
 # Variable: ModelType
 
@@ -8148,53 +8417,53 @@ Model size/type classification
 
 > `readonly` **LARGE**: `"TEXT_LARGE"` = `'TEXT_LARGE'`
 
-### TEXT\_SMALL
+### TEXT_SMALL
 
-> `readonly` **TEXT\_SMALL**: `"TEXT_SMALL"` = `'TEXT_SMALL'`
+> `readonly` **TEXT_SMALL**: `"TEXT_SMALL"` = `'TEXT_SMALL'`
 
-### TEXT\_LARGE
+### TEXT_LARGE
 
-> `readonly` **TEXT\_LARGE**: `"TEXT_LARGE"` = `'TEXT_LARGE'`
+> `readonly` **TEXT_LARGE**: `"TEXT_LARGE"` = `'TEXT_LARGE'`
 
-### TEXT\_EMBEDDING
+### TEXT_EMBEDDING
 
-> `readonly` **TEXT\_EMBEDDING**: `"TEXT_EMBEDDING"` = `'TEXT_EMBEDDING'`
+> `readonly` **TEXT_EMBEDDING**: `"TEXT_EMBEDDING"` = `'TEXT_EMBEDDING'`
 
-### TEXT\_TOKENIZER\_ENCODE
+### TEXT_TOKENIZER_ENCODE
 
-> `readonly` **TEXT\_TOKENIZER\_ENCODE**: `"TEXT_TOKENIZER_ENCODE"` = `'TEXT_TOKENIZER_ENCODE'`
+> `readonly` **TEXT_TOKENIZER_ENCODE**: `"TEXT_TOKENIZER_ENCODE"` = `'TEXT_TOKENIZER_ENCODE'`
 
-### TEXT\_TOKENIZER\_DECODE
+### TEXT_TOKENIZER_DECODE
 
-> `readonly` **TEXT\_TOKENIZER\_DECODE**: `"TEXT_TOKENIZER_DECODE"` = `'TEXT_TOKENIZER_DECODE'`
+> `readonly` **TEXT_TOKENIZER_DECODE**: `"TEXT_TOKENIZER_DECODE"` = `'TEXT_TOKENIZER_DECODE'`
 
-### TEXT\_REASONING\_SMALL
+### TEXT_REASONING_SMALL
 
-> `readonly` **TEXT\_REASONING\_SMALL**: `"REASONING_SMALL"` = `'REASONING_SMALL'`
+> `readonly` **TEXT_REASONING_SMALL**: `"REASONING_SMALL"` = `'REASONING_SMALL'`
 
-### TEXT\_REASONING\_LARGE
+### TEXT_REASONING_LARGE
 
-> `readonly` **TEXT\_REASONING\_LARGE**: `"REASONING_LARGE"` = `'REASONING_LARGE'`
+> `readonly` **TEXT_REASONING_LARGE**: `"REASONING_LARGE"` = `'REASONING_LARGE'`
 
-### TEXT\_COMPLETION
+### TEXT_COMPLETION
 
-> `readonly` **TEXT\_COMPLETION**: `"TEXT_COMPLETION"` = `'TEXT_COMPLETION'`
+> `readonly` **TEXT_COMPLETION**: `"TEXT_COMPLETION"` = `'TEXT_COMPLETION'`
 
 ### IMAGE
 
 > `readonly` **IMAGE**: `"IMAGE"` = `'IMAGE'`
 
-### IMAGE\_DESCRIPTION
+### IMAGE_DESCRIPTION
 
-> `readonly` **IMAGE\_DESCRIPTION**: `"IMAGE_DESCRIPTION"` = `'IMAGE_DESCRIPTION'`
+> `readonly` **IMAGE_DESCRIPTION**: `"IMAGE_DESCRIPTION"` = `'IMAGE_DESCRIPTION'`
 
 ### TRANSCRIPTION
 
 > `readonly` **TRANSCRIPTION**: `"TRANSCRIPTION"` = `'TRANSCRIPTION'`
 
-### TEXT\_TO\_SPEECH
+### TEXT_TO_SPEECH
 
-> `readonly` **TEXT\_TO\_SPEECH**: `"TEXT_TO_SPEECH"` = `'TEXT_TO_SPEECH'`
+> `readonly` **TEXT_TO_SPEECH**: `"TEXT_TO_SPEECH"` = `'TEXT_TO_SPEECH'`
 
 ### AUDIO
 
@@ -8204,28 +8473,29 @@ Model size/type classification
 
 > `readonly` **VIDEO**: `"VIDEO"` = `'VIDEO'`
 
-### OBJECT\_SMALL
+### OBJECT_SMALL
 
-> `readonly` **OBJECT\_SMALL**: `"OBJECT_SMALL"` = `'OBJECT_SMALL'`
+> `readonly` **OBJECT_SMALL**: `"OBJECT_SMALL"` = `'OBJECT_SMALL'`
 
-### OBJECT\_LARGE
+### OBJECT_LARGE
 
-> `readonly` **OBJECT\_LARGE**: `"OBJECT_LARGE"` = `'OBJECT_LARGE'`
+> `readonly` **OBJECT_LARGE**: `"OBJECT_LARGE"` = `'OBJECT_LARGE'`
 
 ## Defined in
 
 [packages/core/src/types.ts:73](https://github.com/elizaOS/eliza/blob/main/packages/core/src/types.ts#L73)
-````
+```
 
-## File: api/index.md
-````markdown
-# @elizaos/core v1.0.0-beta.32
+## File: packages/docs/api/index.md
+
+```markdown
+# @elizaos/core v1.0.0-beta.34
 
 ## Enumerations
 
 - [EventType](enumerations/EventType.md)
 - [PlatformPrefix](enumerations/PlatformPrefix.md)
-- [SOCKET\_MESSAGE\_TYPE](enumerations/SOCKET_MESSAGE_TYPE.md)
+- [SOCKET_MESSAGE_TYPE](enumerations/SOCKET_MESSAGE_TYPE.md)
 
 ## Classes
 
@@ -8282,11 +8552,13 @@ Model size/type classification
 - [RunEventPayload](interfaces/RunEventPayload.md)
 - [ActionEventPayload](interfaces/ActionEventPayload.md)
 - [EvaluatorEventPayload](interfaces/EvaluatorEventPayload.md)
+- [ModelEventPayload](interfaces/ModelEventPayload.md)
 - [EventPayloadMap](interfaces/EventPayloadMap.md)
 - [MessageMemory](interfaces/MessageMemory.md)
 - [TypedService](interfaces/TypedService.md)
 - [ServiceError](interfaces/ServiceError.md)
 - [EnhancedState](interfaces/EnhancedState.md)
+- [ControlMessage](interfaces/ControlMessage.md)
 
 ## Type Aliases
 
@@ -8364,4 +8636,4 @@ Model size/type classification
 - [createServiceError](functions/createServiceError.md)
 - [validateUuid](functions/validateUuid.md)
 - [stringToUuid](functions/stringToUuid.md)
-````
+```
