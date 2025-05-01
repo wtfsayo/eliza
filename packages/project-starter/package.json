@@ -23,8 +23,10 @@
     "@elizaos/cli": "workspace:*",
     "@elizaos/core": "workspace:*",
     "@elizaos/plugin-anthropic": "workspace:*",
+    "@elizaos/plugin-coinmarketcap": "workspace:*",
     "@elizaos/plugin-openai": "workspace:*",
     "@elizaos/plugin-sql": "workspace:*",
+    "@elizaos/plugin-twitter": "workspace:*",
     "zod": "3.24.2"
   },
   "devDependencies": {
