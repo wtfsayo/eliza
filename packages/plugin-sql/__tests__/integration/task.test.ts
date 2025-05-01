@@ -12,6 +12,11 @@ import {
   taskTestTaskWithSpecificTags,
 } from './seed/task-seed';
 
+// Spy on runMigrations before any instance is created to prevent actual execution
+vi.spyOn(PostgresConnectionManager.prototype, 'runMigrations').mockImplementation(async () => {
+  console.log('Skipping runMigrations in test environment.');
+});
+
 // Mock only the logger
 vi.mock('@elizaos/core', async () => {
   const actual = await vi.importActual('@elizaos/core');

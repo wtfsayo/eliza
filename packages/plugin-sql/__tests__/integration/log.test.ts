@@ -6,6 +6,11 @@ import { config } from './seed/config';
 import { logTestAgentSettings, logTestEntity, logTestRoom, logTestLogs } from './seed/log-seed';
 import { v4 as uuidv4 } from 'uuid';
 
+// Spy on runMigrations before any instance is created to prevent actual execution
+vi.spyOn(PostgresConnectionManager.prototype, 'runMigrations').mockImplementation(async () => {
+  console.log('Skipping runMigrations in test environment.');
+});
+
 // Mock only the logger
 vi.mock('@elizaos/core', async () => {
   const actual = await vi.importActual('@elizaos/core');

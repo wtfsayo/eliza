@@ -16,6 +16,18 @@ export const config = {
 };
 ```
 
+### Manual Migration Required
+
+**Important:** Due to limitations with `import.meta.resolve` in the Vitest test environment (specifically when running tests that involve server-side code), the automatic database migration step (`runMigrations`) within the `PgDatabaseAdapter` is mocked and **skipped** during tests.
+
+Therefore, you **must manually apply** any pending database migrations to your **test database** _before_ running the integration tests. Use the following command from the **root of the monorepo**:
+
+```bash
+npx drizzle-kit migrate --config=packages/plugin-sql/drizzle.config.ts
+```
+
+This ensures the test database schema is up-to-date.
+
 ## Seed Data
 
 The `seed/` directory contains data used to populate the database for various test scenarios (e.g., agents, entities, rooms). Each test file typically imports seed data relevant to its specific focus.
