@@ -27,6 +27,10 @@ export async function loadPluginModule(
     let specifier = repository;
 
     if (directory) {
+      if (!existsSync(directory)) {
+        logger.error(`The provided directory does not exist: ${directory}`);
+        return null;
+      }
       // Resolve to <directory>/node_modules/<repository>
       const moduleDir = path.resolve(directory, 'node_modules', repository);
       // Convert to file:// URL so import() can load it
