@@ -2,7 +2,7 @@
   "extends": "@elizaos/tsconfig/base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "packages/plugin-polygon/src",
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "target": "ES2022",
@@ -20,7 +20,7 @@
       "@elizaos/core/*": ["packages/core/src/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["packages/plugin-polygon/src/**/*"],
   "exclude": ["node_modules", "dist"],
   "files": [],
   "references": [

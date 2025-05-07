@@ -307,9 +307,7 @@ export class PolygonRpcService extends Service {
    * @param txHash Transaction hash.
    * @returns An object containing the transaction response and receipt, or null if not found.
    */
-  async getTransactionDetails(
-    txHash: string
-  ): Promise<{
+  async getTransactionDetails(txHash: string): Promise<{
     transaction: TransactionResponse | null;
     receipt: TransactionReceipt | null;
   } | null> {
