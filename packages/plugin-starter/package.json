@@ -28,8 +28,7 @@
     "dist"
   ],
   "dependencies": {
-    "@elizaos/cli": "^1.0.0-beta.32",
-    "@elizaos/core": "^1.0.0-beta.32",
+    "@elizaos/core": "^1.0.0-beta.48",
     "zod": "3.24.2"
   },
   "devDependencies": {

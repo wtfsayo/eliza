@@ -28,7 +28,6 @@
     "dist"
   ],
   "dependencies": {
-    "@elizaos/cli": "workspace:*",
     "@elizaos/core": "workspace:*",
     "@elizaos/plugin-openai": "workspace:*",
     "@elizaos/plugin-sql": "workspace:*",
