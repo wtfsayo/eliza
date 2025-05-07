@@ -10,7 +10,6 @@
         "@elizaos/plugin-openai": "workspace:*",
         "@hapi/shot": "^6.0.1",
         "@types/hapi": "^18.0.14",
-        "eliza": "git+https://github.com/elizaos/eliza.git#v2-develop",
         "node-opus": "^0.3.3",
         "opusscript": "^0.1.1",
         "vittest": "^1.0.2",
@@ -3484,8 +3483,6 @@
     "ejs": ["ejs@3.1.10", "", { "dependencies": { "jake": "^10.8.5" }, "bin": { "ejs": "bin/cli.js" } }, "sha512-UeJmFfOrAQS8OJWPZ4qtgHyWExa088/MtK5UEyoJGFH67cDEXkZSviOiKRCZ4Xij0zxI3JECgYs3oKx+AizQBA=="],
 
     "electron-to-chromium": ["electron-to-chromium@1.5.144", "", {}, "sha512-eJIaMRKeAzxfBSxtjYnoIAw/tdD6VIH6tHBZepZnAbE3Gyqqs5mGN87DvcldPUbVkIljTK8pY0CMcUljP64lfQ=="],
-
-    "eliza": ["eliza@github:elizaos/eliza#c17212a", { "dependencies": { "@anthropic-ai/sdk": "^0.39.0", "@babel/generator": "^7.26.10", "@elizaos/plugin-openai": "workspace:*", "@hapi/shot": "^6.0.1", "@types/hapi": "^18.0.14", "node-opus": "^0.3.3", "opusscript": "^0.1.1", "vittest": "^1.0.2", "zod": "3.24.1" } }, "elizaOS-eliza-c17212a"],
 
     "elliptic": ["elliptic@6.6.1", "", { "dependencies": { "bn.js": "^4.11.9", "brorand": "^1.1.0", "hash.js": "^1.0.0", "hmac-drbg": "^1.0.1", "inherits": "^2.0.4", "minimalistic-assert": "^1.0.1", "minimalistic-crypto-utils": "^1.0.1" } }, "sha512-RaddvvMatK2LJHqFJ+YA4WysVN5Ita9E35botqIYspQ4TkRAlCicdzKOjlyv/1Za5RyTNn7di//eEV0uTAfe3g=="],
 
