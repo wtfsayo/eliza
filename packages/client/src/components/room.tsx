@@ -48,14 +48,14 @@ function MessageContent({
   isUser: boolean;
 }) {
   // Only log message details in development mode
-  if (import.meta.env.DEV) {
-    clientLogger.debug(`[Chat] Rendering message from ${message.name}:`, {
-      isUser: isUser,
-      text: message.text?.substring(0, 20) + '...',
-      senderId: message.senderId,
-      source: message.source,
-    });
-  }
+  // if (import.meta.env.VITE_DEV) {
+  clientLogger.debug(`[Chat] Rendering message from ${message.name}:`, {
+    isUser: isUser,
+    text: message.text?.substring(0, 20) + '...',
+    senderId: message.senderId,
+    source: message.source,
+  });
+  // }
 
   return (
     <div className="flex flex-col w-full">
