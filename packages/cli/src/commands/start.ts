@@ -50,17 +50,19 @@ async function loadAndPreparePlugin(pluginName: string, version: string): Promis
   logger.debug(`Processing plugin: ${pluginName}`);
   let pluginModule: any;
 
+  const directory = process.cwd();
+
   try {
     // Use the centralized loader first
-    pluginModule = await loadPluginModule(pluginName);
+    pluginModule = await loadPluginModule(pluginName, directory);
 
     if (!pluginModule) {
       // If loading failed, try installing and then loading again
-      logger.info(`Plugin ${pluginName} not available, installing into ${process.cwd()}...`);
+      logger.info(`Plugin ${pluginName} not available, installing into ${directory}...`);
       try {
-        await installPlugin(pluginName, process.cwd(), version);
+        await installPlugin(pluginName, directory, version);
         // Try loading again after installation using the centralized loader
-        pluginModule = await loadPluginModule(pluginName);
+        pluginModule = await loadPluginModule(pluginName, directory);
       } catch (installError) {
         logger.error(`Failed to install plugin ${pluginName}: ${installError}`);
         return null; // Installation failed

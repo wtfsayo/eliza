@@ -43,7 +43,7 @@ function getCliDirectory(): string | null {
  */
 async function verifyPluginImport(repository: string, context: string): Promise<boolean> {
   // Use the new centralized loader function
-  const loadedModule = await loadPluginModule(repository);
+  const loadedModule = await loadPluginModule(repository, process.cwd());
 
   if (loadedModule) {
     logger.info(`Successfully verified plugin ${repository} ${context} after installation.`);
