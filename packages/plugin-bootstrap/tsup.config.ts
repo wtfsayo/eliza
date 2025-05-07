@@ -6,7 +6,7 @@ export default defineConfig({
   tsconfig: './tsconfig.build.json', // Use build-specific tsconfig
   sourcemap: true,
   clean: true,
-  format: ['esm'], // Ensure you're targeting CommonJS
+  format: ['esm'], // Ensure you're targeting CommonJSth
   dts: true,
   external: [
     'dotenv', // Externalize dotenv to prevent bundling
@@ -20,5 +20,4 @@ export default defineConfig({
     '@elizaos/core',
     // Add other modules you want to externalize
   ],
-  minify: true,
 });
