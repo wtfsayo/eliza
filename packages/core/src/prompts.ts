@@ -6,15 +6,15 @@ import type { Content, Entity, IAgentRuntime, Memory, State, TemplateType } from
 import { ModelType } from './types';
 
 /**
- * Convert all double-brace bindings ({{var}}) in a Handlebars template
- * to triple-brace bindings ({{{var}}}), so the output is NOT HTML-escaped.
+ * Convert all double-brace bindings in a Handlebars template
+ * to triple-brace bindings, so the output is NOT HTML-escaped.
  *
  * - Ignores block/partial/comment tags that start with # / ! >.
- * - Ignores the {{else}} keyword.
+ * - Ignores the else keyword.
  * - Ignores bindings that are already triple-braced.
  *
- * @param  {string} tpl  Handlebars template source
- * @return {string}      Transformed template
+ * @param  tpl  Handlebars template source
+ * @return      Transformed template
  */
 export function upgradeDoubleToTriple(tpl) {
   return tpl.replace(
@@ -551,44 +551,11 @@ export const normalizeJsonString = (str: string) => {
   return str;
 };
 
-type ActionResponse = {
+export type ActionResponse = {
   like: boolean;
   retweet: boolean;
   quote?: boolean;
   reply?: boolean;
-};
-
-export const parseActionResponseFromText = (text: string): { actions: ActionResponse } => {
-  const actions: ActionResponse = {
-    like: false,
-    retweet: false,
-    quote: false,
-    reply: false,
-  };
-
-  // Regex patterns
-  const likePattern = /\[LIKE\]/i;
-  const retweetPattern = /\[RETWEET\]/i;
-  const quotePattern = /\[QUOTE\]/i;
-  const replyPattern = /\[REPLY\]/i;
-
-  // Check with regex
-  actions.like = likePattern.test(text);
-  actions.retweet = retweetPattern.test(text);
-  actions.quote = quotePattern.test(text);
-  actions.reply = replyPattern.test(text);
-
-  // Also do line by line parsing as backup
-  const lines = text.split('\n');
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed === '[LIKE]') actions.like = true;
-    if (trimmed === '[RETWEET]') actions.retweet = true;
-    if (trimmed === '[QUOTE]') actions.quote = true;
-    if (trimmed === '[REPLY]') actions.reply = true;
-  }
-
-  return { actions };
 };
 
 /**

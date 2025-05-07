@@ -22,6 +22,7 @@ elizaos dev [options]
 
 | Option                           | Description                                             |
 | -------------------------------- | ------------------------------------------------------- |
+| `-p, --port <port>`              | Port number to run the server on                        |
 | `-c, --configure`                | Reconfigure services and AI models                      |
 | `-char, --character <character>` | Path or URL to character file to use instead of default |
 | `-b, --build`                    | Build the project before starting                       |
@@ -143,4 +144,3 @@ If file changes aren't being detected:
 
 - [`start`](./start.md): Run your project in production mode
 - [`test`](./test.md): Run tests for your project
-- [`project`](./projects.md): Manage project settings
