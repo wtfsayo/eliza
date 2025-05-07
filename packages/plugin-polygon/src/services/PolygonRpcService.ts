@@ -16,10 +16,14 @@ import {
 } from 'ethers'; // Assuming ethers v6+
 
 // Use require for JSON ABIs as a workaround for import issues
-const StakeManagerABI = require('../abi/StakeManager.json');
-const ValidatorShareABI = require('../abi/ValidatorShare.json');
-const RootChainManagerABI = require('../abi/RootChainManager.json'); // Added RootChainManager ABI
-const Erc20ABI = require('../abi/ERC20.json'); // Added ERC20 ABI (for approve/allowance)
+const StakeManagerABI = '{}';
+//require('../abi/StakeManager.json');
+const ValidatorShareABI = '{}';
+//require('../abi/ValidatorShare.json');
+const RootChainManagerABI = '{}';
+//require('../abi/RootChainManager.json'); // Added RootChainManager ABI
+const Erc20ABI = '{}';
+//require('../abi/ERC20.json'); // Added ERC20 ABI (for approve/allowance)
 
 // Re-import GasService components
 import { getGasPriceEstimates, GasPriceEstimates } from './GasService';
