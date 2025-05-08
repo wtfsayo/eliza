@@ -231,9 +231,14 @@ export const voteGovernanceAction: Action = {
   },
 
   examples: [
-    [
-      { role: 'user', content: { text: 'Vote FOR proposal 77 on Polygon governor 0xGovAddress.' } },
-      undefined,
-    ],
-  ] as ActionExample[],
+    {
+      name: 'Vote FOR proposal',
+      content: [
+        {
+          role: 'user',
+          content: { text: 'Vote FOR proposal 77 on Polygon governor 0xGovAddress.' },
+        },
+      ],
+    },
+  ],
 };

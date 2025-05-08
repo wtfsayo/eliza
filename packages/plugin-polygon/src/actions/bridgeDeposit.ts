@@ -224,11 +224,11 @@ export const bridgeDepositAction: Action = {
       const modelResponse = await runtime.useModel(ModelType.LARGE, { prompt });
       let paramsJson;
       try {
-        const responseText = modelResponse.text || '';
+        const responseText = modelResponse || '';
         const jsonString = responseText.replace(/^```json\n?|\n?```$/g, '');
         paramsJson = JSON.parse(jsonString);
       } catch (e) {
-        logger.error('Failed to parse LLM response for bridge params:', modelResponse.text, e);
+        logger.error('Failed to parse LLM response for bridge params:', modelResponse, e);
         throw new Error('Could not understand bridge parameters.');
       }
       if (

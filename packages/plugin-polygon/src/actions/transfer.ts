@@ -100,8 +100,7 @@ class PolygonTransferActionRunner {
     const [fromAddress] = await walletClient.getAddresses();
 
     let txTo: Address = params.toAddress;
-    let txData: Hex | undefined =
-      params.data === '0x' || params.data === '' ? undefined : params.data;
+    let txData: Hex | undefined = params.data === '0x' ? undefined : params.data;
     let txValue = parseEther(params.amount); // Amount is native value unless it's an ERC20 call w/ data
 
     if (params.tokenAddress) {
@@ -286,18 +285,22 @@ export const transferPolygonAction: Action = {
   },
 
   examples: [
-    [
-      { role: 'user', content: { text: 'Send 10.5 MATIC to 0xRecipientAddress on Polygon.' } },
-      undefined,
-    ],
-    [
-      {
-        role: 'user',
-        content: {
-          text: 'Transfer 100 USDC (0xTokenAddress) to 0xRecipient on Polygon. Calldata: 0xData.',
+    {
+      name: 'Transfer MATIC',
+      content: [
+        { role: 'user', content: { text: 'Send 10.5 MATIC to 0xRecipientAddress on Polygon.' } },
+      ],
+    },
+    {
+      name: 'Transfer USDC',
+      content: [
+        {
+          role: 'user',
+          content: {
+            text: 'Transfer 100 USDC (0xTokenAddress) to 0xRecipient on Polygon. Calldata: 0xData.',
+          },
         },
-      },
-      undefined,
-    ],
-  ] as ActionExample[],
+      ],
+    },
+  ],
 };
