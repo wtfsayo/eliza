@@ -16,11 +16,22 @@ export const proposeGovernanceAction: Action = {
   description: 'Submits a new governance proposal.',
 
   validate: async (
-    _runtime: IAgentRuntime,
+    runtime: IAgentRuntime,
     _message: Memory,
     _state: State | undefined
   ): Promise<boolean> => {
     logger.debug('Validating PROPOSE_GOVERNANCE action...');
+
+    if (
+      !runtime.getSetting('WALLET_PUBLIC_KEY') ||
+      !runtime.getSetting('WALLET_PRIVATE_KEY') ||
+      !runtime.getSetting('POLYGON_PLUGINS_ENABLED')
+    ) {
+      logger.error(
+        'Required settings (WALLET_PUBLIC_KEY, WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) are not configured for PROPOSE_GOVERNANCE action.'
+      );
+      return false;
+    }
     return true;
   },
 

@@ -19,11 +19,22 @@ export const transferPolygonAction: Action = {
 
   // TODO: Implement validation if necessary (e.g., check for valid address format in message)
   validate: async (
-    _runtime: IAgentRuntime,
+    runtime: IAgentRuntime,
     _message: Memory,
     _state: State | undefined
   ): Promise<boolean> => {
     logger.debug('Validating TRANSFER_POLYGON action...');
+
+    if (
+      !runtime.getSetting('WALLET_PUBLIC_KEY') ||
+      !runtime.getSetting('WALLET_PRIVATE_KEY') ||
+      !runtime.getSetting('POLYGON_PLUGINS_ENABLED')
+    ) {
+      logger.error(
+        'Required settings (WALLET_PUBLIC_KEY, WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) are not configured for TRANSFER_POLYGON action.'
+      );
+      return false;
+    }
     // For now, assume valid if the action is invoked
     return true;
   },
