@@ -55,11 +55,11 @@ async function getLocalAvailableDatabases(): Promise<string[]> {
 }
 
 /**
- * Installs dependencies for the specified target directory, database, and selected plugins.
- * @param {string} targetDir - The directory where dependencies will be installed.
- * @param {string} database - The database for which the adapter will be installed.
- * @param {string[]} selectedPlugins - An array of selected plugins to be installed.
- * @returns {Promise<void>} A promise that resolves once all dependencies are installed.
+ * Installs project dependencies in the specified directory using Bun.
+ *
+ * Attempts to run `bun install --no-optional` in {@link targetDir}. If installation fails, a warning is displayed prompting manual installation.
+ *
+ * @param targetDir - The directory in which to install dependencies.
  */
 async function installDependencies(targetDir: string) {
   console.info('Installing dependencies...');
@@ -76,7 +76,12 @@ async function installDependencies(targetDir: string) {
 }
 
 /**
- * Creates .gitignore and .npmignore files in the target directory if they don't exist
+ * Ensures that `.gitignore` and `.npmignore` files exist in the specified directory, creating them with default content if missing.
+ *
+ * @param targetDir - The directory in which to check and create ignore files.
+ *
+ * @remark
+ * If file creation fails, an error message is logged but the function does not throw.
  */
 async function createIgnoreFiles(targetDir: string): Promise<void> {
   const gitignorePath = path.join(targetDir, '.gitignore');

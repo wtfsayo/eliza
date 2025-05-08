@@ -53,7 +53,16 @@ export async function copyDir(src: string, dest: string, exclude: string[] = [])
 }
 
 /**
- * Copy a project or plugin template to target directory
+ * Copies a project or plugin template to a target directory and customizes it.
+ *
+ * Copies the appropriate template files, updates the `package.json` with the specified name, version, and dependency versions, and configures fields such as `repository`, `agentConfig`, and `platform` as needed. For plugins, also creates an `images` directory with a README and updates the main README and `src/index.ts` with relevant information. For projects, ensures default configuration fields are present.
+ *
+ * @param templateType - The type of template to copy, either `'project'` or `'plugin'`.
+ * @param targetDir - The directory where the template will be copied.
+ * @param name - The name to assign to the new project or plugin.
+ *
+ * @remark
+ * For plugins, this function creates an `images` directory with a README describing required assets, and overwrites the main README with publishing and configuration instructions. It also attempts to update `src/index.ts` with the correct plugin name and description.
  */
 export async function copyTemplate(
   templateType: 'project' | 'plugin',
