@@ -29,6 +29,8 @@ import { Command } from 'commander';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import semver from 'semver';
+import { wrapV1Plugin, isV1Plugin as coreIsV1Plugin } from '@elizaos/core-plugin-v1';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,25 +50,25 @@ export const wait = (minTime = 1000, maxTime = 3000) => {
  */
 async function loadAndPreparePlugin(pluginName: string, version: string): Promise<Plugin | null> {
   logger.debug(`Processing plugin: ${pluginName}`);
-  let pluginModule: any;
+  let pluginModuleResult: { module: any; packageVersion?: string } | null = null;
 
   try {
     // Use the centralized loader first
-    pluginModule = await loadPluginModule(pluginName);
+    pluginModuleResult = await loadPluginModule(pluginName);
 
-    if (!pluginModule) {
+    if (!pluginModuleResult?.module) {
       // If loading failed, try installing and then loading again
       logger.info(`Plugin ${pluginName} not available, installing into ${process.cwd()}...`);
       try {
         await installPlugin(pluginName, process.cwd(), version);
         // Try loading again after installation using the centralized loader
-        pluginModule = await loadPluginModule(pluginName);
+        pluginModuleResult = await loadPluginModule(pluginName);
       } catch (installError) {
         logger.error(`Failed to install plugin ${pluginName}: ${installError}`);
         return null; // Installation failed
       }
 
-      if (!pluginModule) {
+      if (!pluginModuleResult?.module) {
         logger.error(`Failed to load plugin ${pluginName} even after installation.`);
         return null; // Loading failed post-installation
       }
@@ -77,11 +79,14 @@ async function loadAndPreparePlugin(pluginName: string, version: string): Promis
     return null;
   }
 
-  if (!pluginModule) {
+  if (!pluginModuleResult?.module) {
     // This check might be redundant now, but kept for safety.
     logger.error(`Failed to process plugin ${pluginName} (module is null/undefined unexpectedly)`);
     return null;
   }
+
+  const pluginModule = pluginModuleResult.module;
+  const pluginPackageVersion = pluginModuleResult.packageVersion;
 
   // Construct the expected camelCase export name (e.g., @elizaos/plugin-foo-bar -> fooBarPlugin)
   const expectedFunctionName = `${pluginName
@@ -99,7 +104,7 @@ async function loadAndPreparePlugin(pluginName: string, version: string): Promis
   const expectedExport = pluginModule[expectedFunctionName];
   if (isValidPluginShape(expectedExport)) {
     logger.debug(`Found valid plugin export using expected name: ${expectedFunctionName}`);
-    return preparePluginForRuntime(expectedExport);
+    return preparePluginForRuntime(expectedExport, pluginPackageVersion);
   }
 
   // 2. Check the default export if the named one wasn't found or valid
@@ -108,7 +113,7 @@ async function loadAndPreparePlugin(pluginName: string, version: string): Promis
     // Ensure it's not the same invalid object we might have checked above
     if (expectedExport !== defaultExport) {
       logger.debug('Found valid plugin export using default export');
-      return preparePluginForRuntime(defaultExport);
+      return preparePluginForRuntime(defaultExport, pluginPackageVersion);
     }
   }
 
@@ -127,7 +132,7 @@ async function loadAndPreparePlugin(pluginName: string, version: string): Promis
       logger.debug(
         `Found alternative valid plugin export under key: ${key}, Name: ${potentialPlugin.name}`
       );
-      return preparePluginForRuntime(potentialPlugin);
+      return preparePluginForRuntime(potentialPlugin, pluginPackageVersion);
     }
   }
 
@@ -172,9 +177,9 @@ function isValidPluginShape(obj: any): obj is Plugin {
  * @param plugin The plugin to check and potentially wrap
  * @returns The plugin, either wrapped with v1 compatibility or unchanged if v2
  */
-function preparePluginForRuntime(plugin: any): Plugin {
+function preparePluginForRuntime(plugin: any, pluginPackageVersion?: string): Plugin {
   // Check if this is a v1 plugin based on various indicators
-  const isV1PluginType = detectV1Plugin(plugin);
+  const isV1PluginType = detectV1Plugin(plugin, pluginPackageVersion);
 
   if (isV1PluginType) {
     logger.info(`Detected v1 plugin: ${plugin.name}, wrapping with compatibility layer`);
@@ -199,9 +204,9 @@ function preparePluginForRuntime(plugin: any): Plugin {
       return {
         name: plugin.name,
         description: `Partially wrapped v1 plugin: ${plugin.name} (wrapping error occurred)`,
-        init: async () => {
+        init: async (_config: Record<string, string>, _runtime: IAgentRuntime) => {
           logger.warn(`Using fallback initialization for v1 plugin: ${plugin.name}`);
-          return { error: `Wrapping failed: ${error.message}` };
+          logger.error(`Wrapping failed for ${plugin.name}: ${error.message}`);
         },
         actions: [],
         providers: [],
@@ -220,29 +225,51 @@ function preparePluginForRuntime(plugin: any): Plugin {
  * @param plugin The plugin to check
  * @returns True if it's a v1 plugin, false otherwise
  */
-function detectV1Plugin(plugin: any): boolean {
+function detectV1Plugin(plugin: any, pluginPackageVersion?: string): boolean {
   if (!plugin || typeof plugin !== 'object') {
     return false;
   }
 
-  // // First, use the core compatibility layer's detection
-  // if (isV1Plugin(plugin)) {
-  //   logger.debug(`Plugin detected as v1 by core compatibility layer: ${plugin.name}`);
-  //   return true;
-  // }
-
-  // Additional detection methods for better diagnostics and edge cases
-
-  // Check for semver version if available
-  if (plugin.version && semver.valid(plugin.version)) {
-    const isOlderVersion = semver.lt(plugin.version, '1.0.0');
-    if (isOlderVersion) {
-      logger.debug(`Plugin detected as v1 based on version: ${plugin.version}`);
+  // 1. Check version from package.json if provided via pluginPackageVersion
+  if (pluginPackageVersion && semver.valid(pluginPackageVersion)) {
+    if (semver.lt(pluginPackageVersion, '1.0.0')) {
+      logger.debug(
+        `Plugin ${plugin.name || '(unknown name)'} detected as v1 based on package.json version: ${pluginPackageVersion}`
+      );
       return true;
     }
+    // If version is >= 1.0.0 from package.json, it's definitively not v1 by this primary check.
+    // We might even consider returning false here if a valid package.json version >= 1.0.0 is found,
+    // but for now, we'll let other checks proceed just in case of unusual plugin structures.
+    logger.debug(
+      `Plugin ${plugin.name || '(unknown name)'} has package.json version ${pluginPackageVersion} (>=1.0.0), not v1 by this check.`
+    );
   }
 
-  // Not detected as v1
+  // 2. Check for semver version on the plugin object itself (plugin.version) as a fallback
+  if (plugin.version && semver.valid(plugin.version)) {
+    if (semver.lt(plugin.version, '1.0.0')) {
+      logger.debug(
+        `Plugin ${plugin.name || '(unknown name)'} detected as v1 based on plugin.version property: ${plugin.version}`
+      );
+      return true;
+    }
+    logger.debug(
+      `Plugin ${plugin.name || '(unknown name)'} has plugin.version property ${plugin.version} (>=1.0.0), not v1 by this check.`
+    );
+  }
+
+  // 3. Use the core compatibility layer's detection as another fallback
+  if (coreIsV1Plugin(plugin)) {
+    logger.debug(
+      `Plugin ${plugin.name || '(unknown name)'} detected as v1 by core compatibility layer.`
+    );
+    return true;
+  }
+
+  logger.debug(
+    `Plugin ${plugin.name || '(unknown name)'} not detected as v1 after checking package.json version, plugin.version, and core layer.`
+  );
   return false;
 }
 

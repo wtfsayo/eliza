@@ -59,6 +59,7 @@ async function processSocketMessage(
   io: SocketIOServer,
   tracer?: Tracer
 ) {
+  console.log('processSocketMessage##############');
   const agentId = runtime.agentId;
   const senderId = payload.senderId;
 
@@ -73,10 +74,14 @@ async function processSocketMessage(
     return;
   }
 
+  console.log('processSocketMessage##############1');
+
   const entityId = createUniqueUuid(runtime, senderId);
   const uniqueRoomId = createUniqueUuid(runtime, socketRoomId);
   const source = payload.source;
   const worldId = payload.worldId;
+
+  console.log('processSocketMessage##############3');
 
   const executeLogic = async () => {
     // Ensure connection between entity and room
@@ -110,6 +115,8 @@ async function processSocketMessage(
       },
       createdAt: Date.now(),
     };
+
+    console.log('processSocketMessage##############11');
 
     // Define callback for agent responses
     const callback = async (content) => {
@@ -201,6 +208,8 @@ async function processSocketMessage(
       },
     });
   };
+
+  console.log('processSocketMessage##############4');
 
   // Handle instrumentation if tracer is provided and enabled
   if (tracer && (runtime as AgentRuntime).instrumentationService?.isEnabled?.()) {

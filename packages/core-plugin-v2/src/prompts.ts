@@ -11,13 +11,7 @@ import {
   postCreationTemplate as corePostCreationTemplate,
   booleanFooter as coreBooleanFooter,
   parseBooleanFromText as coreParseBooleanFromText,
-  stringArrayFooter as coreStringArrayFooter,
-  parseJsonArrayFromText as coreParseJsonArrayFromText,
-  extractAttributes as coreExtractAttributes,
   normalizeJsonString as coreNormalizeJsonString,
-  cleanJsonResponse as coreCleanJsonResponse,
-  postActionResponseFooter as corePostActionResponseFooter,
-  parseActionResponseFromText as coreParseActionResponseFromText,
   truncateToCompleteSentence as coreTruncateToCompleteSentence,
   splitChunks as coreSplitChunks,
   trimTokens as coreTrimTokens,
@@ -31,14 +25,6 @@ import {
   type Entity,
   type IAgentRuntime,
 } from './types';
-
-// TODO: move to core -> types.ts
-type ActionResponse = {
-  like: boolean;
-  retweet: boolean;
-  quote?: boolean;
-  reply?: boolean;
-};
 
 /**
  * Composes a context string by replacing placeholders in a template with corresponding values from the state.
@@ -194,21 +180,6 @@ export function parseBooleanFromText(value: string | undefined | null): boolean 
   return coreParseBooleanFromText(value);
 }
 
-export const stringArrayFooter = coreStringArrayFooter;
-
-/**
- * Parses a JSON array from a given text. The function looks for a JSON block wrapped in triple backticks
- * with `json` language identifier, and if not found, it searches for an array pattern within the text.
- * It then attempts to parse the JSON string into a JavaScript object. If parsing is successful and the result
- * is an array, it returns the array; otherwise, it returns null.
- *
- * @param text - The input text from which to extract and parse the JSON array.
- * @returns An array parsed from the JSON string if successful; otherwise, null.
- */
-export function parseJsonArrayFromText(text: string) {
-  return coreParseJsonArrayFromText(text);
-}
-
 /**
  * Parses a JSON object from a given text. The function looks for a JSON block wrapped in triple backticks
  * with `json` language identifier, and if not found, it searches for an object pattern within the text.
@@ -221,19 +192,6 @@ export function parseJsonArrayFromText(text: string) {
  */
 export function parseJSONObjectFromText(text: string): Record<string, any> | null {
   return coreParseJSONObjectFromText(text);
-}
-
-/**
- * Extracts specific attributes (e.g., user, text, action) from a JSON-like string using regex.
- * @param response - The cleaned string response to extract attributes from.
- * @param attributesToExtract - An array of attribute names to extract.
- * @returns An object containing the extracted attributes.
- */
-export function extractAttributes(
-  response: string,
-  attributesToExtract?: string[]
-): { [key: string]: string | undefined } {
-  return coreExtractAttributes(response, attributesToExtract);
 }
 
 /**
@@ -256,23 +214,6 @@ export const normalizeJsonString = (str: string) => {
 };
 
 /**
- * Cleans a JSON-like response string by removing unnecessary markers, line breaks, and extra whitespace.
- * This is useful for handling improperly formatted JSON responses from external sources.
- *
- * @param response - The raw JSON-like string response to clean.
- * @returns The cleaned string, ready for parsing or further processing.
- */
-export function cleanJsonResponse(response: string): string {
-  return coreCleanJsonResponse(response);
-}
-
-export const postActionResponseFooter: string = corePostActionResponseFooter;
-
-export const parseActionResponseFromText = (text: string): { actions: ActionResponse } => {
-  return coreParseActionResponseFromText(text);
-};
-
-/**
  * Truncate text to fit within the character limit, ensuring it ends at a complete sentence.
  */
 export function truncateToCompleteSentence(text: string, maxLength: number): string {
@@ -287,5 +228,5 @@ export async function splitChunks(content: string, chunkSize = 512, bleed = 20):
  * Trims the provided text prompt to a specified token limit using a tokenizer model and type.
  */
 export async function trimTokens(prompt: string, maxTokens: number, runtime: IAgentRuntime) {
-  return coreTrimTokens(prompt, maxTokens, runtime);
+  return coreTrimTokens(prompt, maxTokens, runtime as any);
 }
