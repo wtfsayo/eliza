@@ -19,7 +19,7 @@ import { getValidatorInfoAction } from './actions/getValidatorInfo';
 import { getDelegatorInfoAction } from './actions/getDelegatorInfo';
 import { withdrawRewardsAction } from './actions/withdrawRewards';
 import { bridgeDepositAction } from './actions/bridgeDeposit';
-import { IPolygonWalletContext, polygonWalletProvider } from './providers/PolygonWalletProvider';
+import { IPolygonWalletContext, WalletProvider } from './providers/PolygonWalletProvider';
 import {
   PolygonRpcService,
   ValidatorInfo,
@@ -356,7 +356,7 @@ const polygonActions: Action[] = [
 ];
 
 // --- Define Providers --- //
-const polygonProviders: Provider[] = [polygonWalletProvider];
+const polygonProviders: Provider[] = [WalletProvider];
 
 // --- Define Services --- //
 const polygonServices: (typeof Service)[] = [PolygonRpcService];

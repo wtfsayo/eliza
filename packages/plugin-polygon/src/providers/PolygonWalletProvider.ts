@@ -28,7 +28,7 @@ import type {
   TestClient,
 } from 'viem';
 import * as viemChains from 'viem/chains';
-import { PhalaDeriveKeyProvider, TEEMode } from '@elizaos/plugin-tee';
+import { PhalaDeriveKeyProvider } from '@elizaos/plugin-tee';
 import NodeCache from 'node-cache';
 import * as path from 'node:path';
 
@@ -267,11 +267,11 @@ const genChainsFromRuntime = (runtime: IAgentRuntime): Record<string, Chain> => 
 };
 
 export const initWalletProvider = async (runtime: IAgentRuntime) => {
-  const teeMode = runtime.getSetting('TEE_MODE') || TEEMode.OFF;
+  const teeMode = runtime.getSetting('TEE_MODE') || 'OFF';
 
   const chains = genChainsFromRuntime(runtime);
 
-  if (teeMode !== TEEMode.OFF) {
+  if (teeMode !== 'OFF') {
     const walletSecretSalt = runtime.getSetting('WALLET_SECRET_SALT');
     if (!walletSecretSalt) {
       throw new Error('WALLET_SECRET_SALT required when TEE_MODE is enabled');
