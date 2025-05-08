@@ -21,33 +21,36 @@ import {
   PublicClient,
   createPublicClient,
   fallback,
+  keccak256,
+  stringToHex,
   type Transport,
   type Account,
 } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 
-// Minimal ABI for OZ Governor castVote function
-const governorVoteAbi = [
+// Minimal ABI for OZ Governor execute function
+const governorExecuteAbi = [
   {
     inputs: [
-      { name: 'proposalId', type: 'uint256' },
-      { name: 'support', type: 'uint8' }, // 0 = Against, 1 = For, 2 = Abstain
+      { name: 'targets', type: 'address[]' },
+      { name: 'values', type: 'uint256[]' },
+      { name: 'calldatas', type: 'bytes[]' },
+      { name: 'descriptionHash', type: 'bytes32' },
     ],
-    name: 'castVote',
-    outputs: [], // Typically returns a boolean success or nothing, tx receipt is key
-    stateMutability: 'nonpayable',
+    name: 'execute',
+    outputs: [], // Or proposalId depending on version
+    stateMutability: 'payable', // Execute can be payable
     type: 'function',
   },
 ] as const;
 
-// START - Reusable WalletProvider and types (from previous adaptations)
+// START - Reusable WalletProvider and types
 interface ChainConfig extends Chain {
   rpcUrls: Pick<Chain['rpcUrls'], 'default'> & { default: { http: readonly string[] } };
   blockExplorers: Pick<Chain['blockExplorers'], 'default'> & {
     default: { name: string; url: string };
   };
 }
-
 class WalletProvider {
   public chains: Record<string, ChainConfig> = {};
   constructor(private runtime: IAgentRuntime) {
@@ -101,12 +104,13 @@ async function initWalletProvider(runtime: IAgentRuntime): Promise<WalletProvide
   return new WalletProvider(runtime);
 }
 
-interface VoteParams {
+interface ExecuteGovernanceParams {
   chain: string;
   governorAddress: Address;
-  proposalId: string; // string for LLM, convert to BigInt
-  support: number; // 0, 1, or 2
-  reason?: string; // Optional, if using castVoteWithReason
+  targets: Address[];
+  values: string[]; // ETH values as strings
+  calldatas: Hex[];
+  description: string; // Full description, hash calculated by runner
 }
 
 interface Transaction {
@@ -119,46 +123,70 @@ interface Transaction {
   logs?: any[];
 }
 
-const voteGovernanceTemplate = {
-  name: 'Vote on Governance Proposal',
+const executeGovernanceTemplate = {
+  name: 'Execute Governance Proposal',
   description:
-    'Generates parameters to cast a vote on a governance proposal. // Respond with a valid JSON object containing the extracted parameters.',
+    'Generates parameters to execute a queued governance proposal. // Respond with a valid JSON object containing the extracted parameters.',
   parameters: {
     type: 'object',
     properties: {
       chain: { type: 'string', description: 'Blockchain name (e.g., polygon).' },
-      governorAddress: { type: 'string', description: 'Address of the Governor.' },
-      proposalId: { type: 'string', description: 'ID of the proposal.' },
-      support: {
-        type: 'integer',
-        enum: [0, 1, 2],
-        description: 'Vote: 0=Against, 1=For, 2=Abstain.',
+      governorAddress: { type: 'string', description: 'Address of the Governor contract.' },
+      targets: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Array of target contract addresses.',
       },
+      values: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Array of ETH values (strings) for proposal actions.',
+      },
+      calldatas: {
+        type: 'array',
+        items: { type: 'string' },
+        description: 'Array of hex-encoded calldata for each action.',
+      },
+      description: { type: 'string', description: 'The full text description of the proposal.' },
     },
-    required: ['chain', 'governorAddress', 'proposalId', 'support'],
+    required: ['chain', 'governorAddress', 'targets', 'values', 'calldatas', 'description'],
   },
 };
 
-class PolygonVoteGovernanceActionRunner {
+class PolygonExecuteGovernanceActionRunner {
   constructor(private walletProvider: WalletProvider) {}
 
-  async vote(params: VoteParams): Promise<Transaction> {
+  async execute(params: ExecuteGovernanceParams): Promise<Transaction> {
     const walletClient = this.walletProvider.getWalletClient(params.chain);
     const publicClient = this.walletProvider.getPublicClient(params.chain);
-    const chainConfig = this.walletProvider.getChainConfigs(params.chain);
+    const chainConfig = this.getChainConfigs(params.chain);
 
-    const proposalIdBigInt = BigInt(params.proposalId);
-    // Ensure support is uint8 compatible
-    const supportUint8 = params.support as 0 | 1 | 2;
+    // Note: The `values` in params.values here are for the Governor.execute() call itself.
+    // The actual values for the proposal's actions are part of the proposal, not separate args to execute().
+    // Standard OZ Governor execute() is often payable, allowing msg.value if the proposal itself involves ETH transfer from Governor.
+    // We assume params.values is for the value sent TO THE GOVERNOR.execute() call. Often 0.
+    const executeCallValue =
+      params.values.length > 0
+        ? params.values.map((v) => BigInt(v)).reduce((a, b) => a + b, BigInt(0))
+        : BigInt(0);
+    const descriptionHash = keccak256(stringToHex(params.description));
 
     const txData = encodeFunctionData({
-      abi: governorVoteAbi,
-      functionName: 'castVote',
-      args: [proposalIdBigInt, supportUint8],
+      abi: governorExecuteAbi,
+      functionName: 'execute',
+      // For OZ Governor, `execute` takes `targets[], values[], calldatas[], descriptionHash`.
+      // The `values` here are the proposal's action values, not msg.value for execute itself.
+      // This seems to be a misunderstanding in the EVM plugin's `execute` params if it also has a separate `values` field.
+      // Let's assume `params.values` are the proposal action values.
+      args: [
+        params.targets,
+        params.values.map((v) => BigInt(v)),
+        params.calldatas,
+        descriptionHash,
+      ],
     });
-
     logger.debug(
-      `Voting on proposal ${params.proposalId} with support ${params.support} on ${params.chain} at governor ${params.governorAddress}`
+      `Executing proposal on ${params.chain} at governor ${params.governorAddress} with descHash: ${descriptionHash}`
     );
 
     try {
@@ -174,141 +202,134 @@ class PolygonVoteGovernanceActionRunner {
       const hash = await walletClient.sendTransaction({
         account: walletClient.account!,
         to: params.governorAddress,
-        value: BigInt(0),
+        value: executeCallValue, // This is msg.value for the execute() call itself.
         data: txData,
         chain: chainConfig,
         kzg,
       });
-
-      logger.info(`Vote transaction sent. Hash: ${hash}. Waiting for receipt...`);
+      logger.info(`Execute transaction sent. Hash: ${hash}. Waiting for receipt...`);
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
       return {
         hash,
         from: walletClient.account!.address,
         to: params.governorAddress,
-        value: BigInt(0),
+        value: executeCallValue,
         data: txData,
         chainId: chainConfig.id,
         logs: receipt.logs,
       };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      logger.error(`Governance vote failed: ${errMsg}`, error);
-      throw new Error(`Governance vote failed: ${errMsg}`);
+      logger.error(`Governance execute failed: ${errMsg}`, error);
+      throw new Error(`Governance execute failed: ${errMsg}`);
     }
   }
 }
-// END - Reusable WalletProvider and types
+// END
 
-export const voteGovernanceAction: Action = {
-  name: 'VOTE_GOVERNANCE_POLYGON',
-  similes: ['CAST_POLYGON_VOTE', 'VOTE_ON_POLYGON_PROPOSAL'],
-  description: 'Casts a vote on an existing governance proposal.',
-
-  validate: async (
-    runtime: IAgentRuntime,
-    _message: Memory,
-    _state: State | undefined
-  ): Promise<boolean> => {
-    logger.debug('Validating VOTE_GOVERNANCE_POLYGON action...');
+export const executeGovernanceAction: Action = {
+  name: 'EXECUTE_GOVERNANCE_POLYGON',
+  similes: ['POLYGON_GOV_EXECUTE', 'RUN_POLYGON_PROPOSAL'],
+  description: 'Executes a queued governance proposal on Polygon.',
+  validate: async (runtime: IAgentRuntime, _m: Memory, _s: State | undefined): Promise<boolean> => {
+    logger.debug('Validating EXECUTE_GOVERNANCE_POLYGON action...');
     const checks = [
       runtime.getSetting('WALLET_PUBLIC_KEY'),
       runtime.getSetting('WALLET_PRIVATE_KEY'),
       runtime.getSetting('POLYGON_PLUGINS_ENABLED'),
     ];
-    if (checks.some((check) => !check)) {
-      logger.error(
-        'Required settings (WALLET_PUBLIC_KEY, WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) are not configured.'
-      );
+    if (checks.some((c) => !c)) {
+      logger.error('Required settings not configured.');
       return false;
     }
     if (
       typeof runtime.getSetting('WALLET_PRIVATE_KEY') !== 'string' ||
       !(runtime.getSetting('WALLET_PRIVATE_KEY') as string).startsWith('0x')
     ) {
-      logger.error('WALLET_PRIVATE_KEY is invalid.');
+      logger.error('WALLET_PRIVATE_KEY invalid.');
       return false;
     }
     return true;
   },
-
   handler: async (
     runtime: IAgentRuntime,
     message: Memory,
     state: State | undefined,
-    _options: any,
-    callback: HandlerCallback | undefined,
-    _responses: Memory[] | undefined
+    _o: any,
+    cb: HandlerCallback | undefined,
+    _rs: Memory[] | undefined
   ) => {
-    logger.info('Handling VOTE_GOVERNANCE_POLYGON for message:', message.id);
+    logger.info('Handling EXECUTE_GOVERNANCE_POLYGON for message:', message.id);
     try {
       const walletProvider = await initWalletProvider(runtime);
-      const actionRunner = new PolygonVoteGovernanceActionRunner(walletProvider);
-
+      const actionRunner = new PolygonExecuteGovernanceActionRunner(walletProvider);
       const prompt = composePromptFromState({
         state,
-        template: voteGovernanceTemplate,
+        template: executeGovernanceTemplate,
         message: message.content.text,
       });
-      const modelResponse = await runtime.useModel(ModelType.SMALL, { prompt });
+      const modelResponse = await runtime.useModel(ModelType.LARGE, { prompt });
       let paramsJson;
       try {
         const responseText = modelResponse.text || '';
         const jsonString = responseText.replace(/^```json\n?|\n?```$/g, '');
         paramsJson = JSON.parse(jsonString);
       } catch (e) {
-        logger.error('Failed to parse LLM response for vote params:', modelResponse.text, e);
-        throw new Error('Could not understand vote parameters.');
+        logger.error('Failed to parse LLM response for execute params:', modelResponse.text, e);
+        throw new Error('Could not understand execute parameters.');
       }
-
       if (
         !paramsJson.chain ||
         !paramsJson.governorAddress ||
-        !paramsJson.proposalId ||
-        typeof paramsJson.support === 'undefined'
+        !paramsJson.targets ||
+        !paramsJson.values ||
+        !paramsJson.calldatas ||
+        !paramsJson.description
       ) {
-        throw new Error('Missing required vote parameters.');
+        throw new Error('Incomplete execute parameters extracted.');
       }
-
-      const voteParams: VoteParams = {
+      const executeParams: ExecuteGovernanceParams = {
         chain: paramsJson.chain as string,
         governorAddress: paramsJson.governorAddress as Address,
-        proposalId: paramsJson.proposalId as string,
-        support: paramsJson.support as number,
+        targets: paramsJson.targets as Address[],
+        values: paramsJson.values as string[],
+        calldatas: paramsJson.calldatas as Hex[],
+        description: paramsJson.description as string,
       };
-
-      logger.debug('Vote governance parameters:', voteParams);
-      const txResult = await actionRunner.vote(voteParams);
-      const successMsg = `Successfully voted on proposal ${voteParams.proposalId} on ${voteParams.chain} with support ${voteParams.support}. TxHash: ${txResult.hash}`;
+      logger.debug('Execute governance parameters:', executeParams);
+      const txResult = await actionRunner.execute(executeParams);
+      const successMsg = `Successfully executed proposal on ${executeParams.chain} for governor ${executeParams.governorAddress} (Desc: "${executeParams.description}"). TxHash: ${txResult.hash}`;
       logger.info(successMsg);
-
-      if (callback) {
-        await callback({
+      if (cb) {
+        await cb({
           text: successMsg,
           content: { success: true, ...txResult },
-          actions: ['VOTE_GOVERNANCE_POLYGON'],
+          actions: ['EXECUTE_GOVERNANCE_POLYGON'],
           source: message.content.source,
         });
       }
       return { success: true, ...txResult };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      logger.error('Error in VOTE_GOVERNANCE_POLYGON handler:', errMsg, error);
-      if (callback) {
-        await callback({
-          text: `Error voting on proposal: ${errMsg}`,
-          actions: ['VOTE_GOVERNANCE_POLYGON'],
+      logger.error('Error in EXECUTE_GOVERNANCE_POLYGON handler:', errMsg, error);
+      if (cb) {
+        await cb({
+          text: `Error executing proposal: ${errMsg}`,
+          actions: ['EXECUTE_GOVERNANCE_POLYGON'],
           source: message.content.source,
         });
       }
       return { success: false, error: errMsg };
     }
   },
-
   examples: [
     [
-      { role: 'user', content: { text: 'Vote FOR proposal 77 on Polygon governor 0xGovAddress.' } },
+      {
+        role: 'user',
+        content: {
+          text: "Execute the queued proposal 'Test Prop E1' on Polygon governor 0xGov. Targets:[0xT1], Values:[0], Calldatas:[0xCD1].",
+        },
+      },
       undefined,
     ],
   ] as ActionExample[],

@@ -1,70 +1,309 @@
 import {
+  createPublicClient,
+  createTestClient,
+  createWalletClient,
+  formatUnits,
+  http,
+  publicActions,
+  walletActions,
+} from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import {
+  type IAgentRuntime,
   type Provider,
-  type ProviderResult,
-  IAgentRuntime,
   type Memory,
   type State,
-  logger,
+  type ICacheManager,
+  elizaLogger,
 } from '@elizaos/core';
-import { Wallet } from 'ethers'; // Or appropriate wallet class
+import type {
+  Address,
+  WalletClient,
+  PublicClient,
+  Chain,
+  HttpTransport,
+  Account,
+  PrivateKeyAccount,
+  TestClient,
+} from 'viem';
+import * as viemChains from 'viem/chains';
+import { DeriveKeyProvider, TEEMode } from '@elizaos/plugin-tee';
+import NodeCache from 'node-cache';
+import * as path from 'node:path';
 
-// Define the context provided by this provider
-export interface IPolygonWalletContext {
-  address: string;
-  // Potentially add signTransaction, sendTransaction methods later
-  // May also include provider instances for L1/L2
+import type { SupportedChain } from '../types';
+
+export class WalletProvider {
+  private cache: NodeCache;
+  private cacheKey = 'evm/wallet';
+  private currentChain: SupportedChain = 'mainnet';
+  private CACHE_EXPIRY_SEC = 5;
+  chains: Record<string, Chain> = { ...viemChains };
+  account: PrivateKeyAccount;
+
+  constructor(
+    accountOrPrivateKey: PrivateKeyAccount | `0x${string}`,
+    private cacheManager: ICacheManager,
+    chains?: Record<string, Chain>
+  ) {
+    this.setAccount(accountOrPrivateKey);
+    this.setChains(chains);
+
+    if (chains && Object.keys(chains).length > 0) {
+      this.setCurrentChain(Object.keys(chains)[0] as SupportedChain);
+    }
+
+    this.cache = new NodeCache({ stdTTL: this.CACHE_EXPIRY_SEC });
+  }
+
+  getAddress(): Address {
+    return this.account.address;
+  }
+
+  getCurrentChain(): Chain {
+    return this.chains[this.currentChain];
+  }
+
+  getPublicClient(
+    chainName: SupportedChain
+  ): PublicClient<HttpTransport, Chain, Account | undefined> {
+    const transport = this.createHttpTransport(chainName);
+
+    const publicClient = createPublicClient({
+      chain: this.chains[chainName],
+      transport,
+    });
+    return publicClient;
+  }
+
+  getWalletClient(chainName: SupportedChain): WalletClient {
+    const transport = this.createHttpTransport(chainName);
+
+    const walletClient = createWalletClient({
+      chain: this.chains[chainName],
+      transport,
+      account: this.account,
+    });
+
+    return walletClient;
+  }
+
+  getTestClient(): TestClient {
+    return createTestClient({
+      chain: viemChains.hardhat,
+      mode: 'hardhat',
+      transport: http(),
+    })
+      .extend(publicActions)
+      .extend(walletActions);
+  }
+
+  getChainConfigs(chainName: SupportedChain): Chain {
+    const chain = viemChains[chainName];
+
+    if (!chain?.id) {
+      throw new Error('Invalid chain name');
+    }
+
+    return chain;
+  }
+
+  async getWalletBalance(): Promise<string | null> {
+    const cacheKey = `walletBalance_${this.currentChain}`;
+    const cachedData = await this.getCachedData<string>(cacheKey);
+    if (cachedData) {
+      elizaLogger.log(`Returning cached wallet balance for chain: ${this.currentChain}`);
+      return cachedData;
+    }
+
+    try {
+      const client = this.getPublicClient(this.currentChain);
+      const balance = await client.getBalance({
+        address: this.account.address,
+      });
+      const balanceFormatted = formatUnits(balance, 18);
+      this.setCachedData<string>(cacheKey, balanceFormatted);
+      elizaLogger.log('Wallet balance cached for chain: ', this.currentChain);
+      return balanceFormatted;
+    } catch (error) {
+      console.error('Error getting wallet balance:', error);
+      return null;
+    }
+  }
+
+  async getWalletBalanceForChain(chainName: SupportedChain): Promise<string | null> {
+    try {
+      const client = this.getPublicClient(chainName);
+      const balance = await client.getBalance({
+        address: this.account.address,
+      });
+      return formatUnits(balance, 18);
+    } catch (error) {
+      console.error('Error getting wallet balance:', error);
+      return null;
+    }
+  }
+
+  addChain(chain: Record<string, Chain>) {
+    this.setChains(chain);
+  }
+
+  switchChain(chainName: SupportedChain, customRpcUrl?: string) {
+    if (!this.chains[chainName]) {
+      const chain = WalletProvider.genChainFromName(chainName, customRpcUrl);
+      this.addChain({ [chainName]: chain });
+    }
+    this.setCurrentChain(chainName);
+  }
+
+  private async readFromCache<T>(key: string): Promise<T | null> {
+    const cached = await this.cacheManager.get<T>(path.join(this.cacheKey, key));
+    return cached;
+  }
+
+  private async writeToCache<T>(key: string, data: T): Promise<void> {
+    await this.cacheManager.set(path.join(this.cacheKey, key), data, {
+      expires: Date.now() + this.CACHE_EXPIRY_SEC * 1000,
+    });
+  }
+
+  private async getCachedData<T>(key: string): Promise<T | null> {
+    // Check in-memory cache first
+    const cachedData = this.cache.get<T>(key);
+    if (cachedData) {
+      return cachedData;
+    }
+
+    // Check file-based cache
+    const fileCachedData = await this.readFromCache<T>(key);
+    if (fileCachedData) {
+      // Populate in-memory cache
+      this.cache.set(key, fileCachedData);
+      return fileCachedData;
+    }
+
+    return null;
+  }
+
+  private async setCachedData<T>(cacheKey: string, data: T): Promise<void> {
+    // Set in-memory cache
+    this.cache.set(cacheKey, data);
+
+    // Write to file-based cache
+    await this.writeToCache(cacheKey, data);
+  }
+
+  private setAccount = (accountOrPrivateKey: PrivateKeyAccount | `0x${string}`) => {
+    if (typeof accountOrPrivateKey === 'string') {
+      this.account = privateKeyToAccount(accountOrPrivateKey);
+    } else {
+      this.account = accountOrPrivateKey;
+    }
+  };
+
+  private setChains = (chains?: Record<string, Chain>) => {
+    if (!chains) {
+      return;
+    }
+    for (const chain of Object.keys(chains)) {
+      this.chains[chain] = chains[chain];
+    }
+  };
+
+  private setCurrentChain = (chain: SupportedChain) => {
+    this.currentChain = chain;
+  };
+
+  private createHttpTransport = (chainName: SupportedChain) => {
+    const chain = this.chains[chainName];
+
+    if (chain.rpcUrls.custom) {
+      return http(chain.rpcUrls.custom.http[0]);
+    }
+    return http(chain.rpcUrls.default.http[0]);
+  };
+
+  static genChainFromName(chainName: string, customRpcUrl?: string | null): Chain {
+    const baseChain = viemChains[chainName];
+
+    if (!baseChain?.id) {
+      throw new Error('Invalid chain name');
+    }
+
+    const viemChain: Chain = customRpcUrl
+      ? {
+          ...baseChain,
+          rpcUrls: {
+            ...baseChain.rpcUrls,
+            custom: {
+              http: [customRpcUrl],
+            },
+          },
+        }
+      : baseChain;
+
+    return viemChain;
+  }
 }
 
-/**
- * Provider object conforming to the ElizaOS Provider interface.
- * It retrieves the private key from runtime settings within the `get` method.
- */
-export const polygonWalletProvider: Provider = {
-  name: 'polygonWallet',
-  description:
-    "Provides the agent's Polygon wallet address derived from the configured private key.",
+const genChainsFromRuntime = (runtime: IAgentRuntime): Record<string, Chain> => {
+  const chainNames = (runtime.character.settings.chains?.evm as SupportedChain[]) || [];
+  const chains: Record<string, Chain> = {};
 
-  get: async (
-    runtime: IAgentRuntime,
-    _message?: Memory,
-    _state?: State | undefined
-  ): Promise<ProviderResult> => {
-    // !!! IMPORTANT: Handle private key securely.
-    const privateKey = runtime.getSetting('PRIVATE_KEY');
+  for (const chainName of chainNames) {
+    const rpcUrl = runtime.getSetting(`ETHEREUM_PROVIDER_${chainName.toUpperCase()}`);
+    const chain = WalletProvider.genChainFromName(chainName, rpcUrl);
+    chains[chainName] = chain;
+  }
+
+  const mainnet_rpcurl = runtime.getSetting('EVM_PROVIDER_URL');
+  if (mainnet_rpcurl) {
+    const chain = WalletProvider.genChainFromName('mainnet', mainnet_rpcurl);
+    chains['mainnet'] = chain;
+  }
+
+  return chains;
+};
+
+export const initWalletProvider = async (runtime: IAgentRuntime) => {
+  const teeMode = runtime.getSetting('TEE_MODE') || TEEMode.OFF;
+
+  const chains = genChainsFromRuntime(runtime);
+
+  if (teeMode !== TEEMode.OFF) {
+    const walletSecretSalt = runtime.getSetting('WALLET_SECRET_SALT');
+    if (!walletSecretSalt) {
+      throw new Error('WALLET_SECRET_SALT required when TEE_MODE is enabled');
+    }
+
+    const deriveKeyProvider = new DeriveKeyProvider(teeMode);
+    const deriveKeyResult = await deriveKeyProvider.deriveEcdsaKeypair(
+      walletSecretSalt,
+      'evm',
+      runtime.agentId
+    );
+    return new WalletProvider(deriveKeyResult.keypair, runtime.cacheManager, chains);
+  } else {
+    const privateKey = runtime.getSetting('EVM_PRIVATE_KEY') as `0x${string}`;
     if (!privateKey) {
-      logger.error('PRIVATE_KEY not found in settings for PolygonWalletProvider.');
-      // Return a result indicating failure
-      return {
-        text: 'Error: Wallet private key is not configured.',
-        data: { address: '0xConfigurationError' } as IPolygonWalletContext,
-        values: { configured: false },
-      };
+      throw new Error('EVM_PRIVATE_KEY is missing');
     }
+    return new WalletProvider(privateKey, runtime.cacheManager, chains);
+  }
+};
 
-    let address = '0xErrorDerivingAddress';
-    let derived = false;
-    let walletContext: IPolygonWalletContext = { address };
+export const evmWalletProvider: Provider = {
+  async get(runtime: IAgentRuntime, _message: Memory, state?: State): Promise<string | null> {
     try {
-      const wallet = new Wallet(privateKey);
-      address = wallet.address;
-      walletContext = { address };
-      derived = true;
-      logger.debug(`Derived address ${address} in PolygonWalletProvider`);
+      const walletProvider = await initWalletProvider(runtime);
+      const address = walletProvider.getAddress();
+      const balance = await walletProvider.getWalletBalance();
+      const chain = walletProvider.getCurrentChain();
+      const agentName = state?.agentName || 'The agent';
+      return `${agentName}'s EVM Wallet Address: ${address}\nBalance: ${balance} ${chain.nativeCurrency.symbol}\nChain ID: ${chain.id}, Name: ${chain.name}`;
     } catch (error) {
-      logger.error('Failed to derive address from private key in PolygonWalletProvider:', error);
-      walletContext = { address: '0xDerivationError' };
+      console.error('Error in EVM wallet provider:', error);
+      return null;
     }
-
-    // Return the ProviderResult object including context in `data`
-    return {
-      // Textual representation (optional)
-      text: derived ? `Agent Wallet Address: ${address}` : 'Error deriving wallet address.',
-      // Structured data context
-      data: walletContext,
-      // Simple key-value pairs (optional)
-      values: {
-        derivedSuccessfully: derived,
-      },
-    };
   },
 };
