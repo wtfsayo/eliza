@@ -426,8 +426,12 @@
       "name": "@elizaos/plugin-polygon",
       "version": "1.0.0-beta.40",
       "dependencies": {
-        "@elizaos/cli": "1.0.0-beta.41",
-        "@elizaos/core": "1.0.0-beta.41",
+        "@elizaos/cli": "workspace:*",
+        "@elizaos/core": "workspace:*",
+        "@elizaos/plugin-tee": "workspace:*",
+        "@lifi/data-types": "5.15.5",
+        "@lifi/sdk": "3.4.1",
+        "@lifi/types": "16.3.0",
         "zod": "3.24.2",
       },
       "devDependencies": {

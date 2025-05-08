@@ -13,8 +13,9 @@ import {
   type Provider,
   type Memory,
   type State,
-  type ICacheManager,
+  type CacheManager,
   elizaLogger,
+  type ProviderResult,
 } from '@elizaos/core';
 import type {
   Address,
@@ -27,7 +28,7 @@ import type {
   TestClient,
 } from 'viem';
 import * as viemChains from 'viem/chains';
-import { DeriveKeyProvider, TEEMode } from '@elizaos/plugin-tee';
+import { PhalaDeriveKeyProvider, TEEMode } from '@elizaos/plugin-tee';
 import NodeCache from 'node-cache';
 import * as path from 'node:path';
 
@@ -43,7 +44,7 @@ export class WalletProvider {
 
   constructor(
     accountOrPrivateKey: PrivateKeyAccount | `0x${string}`,
-    private cacheManager: ICacheManager,
+    private cacheManager: CacheManager,
     chains?: Record<string, Chain>
   ) {
     this.setAccount(accountOrPrivateKey);
@@ -276,34 +277,36 @@ export const initWalletProvider = async (runtime: IAgentRuntime) => {
       throw new Error('WALLET_SECRET_SALT required when TEE_MODE is enabled');
     }
 
-    const deriveKeyProvider = new DeriveKeyProvider(teeMode);
+    const deriveKeyProvider = new PhalaDeriveKeyProvider(teeMode);
     const deriveKeyResult = await deriveKeyProvider.deriveEcdsaKeypair(
       walletSecretSalt,
       'evm',
       runtime.agentId
     );
-    return new WalletProvider(deriveKeyResult.keypair, runtime.cacheManager, chains);
+    return new WalletProvider(deriveKeyResult.keypair, runtime.cache, chains);
   } else {
     const privateKey = runtime.getSetting('EVM_PRIVATE_KEY') as `0x${string}`;
     if (!privateKey) {
       throw new Error('EVM_PRIVATE_KEY is missing');
     }
-    return new WalletProvider(privateKey, runtime.cacheManager, chains);
+    return new WalletProvider(privateKey, runtime.cache, chains);
   }
 };
 
 export const evmWalletProvider: Provider = {
-  async get(runtime: IAgentRuntime, _message: Memory, state?: State): Promise<string | null> {
+  async get(runtime: IAgentRuntime, _message: Memory, state?: State): Promise<ProviderResult> {
     try {
       const walletProvider = await initWalletProvider(runtime);
       const address = walletProvider.getAddress();
       const balance = await walletProvider.getWalletBalance();
       const chain = walletProvider.getCurrentChain();
       const agentName = state?.agentName || 'The agent';
-      return `${agentName}'s EVM Wallet Address: ${address}\nBalance: ${balance} ${chain.nativeCurrency.symbol}\nChain ID: ${chain.id}, Name: ${chain.name}`;
+      const resultText = `${agentName}'s EVM Wallet Address: ${address}\nBalance: ${balance} ${chain.nativeCurrency.symbol}\nChain ID: ${chain.id}, Name: ${chain.name}`;
+      return { text: resultText };
     } catch (error) {
       console.error('Error in EVM wallet provider:', error);
-      return null;
+      const errorText = error instanceof Error ? error.message : String(error);
+      return { text: `Error in EVM wallet provider: ${errorText}`, error: true };
     }
   },
 };

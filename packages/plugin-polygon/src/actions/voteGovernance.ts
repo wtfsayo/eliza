@@ -9,22 +9,10 @@ import {
   composePromptFromState,
   ModelType,
   type ActionExample,
+  type TemplateType,
 } from '@elizaos/core';
-import { type Chain, polygon as polygonChain, mainnet as ethereumChain } from 'viem/chains';
-import {
-  createWalletClient,
-  http,
-  type WalletClient,
-  encodeFunctionData,
-  type Address,
-  type Hex,
-  PublicClient,
-  createPublicClient,
-  fallback,
-  type Transport,
-  type Account,
-} from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { encodeFunctionData, type Address, type Hex, type Chain } from 'viem';
+import { WalletProvider, initWalletProvider } from '../providers/PolygonWalletProvider';
 
 // Minimal ABI for OZ Governor castVote function
 const governorVoteAbi = [
@@ -39,67 +27,6 @@ const governorVoteAbi = [
     type: 'function',
   },
 ] as const;
-
-// START - Reusable WalletProvider and types (from previous adaptations)
-interface ChainConfig extends Chain {
-  rpcUrls: Pick<Chain['rpcUrls'], 'default'> & { default: { http: readonly string[] } };
-  blockExplorers: Pick<Chain['blockExplorers'], 'default'> & {
-    default: { name: string; url: string };
-  };
-}
-
-class WalletProvider {
-  public chains: Record<string, ChainConfig> = {};
-  constructor(private runtime: IAgentRuntime) {
-    const defaultChains: Record<string, Chain> = { polygon: polygonChain, ethereum: ethereumChain };
-    Object.keys(defaultChains).forEach((chainKey) => {
-      const baseChain = defaultChains[chainKey];
-      const rpcUrlSetting = `RPC_URL_${chainKey.toUpperCase()}`;
-      const customRpcUrl = this.runtime.getSetting(rpcUrlSetting) as string;
-      const httpUrls = customRpcUrl ? [customRpcUrl] : [...baseChain.rpcUrls.default.http];
-      this.chains[chainKey] = {
-        ...baseChain,
-        rpcUrls: {
-          ...baseChain.rpcUrls,
-          default: { ...baseChain.rpcUrls.default, http: httpUrls },
-        },
-        blockExplorers: {
-          ...baseChain.blockExplorers,
-          default: {
-            name: baseChain.blockExplorers?.default?.name ?? '',
-            url: baseChain.blockExplorers?.default?.url ?? '',
-          },
-        },
-      } as ChainConfig;
-    });
-  }
-  getChainConfigs(chainName: string): ChainConfig {
-    const k = chainName.toLowerCase();
-    if (!this.chains[k]) throw new Error(`Chain ${k} not supported`);
-    return this.chains[k];
-  }
-  getWalletClient(chainName: string): WalletClient<Transport, Chain, Account> {
-    const pk = this.runtime.getSetting('WALLET_PRIVATE_KEY') as `0x${string}`;
-    if (!pk || !pk.startsWith('0x')) throw new Error('WALLET_PRIVATE_KEY invalid');
-    const account = privateKeyToAccount(pk);
-    const chainConfig = this.getChainConfigs(chainName);
-    return createWalletClient({
-      account,
-      chain: chainConfig,
-      transport: http(chainConfig.rpcUrls.default.http[0]),
-    });
-  }
-  getPublicClient(chainName: string): PublicClient<Transport, Chain> {
-    const chainConfig = this.getChainConfigs(chainName);
-    return createPublicClient({
-      chain: chainConfig,
-      transport: fallback(chainConfig.rpcUrls.default.http.map((url) => http(url))),
-    });
-  }
-}
-async function initWalletProvider(runtime: IAgentRuntime): Promise<WalletProvider> {
-  return new WalletProvider(runtime);
-}
 
 interface VoteParams {
   chain: string;
@@ -119,7 +46,7 @@ interface Transaction {
   logs?: any[];
 }
 
-const voteGovernanceTemplate = {
+const voteGovernanceTemplateObj = {
   name: 'Vote on Governance Proposal',
   description:
     'Generates parameters to cast a vote on a governance proposal. // Respond with a valid JSON object containing the extracted parameters.',
@@ -137,7 +64,7 @@ const voteGovernanceTemplate = {
     },
     required: ['chain', 'governorAddress', 'proposalId', 'support'],
   },
-};
+} as const;
 
 class PolygonVoteGovernanceActionRunner {
   constructor(private walletProvider: WalletProvider) {}
@@ -176,7 +103,7 @@ class PolygonVoteGovernanceActionRunner {
         to: params.governorAddress,
         value: BigInt(0),
         data: txData,
-        chain: chainConfig,
+        chain: chainConfig as Chain,
         kzg,
       });
 
@@ -190,7 +117,7 @@ class PolygonVoteGovernanceActionRunner {
         value: BigInt(0),
         data: txData,
         chainId: chainConfig.id,
-        logs: receipt.logs,
+        logs: receipt.logs as any[],
       };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
@@ -199,7 +126,6 @@ class PolygonVoteGovernanceActionRunner {
     }
   }
 }
-// END - Reusable WalletProvider and types
 
 export const voteGovernanceAction: Action = {
   name: 'VOTE_GOVERNANCE_POLYGON',
@@ -213,21 +139,20 @@ export const voteGovernanceAction: Action = {
   ): Promise<boolean> => {
     logger.debug('Validating VOTE_GOVERNANCE_POLYGON action...');
     const checks = [
-      runtime.getSetting('WALLET_PUBLIC_KEY'),
       runtime.getSetting('WALLET_PRIVATE_KEY'),
       runtime.getSetting('POLYGON_PLUGINS_ENABLED'),
     ];
     if (checks.some((check) => !check)) {
       logger.error(
-        'Required settings (WALLET_PUBLIC_KEY, WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) are not configured.'
+        'Required settings (WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) are not configured.'
       );
       return false;
     }
-    if (
-      typeof runtime.getSetting('WALLET_PRIVATE_KEY') !== 'string' ||
-      !(runtime.getSetting('WALLET_PRIVATE_KEY') as string).startsWith('0x')
-    ) {
-      logger.error('WALLET_PRIVATE_KEY is invalid.');
+    try {
+      await initWalletProvider(runtime);
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      logger.error(`WalletProvider initialization failed during validation: ${errMsg}`);
       return false;
     }
     return true;
@@ -248,17 +173,16 @@ export const voteGovernanceAction: Action = {
 
       const prompt = composePromptFromState({
         state,
-        template: voteGovernanceTemplate,
+        template: voteGovernanceTemplateObj as TemplateType,
         message: message.content.text,
       });
       const modelResponse = await runtime.useModel(ModelType.SMALL, { prompt });
       let paramsJson;
       try {
-        const responseText = modelResponse.text || '';
-        const jsonString = responseText.replace(/^```json\n?|\n?```$/g, '');
+        const jsonString = (modelResponse || '').replace(/^```json(\r?\n)?|(\r?\n)?```$/g, '');
         paramsJson = JSON.parse(jsonString);
       } catch (e) {
-        logger.error('Failed to parse LLM response for vote params:', modelResponse.text, e);
+        logger.error('Failed to parse LLM response for vote params:', modelResponse, e);
         throw new Error('Could not understand vote parameters.');
       }
 

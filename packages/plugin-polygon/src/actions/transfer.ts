@@ -9,100 +9,39 @@ import {
   composePromptFromState,
   ModelType,
   type ActionExample,
+  type TemplateType,
 } from '@elizaos/core';
-import { type Chain, polygon as polygonChain, mainnet as ethereumChain } from 'viem/chains';
+// import { type Chain, polygon as polygonChain, mainnet as ethereumChain } from 'viem/chains'; // Managed by Provider
 import {
-  createWalletClient,
-  http,
-  type WalletClient,
+  // createWalletClient, http, type WalletClient, // Provided by WalletProvider instance
   parseEther,
   type Address,
   type Hex,
-  PublicClient,
-  createPublicClient,
-  fallback,
+  // PublicClient, createPublicClient, fallback, // Provided by WalletProvider instance
   formatEther,
-  type Transport,
-  type Account,
+  type Transport, // Not directly used
+  type Account, // Not directly used
+  type Chain, // For type annotation
 } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+// import { privateKeyToAccount } from 'viem/accounts'; // Handled by Provider
 
-// TODO: Define specific input/output schemas/types based on ElizaOS conventions
-// Input might be inferred from message content or structured parameters.
-// Output is typically Content object.
+import { WalletProvider, initWalletProvider } from '../providers/PolygonWalletProvider';
 
-// START - Reusable WalletProvider and types (from previous adaptations)
-interface ChainConfig extends Chain {
-  rpcUrls: Pick<Chain['rpcUrls'], 'default'> & { default: { http: readonly string[] } };
-  blockExplorers: Pick<Chain['blockExplorers'], 'default'> & {
-    default: { name: string; url: string };
-  };
-}
+// Minimal ABI for ERC20 transfer (optional, if not using raw data)
+const erc20TransferAbi = [
+  {
+    inputs: [
+      { name: 'to', type: 'address' },
+      { name: 'value', type: 'uint256' },
+    ],
+    name: 'transfer',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+] as const;
 
-class WalletProvider {
-  public chains: Record<string, ChainConfig> = {};
-
-  constructor(private runtime: IAgentRuntime) {
-    const defaultChains: Record<string, Chain> = {
-      polygon: polygonChain,
-      ethereum: ethereumChain,
-    };
-    Object.keys(defaultChains).forEach((chainKey) => {
-      const baseChain = defaultChains[chainKey];
-      const rpcUrlSetting = `RPC_URL_${chainKey.toUpperCase()}`;
-      const customRpcUrl = this.runtime.getSetting(rpcUrlSetting) as string;
-      const httpUrls = customRpcUrl ? [customRpcUrl] : [...baseChain.rpcUrls.default.http];
-      this.chains[chainKey] = {
-        ...baseChain,
-        rpcUrls: {
-          ...baseChain.rpcUrls,
-          default: { ...baseChain.rpcUrls.default, http: httpUrls },
-        },
-        blockExplorers: {
-          ...baseChain.blockExplorers,
-          default: {
-            name: baseChain.blockExplorers?.default?.name ?? '',
-            url: baseChain.blockExplorers?.default?.url ?? '',
-          },
-        },
-      } as ChainConfig;
-    });
-  }
-
-  getChainConfigs(chainName: string): ChainConfig {
-    const chainKey = chainName.toLowerCase();
-    if (!this.chains[chainKey]) {
-      throw new Error(`Chain ${chainName} not supported.`);
-    }
-    return this.chains[chainKey];
-  }
-
-  getWalletClient(chainName: string): WalletClient<Transport, Chain, Account> {
-    const privateKey = this.runtime.getSetting('WALLET_PRIVATE_KEY') as `0x${string}` | undefined;
-    if (!privateKey || !privateKey.startsWith('0x')) {
-      throw new Error('WALLET_PRIVATE_KEY is not set or invalid.');
-    }
-    const account = privateKeyToAccount(privateKey);
-    const chainConfig = this.getChainConfigs(chainName);
-    return createWalletClient({
-      account,
-      chain: chainConfig,
-      transport: http(chainConfig.rpcUrls.default.http[0]),
-    });
-  }
-
-  getPublicClient(chainName: string): PublicClient<Transport, Chain> {
-    const chainConfig = this.getChainConfigs(chainName);
-    return createPublicClient({
-      chain: chainConfig,
-      transport: fallback(chainConfig.rpcUrls.default.http.map((url) => http(url))),
-    });
-  }
-}
-
-async function initWalletProvider(runtime: IAgentRuntime): Promise<WalletProvider> {
-  return new WalletProvider(runtime);
-}
+// REMOVE INLINE WalletProvider, ChainConfig, and initWalletProvider
 
 interface TransferParams {
   fromChain: string; // Name of the chain, e.g., "polygon"
@@ -119,9 +58,10 @@ interface Transaction {
   value: bigint;
   chainId: number;
   data?: Hex;
+  logs: any[];
 }
 
-const transferTemplate = {
+const transferTemplateObj = {
   name: 'Transfer MATIC or Tokens',
   description:
     'Generates parameters to transfer MATIC (native currency) or execute a token transaction. // Respond with a valid JSON object containing the extracted parameters.',
@@ -137,7 +77,7 @@ const transferTemplate = {
       amount: {
         type: 'string',
         description:
-          'Amount of MATIC (native) to transfer. For ERC20, use \"0\" if value is in data.',
+          'Amount of MATIC (native) to transfer. For ERC20, use "0" if value is in data.',
       },
       data: {
         type: 'string',
@@ -147,42 +87,54 @@ const transferTemplate = {
     },
     required: ['toAddress', 'amount'],
   },
-};
+} as const; // Use as const for better type inference if TemplateType is structural
 
 class PolygonTransferActionRunner {
-  constructor(private walletProvider: WalletProvider) {}
+  constructor(private walletProvider: WalletProvider) {} // Use imported WalletProvider
 
   async transfer(params: TransferParams): Promise<Transaction> {
-    logger.debug(`Transferring on ${params.fromChain}: ${params.amount} to ${params.toAddress}`);
+    const effectiveChain = (params.fromChain || 'polygon').toLowerCase();
+    const walletClient = this.walletProvider.getWalletClient(effectiveChain);
+    const publicClient = this.walletProvider.getPublicClient(effectiveChain);
+    const chainConfig = this.walletProvider.getChainConfigs(effectiveChain); // viem.Chain from provider
+    const [fromAddress] = await walletClient.getAddresses();
 
-    const chainConfig = this.walletProvider.getChainConfigs(params.fromChain);
-    const walletClient = this.walletProvider.getWalletClient(params.fromChain);
-    const publicClient = this.walletProvider.getPublicClient(params.fromChain);
+    let txTo: Address = params.toAddress;
+    let txData: Hex | undefined =
+      params.data === '0x' || params.data === '' ? undefined : params.data;
+    let txValue = parseEther(params.amount); // Amount is native value unless it's an ERC20 call w/ data
 
-    let txValue = parseEther(params.amount);
-    let txTo = params.toAddress;
-    let txData = params.data || '0x';
-
-    // Logic for ERC20 transfer if tokenAddress and data (for transfer calldata) are provided
-    // This is a simplified example; robust ERC20 handling would need ABI and proper encoding.
-    if (params.tokenAddress && params.data) {
-      // For ERC20, the 'to' is the token contract, 'value' is 0 unless the contract is payable for other reasons.
-      // The actual recipient is part of params.data (encoded in the transfer function call)
-      txTo = params.tokenAddress;
-      txValue = parseEther(params.amount); // Could be 0 if value is for native token not ERC20 fee.
-      // Amount for ERC20 is usually encoded in txData, params.amount might be confusing here.
-      // For now, assume params.amount is for native token value, or 0 if it's purely an ERC20 data call.
+    if (params.tokenAddress) {
+      // ERC20 Transfer, data should be prepared by LLM or helper
+      txTo = params.tokenAddress; // Target is token contract
+      // If txData is not provided, and it's an ERC20, we might need to encode it.
+      // Assuming LLM provides it or params.data is already the encoded call.
+      if (!txData) {
+        logger.warn(
+          `ERC20 tokenAddress ${params.tokenAddress} provided, but no txData. This action will likely fail or do something unintended unless the LLM provides specific calldata for this token interaction.`
+        );
+      } else {
+        // If data is provided for an ERC20 token, amount (txValue) should typically be 0 for the main call,
+        // as the value transfer is encoded within the data.
+        // However, the original logic used params.amount as value. For consistency, we keep it unless it causes issues.
+        // txValue = BigInt(0); // Typically for ERC20 calls where value is in data.
+        logger.info(
+          `ERC20 interaction with token ${txTo}, data: ${txData}. Value field ${params.amount} ETH will be sent with this call.`
+        );
+      }
+    } else if (txData) {
       logger.info(
-        `ERC20 transfer detected to token ${txTo} with data ${txData}. Ensure recipient is in encoded data.`
+        `Raw transaction with data ${txData} to ${params.toAddress}. Value: ${params.amount} ETH.`
       );
-    } else if (params.data && params.data !== '0x') {
-      logger.info(`Raw transaction detected with data ${params.data}. Value: ${params.amount}`);
+      // For raw tx, toAddress is params.toAddress, value is params.amount, data is params.data
     } else {
-      logger.info(`Native currency (MATIC) transfer: ${params.amount} to ${params.toAddress}`);
+      // Native currency transfer
+      logger.info(
+        `Native transfer: ${params.amount} ETH to ${params.toAddress} on ${effectiveChain}.`
+      );
     }
 
     try {
-      // Add missing kzg property
       const kzg = {
         blobToKzgCommitment: (_blob: any) => {
           throw new Error('KZG not impl.');
@@ -192,62 +144,56 @@ class PolygonTransferActionRunner {
         },
       };
       const hash = await walletClient.sendTransaction({
-        account: walletClient.account!,
+        account: fromAddress,
         to: txTo,
         value: txValue,
-        data: txData as Hex,
-        chain: chainConfig, // Explicitly pass chain config
+        data: txData,
+        chain: chainConfig,
         kzg,
       });
 
-      logger.info(`Transaction sent: ${hash}. Waiting for confirmation...`);
-      await publicClient.waitForTransactionReceipt({ hash });
-      logger.info(`Transaction ${hash} confirmed on ${params.fromChain}.`);
+      logger.info(`Transaction sent: ${hash}. Waiting for receipt...`);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
       return {
         hash,
-        from: walletClient.account!.address,
-        to: txTo, // This is the contract for ERC20, or recipient for native
+        from: fromAddress,
+        to: txTo,
         value: txValue,
-        data: txData as Hex,
+        data: txData,
         chainId: chainConfig.id,
+        logs: receipt.logs as any[],
       };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      logger.error(`Transfer failed on ${params.fromChain}: ${errMsg}`, error);
+      logger.error(`Transfer failed: ${errMsg}`, error);
       throw new Error(`Transfer failed: ${errMsg}`);
     }
   }
 }
-// END - Reusable WalletProvider and types
 
 export const transferPolygonAction: Action = {
-  name: 'TRANSFER_POLYGON_ASSETS', // More specific name
-  similes: ['SEND_MATIC', 'TRANSFER_MATIC_POLYGON', 'POLYGON_TOKEN_TRANSFER'],
-  description: 'Transfers MATIC (native) or other tokens on the Polygon network.',
+  name: 'TRANSFER_POLYGON',
+  similes: ['POLYGON_SEND', 'TRANSFER_MATIC_OR_TOKEN_POLYGON'],
+  description: 'Transfers MATIC (native currency) or executes a token transaction on Polygon.',
 
-  validate: async (
-    runtime: IAgentRuntime,
-    _message: Memory,
-    _state: State | undefined
-  ): Promise<boolean> => {
-    logger.debug('Validating TRANSFER_POLYGON_ASSETS action...');
+  validate: async (runtime: IAgentRuntime, _m: Memory, _s: State | undefined): Promise<boolean> => {
+    logger.debug('Validating TRANSFER_POLYGON action...');
     const checks = [
-      runtime.getSetting('WALLET_PUBLIC_KEY'),
       runtime.getSetting('WALLET_PRIVATE_KEY'),
       runtime.getSetting('POLYGON_PLUGINS_ENABLED'),
     ];
     if (checks.some((check) => !check)) {
       logger.error(
-        'Required settings (WALLET_PUBLIC_KEY, WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) are not configured.'
+        'Required settings (WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) are not configured.'
       );
       return false;
     }
-    if (
-      typeof runtime.getSetting('WALLET_PRIVATE_KEY') !== 'string' ||
-      !(runtime.getSetting('WALLET_PRIVATE_KEY') as string).startsWith('0x')
-    ) {
-      logger.error('WALLET_PRIVATE_KEY is invalid.');
+    try {
+      await initWalletProvider(runtime);
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      logger.error(`WalletProvider initialization failed during validation: ${errMsg}`);
       return false;
     }
     return true;
@@ -261,21 +207,20 @@ export const transferPolygonAction: Action = {
     callback: HandlerCallback | undefined,
     _responses: Memory[] | undefined
   ) => {
-    logger.info('Handling TRANSFER_POLYGON_ASSETS for message:', message.id);
+    logger.info('Handling TRANSFER_POLYGON for message:', message.id);
     try {
       const walletProvider = await initWalletProvider(runtime);
       const actionRunner = new PolygonTransferActionRunner(walletProvider);
 
-      // Define supported chains for the template context dynamically
       const supportedChains = Object.keys(walletProvider.chains)
         .map((c) => `\"${c}\"`)
         .join(' | ');
       const dynamicTransferTemplate = {
-        ...transferTemplate,
+        ...transferTemplateObj,
         parameters: {
-          ...transferTemplate.parameters,
+          ...transferTemplateObj.parameters,
           properties: {
-            ...transferTemplate.parameters.properties,
+            ...transferTemplateObj.parameters.properties,
             fromChain: {
               type: 'string',
               description: `The blockchain name (e.g., polygon). Supported: ${supportedChains}. Default is polygon.`,
@@ -283,28 +228,25 @@ export const transferPolygonAction: Action = {
             },
           },
         },
-      };
+      } as TemplateType;
 
-      // Use composePromptFromState
       const prompt = composePromptFromState({
         state,
         template: dynamicTransferTemplate,
         message: message.content.text,
       });
-      // Use runtime.useModel
-      const modelResponse = await runtime.useModel(ModelType.SMALL, { prompt }); // Using SMALL
+      const modelResponse = await runtime.useModel(ModelType.SMALL, { prompt });
       let paramsJson;
       try {
-        const responseText = modelResponse.text || '';
-        const jsonString = responseText.replace(/^```json\n?|\n?```$/g, '');
+        const jsonString = (modelResponse || '').replace(/^```json(\r?\n)?|(\r?\n)?```$/g, '');
         paramsJson = JSON.parse(jsonString);
       } catch (e) {
-        logger.error('Failed to parse LLM response for transfer params:', modelResponse.text, e);
+        logger.error('Failed to parse LLM response for transfer params:', modelResponse, e);
         throw new Error('Could not understand transfer parameters.');
       }
 
       if (!paramsJson.toAddress || typeof paramsJson.amount === 'undefined') {
-        throw new Error('Missing required transfer parameters (toAddress, amount).');
+        throw new Error('Incomplete transfer parameters: toAddress and amount are required.');
       }
 
       const transferParams: TransferParams = {
@@ -315,35 +257,27 @@ export const transferPolygonAction: Action = {
         tokenAddress: paramsJson.tokenAddress as Address | undefined,
       };
 
-      logger.debug('Transfer parameters:', transferParams);
+      logger.debug('Parsed transfer parameters:', transferParams);
       const txResult = await actionRunner.transfer(transferParams);
-      const displayAmount = formatEther(txResult.value); // For native token display
-      const successMsg = `Successfully transferred ${displayAmount} (value) on ${transferParams.fromChain} to ${txResult.to}${paramsJson.tokenAddress ? ' (token: ' + paramsJson.tokenAddress + ')' : ''}. TxHash: ${txResult.hash}`;
+      const successMsg = `Successfully transferred ${transferParams.amount} ${transferParams.tokenAddress ? `token ${transferParams.tokenAddress}` : 'native currency'} to ${transferParams.toAddress} on ${transferParams.fromChain}. TxHash: ${txResult.hash}`;
       logger.info(successMsg);
 
       if (callback) {
         await callback({
           text: successMsg,
-          content: {
-            success: true,
-            hash: txResult.hash,
-            amount: displayAmount, // Native currency value displayed
-            recipient: paramsJson.toAddress, // Actual intended recipient
-            contractAddress: paramsJson.tokenAddress || txResult.to, // Token contract or direct recipient
-            chain: transferParams.fromChain,
-          },
-          actions: ['TRANSFER_POLYGON_ASSETS'],
+          content: { success: true, ...txResult, chain: transferParams.fromChain },
+          actions: ['TRANSFER_POLYGON'],
           source: message.content.source,
         });
       }
-      return { success: true, ...txResult, displayAmount };
+      return { success: true, ...txResult, chain: transferParams.fromChain };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
-      logger.error('Error in TRANSFER_POLYGON_ASSETS handler:', errMsg, error);
+      logger.error('Error in TRANSFER_POLYGON handler:', errMsg, error);
       if (callback) {
         await callback({
           text: `Error transferring assets: ${errMsg}`,
-          actions: ['TRANSFER_POLYGON_ASSETS'],
+          actions: ['TRANSFER_POLYGON'],
           source: message.content.source,
         });
       }

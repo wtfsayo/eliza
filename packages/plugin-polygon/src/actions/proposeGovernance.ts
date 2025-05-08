@@ -10,21 +10,20 @@ import {
   ModelType,
   type ActionExample,
 } from '@elizaos/core';
-import { type Chain, polygon as polygonChain, mainnet as ethereumChain } from 'viem/chains'; // Add other chains as needed
+// import { type Chain, polygon as polygonChain, mainnet as ethereumChain } from 'viem/chains'; // Chains managed by Provider
 import {
-  createWalletClient,
-  http,
-  type WalletClient,
+  // createWalletClient, http, type WalletClient, // Provided by WalletProvider instance
   encodeFunctionData,
   type Address,
   type Hex,
-  PublicClient,
-  createPublicClient,
-  fallback,
-  type Transport,
-  type Account,
+  // PublicClient, createPublicClient, fallback, // Provided by WalletProvider instance
+  type Transport, // Not directly used, but WalletProvider uses it
+  type Account, // Not directly used, but WalletProvider uses it
+  type Chain, // For type annotation
 } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+// import { privateKeyToAccount } from 'viem/accounts'; // Handled by Provider
+
+import { WalletProvider, initWalletProvider } from '../providers/PolygonWalletProvider';
 
 // Minimal ABI for OZ Governor propose function
 const governorProposeAbi = [
@@ -42,80 +41,7 @@ const governorProposeAbi = [
   },
 ] as const; // Use 'as const' for better type inference with viem
 
-// START - Reusable WalletProvider and types (simplified, adapt from bridgeDeposit or a shared module)
-interface ChainConfig extends Chain {
-  rpcUrls: Pick<Chain['rpcUrls'], 'default'> & { default: { http: readonly string[] } };
-  blockExplorers: Pick<Chain['blockExplorers'], 'default'> & {
-    default: { name: string; url: string };
-  };
-}
-
-class WalletProvider {
-  public chains: Record<string, ChainConfig> = {};
-
-  constructor(private runtime: IAgentRuntime) {
-    const defaultChains: Record<string, Chain> = {
-      polygon: polygonChain,
-      ethereum: ethereumChain,
-      // Add other viem chain objects here
-    };
-
-    Object.keys(defaultChains).forEach((chainKey) => {
-      const baseChain = defaultChains[chainKey];
-      const rpcUrlSetting = `RPC_URL_${chainKey.toUpperCase()}`;
-      const customRpcUrl = this.runtime.getSetting(rpcUrlSetting) as string;
-      const httpUrls = customRpcUrl ? [customRpcUrl] : [...baseChain.rpcUrls.default.http];
-      this.chains[chainKey] = {
-        ...baseChain,
-        rpcUrls: {
-          ...baseChain.rpcUrls,
-          default: { ...baseChain.rpcUrls.default, http: httpUrls },
-        },
-        blockExplorers: {
-          ...baseChain.blockExplorers,
-          default: {
-            name: baseChain.blockExplorers?.default?.name ?? '',
-            url: baseChain.blockExplorers?.default?.url ?? '',
-          },
-        },
-      } as ChainConfig;
-    });
-  }
-
-  getChainConfigs(chainName: string): ChainConfig {
-    const chainKey = chainName.toLowerCase();
-    if (!this.chains[chainKey]) {
-      throw new Error(`Chain ${chainName} not supported by WalletProvider.`);
-    }
-    return this.chains[chainKey];
-  }
-
-  getWalletClient(chainName: string): WalletClient<Transport, Chain, Account> {
-    const privateKey = this.runtime.getSetting('WALLET_PRIVATE_KEY') as `0x${string}` | undefined;
-    if (!privateKey || !privateKey.startsWith('0x')) {
-      throw new Error('WALLET_PRIVATE_KEY is not set or invalid.');
-    }
-    const account = privateKeyToAccount(privateKey);
-    const chainConfig = this.getChainConfigs(chainName);
-    return createWalletClient({
-      account,
-      chain: chainConfig,
-      transport: http(chainConfig.rpcUrls.default.http[0]),
-    });
-  }
-
-  getPublicClient(chainName: string): PublicClient<Transport, Chain> {
-    const chainConfig = this.getChainConfigs(chainName);
-    return createPublicClient({
-      chain: chainConfig,
-      transport: fallback(chainConfig.rpcUrls.default.http.map((url) => http(url))),
-    });
-  }
-}
-
-async function initWalletProvider(runtime: IAgentRuntime): Promise<WalletProvider> {
-  return new WalletProvider(runtime);
-}
+// REMOVE INLINE WalletProvider, ChainConfig, and initWalletProvider
 
 interface ProposeGovernanceParams {
   chain: string; // e.g., "polygon", "ethereum"
@@ -167,14 +93,14 @@ const proposeGovernanceTemplate = {
 };
 
 class PolygonProposeGovernanceActionRunner {
-  constructor(private walletProvider: WalletProvider) {}
+  constructor(private walletProvider: WalletProvider) {} // Use imported WalletProvider
 
   async propose(params: ProposeGovernanceParams): Promise<GovernanceTransaction> {
     const walletClient = this.walletProvider.getWalletClient(params.chain);
     const publicClient = this.walletProvider.getPublicClient(params.chain);
-    const chainConfig = this.walletProvider.getChainConfigs(params.chain);
+    const chainConfig = this.walletProvider.getChainConfigs(params.chain); // viem.Chain from provider
 
-    const numericValues = params.values.map((v) => BigInt(v)); // Assuming values are wei or smallest unit
+    const numericValues = params.values.map((v) => BigInt(v));
 
     const txData = encodeFunctionData({
       abi: governorProposeAbi,
@@ -184,7 +110,6 @@ class PolygonProposeGovernanceActionRunner {
 
     try {
       logger.debug(`Proposing on ${params.chain} to ${params.governorAddress}`);
-      // Add missing kzg property
       const kzg = {
         blobToKzgCommitment: (_blob: any) => {
           throw new Error('KZG not impl.');
@@ -196,9 +121,9 @@ class PolygonProposeGovernanceActionRunner {
       const hash = await walletClient.sendTransaction({
         account: walletClient.account!,
         to: params.governorAddress,
-        value: BigInt(0), // Standard proposals usually don't send ETH to the governor itself
+        value: BigInt(0),
         data: txData,
-        chain: chainConfig,
+        chain: chainConfig as Chain, // Ensure chainConfig is typed as viem.Chain
         kzg,
       });
 
@@ -206,16 +131,8 @@ class PolygonProposeGovernanceActionRunner {
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       logger.debug('Transaction receipt:', receipt);
 
-      // Attempt to parse proposalId from logs (this is highly dependent on the Governor's events)
-      // OpenZeppelin Governor typically emits a ProposalCreated event with proposalId
       let proposalId: bigint | undefined;
-      const proposalCreatedEventAbi = governorProposeAbi.find((item) => item.name === 'propose');
-      // This is a simplification. Proper event parsing is needed.
-      // For OZ Governor, the event is `ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)`
-      // The actual proposalId is often an output of the `propose` function or an event argument.
-      // Viem's receipt.logs can be decoded if you have the precise event ABI.
-      // For simplicity, if `propose` function ABI has `proposalId` as output, it might be in internal traces or events.
-      // Here we assume it's not directly parseable from std receipt without specific event ABI.
+      // Proposal ID parsing logic remains complex and ABI-dependent
 
       return {
         hash,
@@ -224,8 +141,8 @@ class PolygonProposeGovernanceActionRunner {
         value: BigInt(0),
         data: txData,
         chainId: chainConfig.id,
-        logs: receipt.logs,
-        proposalId: proposalId, // May remain undefined if not easily parsed
+        logs: receipt.logs as any[],
+        proposalId,
       };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
@@ -234,7 +151,6 @@ class PolygonProposeGovernanceActionRunner {
     }
   }
 }
-// END - Reusable WalletProvider and types
 
 export const proposeGovernanceAction: Action = {
   name: 'PROPOSE_GOVERNANCE_POLYGON',
@@ -248,21 +164,20 @@ export const proposeGovernanceAction: Action = {
   ): Promise<boolean> => {
     logger.debug('Validating PROPOSE_GOVERNANCE_POLYGON action...');
     const checks = [
-      runtime.getSetting('WALLET_PUBLIC_KEY'),
       runtime.getSetting('WALLET_PRIVATE_KEY'),
       runtime.getSetting('POLYGON_PLUGINS_ENABLED'),
     ];
     if (checks.some((check) => !check)) {
       logger.error(
-        'Required settings (WALLET_PUBLIC_KEY, WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) are not configured.'
+        'Required settings (WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) are not configured.'
       );
       return false;
     }
-    if (
-      typeof runtime.getSetting('WALLET_PRIVATE_KEY') !== 'string' ||
-      !(runtime.getSetting('WALLET_PRIVATE_KEY') as string).startsWith('0x')
-    ) {
-      logger.error('WALLET_PRIVATE_KEY is invalid.');
+    try {
+      await initWalletProvider(runtime);
+    } catch (e) {
+      const errMsg = error instanceof Error ? e.message : String(e);
+      logger.error(`WalletProvider initialization failed during validation: ${errMsg}`);
       return false;
     }
     return true;

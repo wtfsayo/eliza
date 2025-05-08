@@ -19,7 +19,6 @@ import {
   type Route,
   type ChainKey,
 } from '@lifi/sdk';
-import { type Chain, arbitrum, mainnet, optimism, polygon, sepolia, base } from 'viem/chains';
 import {
   createWalletClient,
   http,
@@ -32,76 +31,9 @@ import {
   type Hex,
   type Transport,
   type Account,
+  type Chain,
 } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-
-// START - Reusable WalletProvider and types
-interface ChainConfig extends Chain {
-  rpcUrls: Pick<Chain['rpcUrls'], 'default'> & { default: { http: readonly string[] } };
-  blockExplorers: Pick<Chain['blockExplorers'], 'default'> & {
-    default: { name: string; url: string };
-  };
-}
-
-class WalletProvider {
-  public chains: Record<string, ChainConfig> = {};
-  constructor(private runtime: IAgentRuntime) {
-    const defaultChains: Record<string, Chain> = {
-      polygon: polygon,
-      ethereum: mainnet,
-      arbitrum,
-      optimism,
-      base,
-      sepolia,
-    };
-    Object.keys(defaultChains).forEach((chainKey) => {
-      const baseChain = defaultChains[chainKey];
-      const rpcUrlSetting = `RPC_URL_${chainKey.toUpperCase()}`;
-      const customRpcUrl = this.runtime.getSetting(rpcUrlSetting) as string;
-      const httpUrls = customRpcUrl ? [customRpcUrl] : [...baseChain.rpcUrls.default.http];
-      this.chains[chainKey] = {
-        ...baseChain,
-        rpcUrls: {
-          ...baseChain.rpcUrls,
-          default: { ...baseChain.rpcUrls.default, http: httpUrls },
-        },
-        blockExplorers: {
-          ...baseChain.blockExplorers,
-          default: {
-            name: baseChain.blockExplorers?.default?.name ?? '',
-            url: baseChain.blockExplorers?.default?.url ?? '',
-          },
-        },
-      } as ChainConfig;
-    });
-  }
-  getChainConfigs(chainName: string): ChainConfig {
-    const k = chainName.toLowerCase();
-    if (!this.chains[k]) throw new Error(`Chain ${k} not supported`);
-    return this.chains[k];
-  }
-  getWalletClient(chainName: string): WalletClient<Transport, Chain, Account> {
-    const privateKey = this.runtime.getSetting('WALLET_PRIVATE_KEY') as `0x${string}`;
-    if (!privateKey || !privateKey.startsWith('0x')) throw new Error('WALLET_PRIVATE_KEY invalid');
-    const account = privateKeyToAccount(privateKey);
-    const chainConfig = this.getChainConfigs(chainName);
-    return createWalletClient({
-      account,
-      chain: chainConfig,
-      transport: http(chainConfig.rpcUrls.default.http[0]),
-    });
-  }
-  getPublicClient(chainName: string): PublicClient<Transport, Chain> {
-    const chainConfig = this.getChainConfigs(chainName);
-    return createPublicClient({
-      chain: chainConfig,
-      transport: fallback(chainConfig.rpcUrls.default.http.map((url) => http(url))),
-    });
-  }
-}
-async function initWalletProvider(runtime: IAgentRuntime): Promise<WalletProvider> {
-  return new WalletProvider(runtime);
-}
+import { WalletProvider, initWalletProvider } from '../providers/PolygonWalletProvider';
 
 interface BridgeParams {
   fromChain: string;
@@ -160,41 +92,49 @@ class PolygonBridgeActionRunner {
 
   constructor(walletProvider: WalletProvider) {
     this.walletProvider = walletProvider;
-    const extendedChains = Object.values(this.walletProvider.chains).map((chainConfig) => ({
-      ...chainConfig,
-      key: chainConfig.name.toLowerCase().replace(/\s+/g, '-') as ChainKey,
-      chainType: 'EVM',
-      coin: chainConfig.nativeCurrency.symbol,
-      mainnet: !chainConfig.testnet,
-      logoURI: '',
-      name: chainConfig.name,
-      nativeToken: {
-        address: '0x0000000000000000000000000000000000000000',
-        chainId: chainConfig.id,
-        symbol: chainConfig.nativeCurrency.symbol,
-        decimals: chainConfig.nativeCurrency.decimals,
-        name: chainConfig.nativeCurrency.name,
-        priceUSD: '0',
+    const extendedChains = Object.values(this.walletProvider.chains).map((chainConfig: Chain) => {
+      const rpcUrls = chainConfig.rpcUrls.custom?.http || chainConfig.rpcUrls.default.http;
+      const blockExplorerUrl = chainConfig.blockExplorers?.default?.url || '';
+
+      return {
+        ...chainConfig,
+        key: (chainConfig.network ||
+          chainConfig.name.toLowerCase().replace(/\s+/g, '-')) as ChainKey,
+        chainType: 'EVM',
+        coin: chainConfig.nativeCurrency.symbol,
+        mainnet: !chainConfig.testnet,
         logoURI: '',
-        coinKey: chainConfig.nativeCurrency.symbol,
-      },
-      metamask: {
-        chainId: `0x${chainConfig.id.toString(16)}`,
-        blockExplorerUrls: [chainConfig.blockExplorers?.default?.url || ''],
-        chainName: chainConfig.name,
-        nativeCurrency: chainConfig.nativeCurrency,
-        rpcUrls: [...chainConfig.rpcUrls.default.http],
-      },
-    }));
+        nativeToken: {
+          address: '0x0000000000000000000000000000000000000000',
+          chainId: chainConfig.id,
+          symbol: chainConfig.nativeCurrency.symbol,
+          decimals: chainConfig.nativeCurrency.decimals,
+          name: chainConfig.nativeCurrency.name,
+          priceUSD: '0',
+          logoURI: '',
+          coinKey: chainConfig.nativeCurrency.symbol,
+        },
+        metamask: {
+          chainId: `0x${chainConfig.id.toString(16)}`,
+          blockExplorerUrls: blockExplorerUrl ? [blockExplorerUrl] : [],
+          chainName: chainConfig.name,
+          nativeCurrency: chainConfig.nativeCurrency,
+          rpcUrls: rpcUrls.slice(),
+        },
+      } as ExtendedChain;
+    });
 
     this.config = createConfig({ integrator: 'ElizaOS-PolygonPlugin', chains: extendedChains });
   }
 
   async bridge(params: BridgeParams): Promise<Transaction> {
-    const walletClient = this.walletProvider.getWalletClient(params.fromChain);
+    const walletClient: WalletClient = this.walletProvider.getWalletClient(params.fromChain);
+    const publicClient: PublicClient = this.walletProvider.getPublicClient(params.fromChain);
     const [fromAddress] = await walletClient.getAddresses();
-    const fromChainId = this.walletProvider.getChainConfigs(params.fromChain).id;
-    const toChainId = this.walletProvider.getChainConfigs(params.toChain).id;
+    const fromChainConfig = this.walletProvider.getChainConfigs(params.fromChain);
+    const toChainConfig = this.walletProvider.getChainConfigs(params.toChain);
+    const fromChainId = fromChainConfig.id;
+    const toChainId = toChainConfig.id;
     const routesRequest = {
       fromChainId,
       toChainId,
@@ -210,15 +150,16 @@ class PolygonBridgeActionRunner {
       throw new Error('No routes found to bridge.');
     }
     const bestRoute: Route = routesResult.routes[0];
-    logger.debug('Executing LiFi route:', bestRoute);
-    const execution = await executeRoute(walletClient, bestRoute);
+    logger.debug('Executing LiFi route:', JSON.stringify(bestRoute, null, 2));
+    const execution = await executeRoute(walletClient as any, bestRoute);
     let txHash: `0x${string}` | undefined;
     for (const step of execution.steps) {
-      if (step.execution?.process) {
-        for (const process of step.execution.process) {
+      const lifiStep = step as LiFiStep;
+      if (lifiStep.execution?.process) {
+        for (const process of lifiStep.execution.process) {
           if (process.txHash) {
             txHash = process.txHash as `0x${string}`;
-            logger.info(`Tx hash found: ${txHash}`);
+            logger.info(`Tx hash found: ${txHash} on chain ${lifiStep.action.fromChainId}`);
             break;
           }
         }
@@ -228,7 +169,6 @@ class PolygonBridgeActionRunner {
     if (!txHash) {
       throw new Error('Bridge tx hash not found.');
     }
-    const publicClient = this.walletProvider.getPublicClient(params.fromChain);
     const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
     return {
       hash: txHash,
@@ -236,11 +176,10 @@ class PolygonBridgeActionRunner {
       to: (bestRoute.steps[0]?.action?.toAddress || '0x') as Address,
       value: parseEther(params.amount),
       chainId: fromChainId,
-      logs: receipt.logs,
+      logs: receipt.logs as any[],
     };
   }
 }
-// END
 
 export const bridgeDepositAction: Action = {
   name: 'BRIDGE_DEPOSIT_POLYGON',
@@ -249,19 +188,18 @@ export const bridgeDepositAction: Action = {
   validate: async (runtime: IAgentRuntime, _m: Memory, _s: State | undefined): Promise<boolean> => {
     logger.debug('Validating BRIDGE_DEPOSIT_POLYGON...');
     const checks = [
-      runtime.getSetting('WALLET_PUBLIC_KEY'),
       runtime.getSetting('WALLET_PRIVATE_KEY'),
       runtime.getSetting('POLYGON_PLUGINS_ENABLED'),
     ];
     if (checks.some((check) => !check)) {
-      logger.error('Required settings missing.');
+      logger.error('Required settings (WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) missing.');
       return false;
     }
-    if (
-      typeof runtime.getSetting('WALLET_PRIVATE_KEY') !== 'string' ||
-      !(runtime.getSetting('WALLET_PRIVATE_KEY') as string).startsWith('0x')
-    ) {
-      logger.error('WALLET_PRIVATE_KEY invalid.');
+    try {
+      await initWalletProvider(runtime);
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      logger.error(`WalletProvider initialization failed during validation: ${errMsg}`);
       return false;
     }
     return true;
