@@ -9,6 +9,7 @@ import {
   composePromptFromState,
   ModelType,
   type ActionExample,
+  TemplateType,
 } from '@elizaos/core';
 import {
   createConfig,
@@ -98,12 +99,12 @@ class PolygonBridgeActionRunner {
 
       return {
         ...chainConfig,
-        key: (chainConfig.network ||
-          chainConfig.name.toLowerCase().replace(/\s+/g, '-')) as ChainKey,
+        key: chainConfig.name.toLowerCase().replace(/\s+/g, '-') as ChainKey,
         chainType: 'EVM',
         coin: chainConfig.nativeCurrency.symbol,
         mainnet: !chainConfig.testnet,
         logoURI: '',
+        diamondAddress: undefined,
         nativeToken: {
           address: '0x0000000000000000000000000000000000000000',
           chainId: chainConfig.id,
@@ -126,57 +127,35 @@ class PolygonBridgeActionRunner {
 
     this.config = createConfig({ integrator: 'ElizaOS-PolygonPlugin', chains: extendedChains });
   }
-
   async bridge(params: BridgeParams): Promise<Transaction> {
-    const walletClient: WalletClient = this.walletProvider.getWalletClient(params.fromChain);
-    const publicClient: PublicClient = this.walletProvider.getPublicClient(params.fromChain);
+    const walletClient = this.walletProvider.getWalletClient(params.fromChain);
     const [fromAddress] = await walletClient.getAddresses();
-    const fromChainConfig = this.walletProvider.getChainConfigs(params.fromChain);
-    const toChainConfig = this.walletProvider.getChainConfigs(params.toChain);
-    const fromChainId = fromChainConfig.id;
-    const toChainId = toChainConfig.id;
-    const routesRequest = {
-      fromChainId,
-      toChainId,
+
+    const routes = await getRoutes({
+      fromChainId: this.walletProvider.getChainConfigs(params.fromChain).id,
+      toChainId: this.walletProvider.getChainConfigs(params.toChain).id,
       fromTokenAddress: params.fromToken,
       toTokenAddress: params.toToken,
       fromAmount: parseEther(params.amount).toString(),
-      fromAddress,
+      fromAddress: fromAddress,
       toAddress: params.toAddress || fromAddress,
-    };
-    logger.debug('Requesting LiFi routes with:', routesRequest);
-    const routesResult = await getRoutes(routesRequest);
-    if (!routesResult.routes || routesResult.routes.length === 0) {
-      throw new Error('No routes found to bridge.');
+    });
+
+    if (!routes.routes.length) throw new Error('No routes found');
+
+    const execution = await executeRoute(routes.routes[0], this.config);
+    const process = execution.steps[0]?.execution?.process[0];
+
+    if (!process?.status || process.status === 'FAILED') {
+      throw new Error('Transaction failed');
     }
-    const bestRoute: Route = routesResult.routes[0];
-    logger.debug('Executing LiFi route:', JSON.stringify(bestRoute, null, 2));
-    const execution = await executeRoute(walletClient as any, bestRoute);
-    let txHash: `0x${string}` | undefined;
-    for (const step of execution.steps) {
-      const lifiStep = step as LiFiStep;
-      if (lifiStep.execution?.process) {
-        for (const process of lifiStep.execution.process) {
-          if (process.txHash) {
-            txHash = process.txHash as `0x${string}`;
-            logger.info(`Tx hash found: ${txHash} on chain ${lifiStep.action.fromChainId}`);
-            break;
-          }
-        }
-      }
-      if (txHash) break;
-    }
-    if (!txHash) {
-      throw new Error('Bridge tx hash not found.');
-    }
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+
     return {
-      hash: txHash,
+      hash: process.txHash as `0x${string}`,
       from: fromAddress,
-      to: (bestRoute.steps[0]?.action?.toAddress || '0x') as Address,
-      value: parseEther(params.amount),
-      chainId: fromChainId,
-      logs: receipt.logs as any[],
+      to: routes.routes[0].steps[0].estimate.approvalAddress as `0x${string}`,
+      value: BigInt(params.amount),
+      chainId: this.walletProvider.getChainConfigs(params.fromChain).id,
     };
   }
 }
@@ -199,7 +178,7 @@ export const bridgeDepositAction: Action = {
       await initWalletProvider(runtime);
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
-      logger.error(`WalletProvider initialization failed during validation: ${errMsg}`);
+      logger.error(`WalletProvider initialization failed during validation: ${errMsg} `);
       return false;
     }
     return true;
@@ -218,14 +197,13 @@ export const bridgeDepositAction: Action = {
       const actionRunner = new PolygonBridgeActionRunner(walletProvider);
       const prompt = composePromptFromState({
         state,
-        template: bridgeTemplate,
-        message: message.content.text,
+        template: bridgeTemplate as unknown as TemplateType,
       });
       const modelResponse = await runtime.useModel(ModelType.LARGE, { prompt });
       let paramsJson;
       try {
         const responseText = modelResponse || '';
-        const jsonString = responseText.replace(/^```json\n?|\n?```$/g, '');
+        const jsonString = responseText.replace(/^```json\n ?|\n ? ```$/g, '');
         paramsJson = JSON.parse(jsonString);
       } catch (e) {
         logger.error('Failed to parse LLM response for bridge params:', modelResponse, e);
@@ -250,7 +228,7 @@ export const bridgeDepositAction: Action = {
       };
       logger.debug('Parsed bridge options:', bridgeOptions);
       const bridgeResp = await actionRunner.bridge(bridgeOptions);
-      const successMessage = `Initiated bridge: ${bridgeOptions.amount} token from ${bridgeOptions.fromChain} to ${bridgeOptions.toChain}. TxHash: ${bridgeResp.hash}`;
+      const successMessage = `Initiated bridge: ${bridgeOptions.amount} token from ${bridgeOptions.fromChain} to ${bridgeOptions.toChain}.TxHash: ${bridgeResp.hash} `;
       logger.info(successMessage);
       if (cb) {
         await cb({
@@ -266,7 +244,7 @@ export const bridgeDepositAction: Action = {
       logger.error('BRIDGE_DEPOSIT_POLYGON handler error:', errMsg, error);
       if (cb) {
         await cb({
-          text: `Error bridging: ${errMsg}`,
+          text: `Error bridging: ${errMsg} `,
           actions: ['BRIDGE_DEPOSIT_POLYGON'],
           source: message.content.source,
         });
@@ -276,15 +254,16 @@ export const bridgeDepositAction: Action = {
   },
   examples: [
     [
-      { role: 'user', content: { text: 'Bridge 0.5 WETH from Polygon to Ethereum mainnet.' } },
-      undefined,
+      {
+        name: 'user',
+        content: { text: 'Bridge 0.5 WETH from Polygon to Ethereum mainnet.' },
+      },
     ],
     [
       {
-        role: 'user',
+        name: 'user',
         content: { text: 'Move 100 USDC from Arbitrum to Polygon, send it to 0x123...' },
       },
-      undefined,
     ],
-  ] as ActionExample[],
+  ],
 };

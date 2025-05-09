@@ -227,12 +227,11 @@ export const transferPolygonAction: Action = {
             },
           },
         },
-      } as TemplateType;
+      } as unknown as TemplateType;
 
       const prompt = composePromptFromState({
         state,
         template: dynamicTransferTemplate,
-        message: message.content.text,
       });
       const modelResponse = await runtime.useModel(ModelType.SMALL, { prompt });
       let paramsJson;
@@ -285,22 +284,19 @@ export const transferPolygonAction: Action = {
   },
 
   examples: [
-    {
-      name: 'Transfer MATIC',
-      content: [
-        { role: 'user', content: { text: 'Send 10.5 MATIC to 0xRecipientAddress on Polygon.' } },
-      ],
-    },
-    {
-      name: 'Transfer USDC',
-      content: [
-        {
-          role: 'user',
-          content: {
-            text: 'Transfer 100 USDC (0xTokenAddress) to 0xRecipient on Polygon. Calldata: 0xData.',
-          },
+    [
+      {
+        name: 'Transfer MATIC',
+        content: { text: 'Send 10.5 MATIC to 0xRecipientAddress on Polygon.' },
+      },
+    ],
+    [
+      {
+        name: 'Transfer USDC',
+        content: {
+          text: 'Transfer 100 USDC (0xTokenAddress) to 0xRecipient on Polygon. Calldata: 0xData.',
         },
-      ],
-    },
+      },
+    ],
   ],
 };

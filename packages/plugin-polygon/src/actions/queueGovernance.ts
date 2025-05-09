@@ -9,24 +9,17 @@ import {
   composePromptFromState,
   ModelType,
   type ActionExample,
+  TemplateType,
 } from '@elizaos/core';
-import { type Chain, polygon as polygonChain, mainnet as ethereumChain } from 'viem/chains';
 import {
-  createWalletClient,
-  http,
-  type WalletClient,
   encodeFunctionData,
   type Address,
   type Hex,
-  PublicClient,
-  createPublicClient,
-  fallback,
   keccak256,
   stringToHex,
-  type Transport,
-  type Account,
+  type Chain,
 } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { WalletProvider, initWalletProvider } from '../providers/PolygonWalletProvider';
 
 // Minimal ABI for OZ Governor queue function
 const governorQueueAbi = [
@@ -43,66 +36,6 @@ const governorQueueAbi = [
     type: 'function',
   },
 ] as const;
-
-// START - Reusable WalletProvider and types
-interface ChainConfig extends Chain {
-  rpcUrls: Pick<Chain['rpcUrls'], 'default'> & { default: { http: readonly string[] } };
-  blockExplorers: Pick<Chain['blockExplorers'], 'default'> & {
-    default: { name: string; url: string };
-  };
-}
-class WalletProvider {
-  public chains: Record<string, ChainConfig> = {};
-  constructor(private runtime: IAgentRuntime) {
-    const defaultChains: Record<string, Chain> = { polygon: polygonChain, ethereum: ethereumChain };
-    Object.keys(defaultChains).forEach((chainKey) => {
-      const baseChain = defaultChains[chainKey];
-      const rpcUrlSetting = `RPC_URL_${chainKey.toUpperCase()}`;
-      const customRpcUrl = this.runtime.getSetting(rpcUrlSetting) as string;
-      const httpUrls = customRpcUrl ? [customRpcUrl] : [...baseChain.rpcUrls.default.http];
-      this.chains[chainKey] = {
-        ...baseChain,
-        rpcUrls: {
-          ...baseChain.rpcUrls,
-          default: { ...baseChain.rpcUrls.default, http: httpUrls },
-        },
-        blockExplorers: {
-          ...baseChain.blockExplorers,
-          default: {
-            name: baseChain.blockExplorers?.default?.name ?? '',
-            url: baseChain.blockExplorers?.default?.url ?? '',
-          },
-        },
-      } as ChainConfig;
-    });
-  }
-  getChainConfigs(chainName: string): ChainConfig {
-    const k = chainName.toLowerCase();
-    if (!this.chains[k]) throw new Error(`Chain ${k} not supported`);
-    return this.chains[k];
-  }
-  getWalletClient(chainName: string): WalletClient<Transport, Chain, Account> {
-    const pk = this.runtime.getSetting('WALLET_PRIVATE_KEY') as `0x${string}`;
-    if (!pk || !pk.startsWith('0x')) throw new Error('WALLET_PRIVATE_KEY invalid');
-    const account = privateKeyToAccount(pk);
-    const chainConfig = this.getChainConfigs(chainName);
-    return createWalletClient({
-      account,
-      chain: chainConfig,
-      transport: http(chainConfig.rpcUrls.default.http[0]),
-    });
-  }
-  getPublicClient(chainName: string): PublicClient<Transport, Chain> {
-    const chainConfig = this.getChainConfigs(chainName);
-    return createPublicClient({
-      chain: chainConfig,
-      transport: fallback(chainConfig.rpcUrls.default.http.map((url) => http(url))),
-    });
-  }
-}
-async function initWalletProvider(runtime: IAgentRuntime): Promise<WalletProvider> {
-  return new WalletProvider(runtime);
-}
 
 interface QueueGovernanceParams {
   chain: string;
@@ -190,7 +123,7 @@ class PolygonQueueGovernanceActionRunner {
         to: params.governorAddress,
         value: BigInt(0),
         data: txData,
-        chain: chainConfig,
+        chain: chainConfig as Chain,
         kzg,
       });
       logger.info(`Queue transaction sent. Hash: ${hash}. Waiting for receipt...`);
@@ -202,7 +135,7 @@ class PolygonQueueGovernanceActionRunner {
         value: BigInt(0),
         data: txData,
         chainId: chainConfig.id,
-        logs: receipt.logs,
+        logs: receipt.logs as any[],
       };
     } catch (error) {
       const errMsg = error instanceof Error ? error.message : String(error);
@@ -211,7 +144,6 @@ class PolygonQueueGovernanceActionRunner {
     }
   }
 }
-// END
 
 export const queueGovernanceAction: Action = {
   name: 'QUEUE_GOVERNANCE_POLYGON',
@@ -221,19 +153,20 @@ export const queueGovernanceAction: Action = {
   validate: async (runtime: IAgentRuntime, _m: Memory, _s: State | undefined): Promise<boolean> => {
     logger.debug('Validating QUEUE_GOVERNANCE_POLYGON action...');
     const checks = [
-      runtime.getSetting('WALLET_PUBLIC_KEY'),
       runtime.getSetting('WALLET_PRIVATE_KEY'),
       runtime.getSetting('POLYGON_PLUGINS_ENABLED'),
     ];
     if (checks.some((c) => !c)) {
-      logger.error('Required settings not configured.');
+      logger.error(
+        'Required settings (WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) not configured.'
+      );
       return false;
     }
-    if (
-      typeof runtime.getSetting('WALLET_PRIVATE_KEY') !== 'string' ||
-      !(runtime.getSetting('WALLET_PRIVATE_KEY') as string).startsWith('0x')
-    ) {
-      logger.error('WALLET_PRIVATE_KEY invalid.');
+    try {
+      await initWalletProvider(runtime);
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      logger.error(`WalletProvider initialization failed during validation: ${errMsg}`);
       return false;
     }
     return true;
@@ -252,17 +185,16 @@ export const queueGovernanceAction: Action = {
       const actionRunner = new PolygonQueueGovernanceActionRunner(walletProvider);
       const prompt = composePromptFromState({
         state,
-        template: queueGovernanceTemplate,
-        message: message.content.text,
+        template: queueGovernanceTemplate as unknown as TemplateType,
       });
       const modelResponse = await runtime.useModel(ModelType.LARGE, { prompt });
       let paramsJson;
       try {
-        const responseText = modelResponse.text || '';
-        const jsonString = responseText.replace(/^```json\n?|\n?```$/g, '');
+        const responseText = modelResponse || '';
+        const jsonString = responseText.replace(/^```json(\\r?\\n)?|(\\r?\\n)?```$/g, '');
         paramsJson = JSON.parse(jsonString);
       } catch (e) {
-        logger.error('Failed to parse LLM response for queue params:', modelResponse.text, e);
+        logger.error('Failed to parse LLM response for queue params:', modelResponse, e);
         throw new Error('Could not understand queue parameters.');
       }
       if (
@@ -313,12 +245,11 @@ export const queueGovernanceAction: Action = {
   examples: [
     [
       {
-        role: 'user',
+        name: 'user',
         content: {
           text: "Queue the proposal 'Test Prop Q1' on Polygon governor 0xGov. Targets: [0xT1], Values: [0], Calldatas: [0xCD1].",
         },
       },
-      undefined,
     ],
   ] as ActionExample[],
 };

@@ -9,6 +9,7 @@ import {
   composePromptFromState,
   ModelType,
   type ActionExample,
+  TemplateType,
 } from '@elizaos/core';
 // import { type Chain, polygon as polygonChain, mainnet as ethereumChain } from 'viem/chains'; // Chains managed by Provider
 import {
@@ -176,7 +177,7 @@ export const proposeGovernanceAction: Action = {
     try {
       await initWalletProvider(runtime);
     } catch (e) {
-      const errMsg = error instanceof Error ? e.message : String(e);
+      const errMsg = e instanceof Error ? e.message : String(e);
       logger.error(`WalletProvider initialization failed during validation: ${errMsg}`);
       return false;
     }
@@ -198,18 +199,17 @@ export const proposeGovernanceAction: Action = {
 
       const prompt = composePromptFromState({
         state,
-        template: proposeGovernanceTemplate,
-        message: message.content.text,
+        template: proposeGovernanceTemplate as unknown as TemplateType,
       });
 
       const modelResponse = await runtime.useModel(ModelType.LARGE, { prompt });
       let paramsJson;
       try {
-        const responseText = modelResponse.text || '';
+        const responseText = modelResponse || '';
         const jsonString = responseText.replace(/^```json\n?|\n?```$/g, '');
         paramsJson = JSON.parse(jsonString);
       } catch (e) {
-        logger.error('Failed to parse LLM response for propose params:', modelResponse.text, e);
+        logger.error('Failed to parse LLM response for propose params:', modelResponse, e);
         throw new Error('Could not understand proposal parameters.');
       }
 
@@ -268,12 +268,11 @@ export const proposeGovernanceAction: Action = {
   examples: [
     [
       {
-        role: 'user',
+        name: 'user',
         content: {
           text: 'Propose a treasury transfer of 1000 DAI (0xAddrDAI) to 0xRecipient on Polygon governor 0xGovAddr. Desc: Quarterly budget.',
         },
       },
-      undefined,
     ],
-  ] as ActionExample[],
+  ],
 };

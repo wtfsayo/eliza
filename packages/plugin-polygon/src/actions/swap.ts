@@ -9,6 +9,7 @@ import {
   composePromptFromState,
   ModelType,
   type ActionExample,
+  TemplateType,
 } from '@elizaos/core';
 import {
   createConfig,
@@ -19,84 +20,8 @@ import {
   type LiFiStep,
   type ChainKey,
 } from '@lifi/sdk';
-import { type Chain, polygon as polygonChain, mainnet as ethereumChain } from 'viem/chains';
-import {
-  createWalletClient,
-  http,
-  type WalletClient,
-  parseUnits,
-  formatUnits,
-  type Address,
-  type Hex,
-  PublicClient,
-  createPublicClient,
-  fallback,
-  parseAbi,
-  type Transport,
-  type Account,
-} from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
-
-// START - Reusable WalletProvider and types
-interface ChainConfig extends Chain {
-  rpcUrls: Pick<Chain['rpcUrls'], 'default'> & { default: { http: readonly string[] } };
-  blockExplorers: Pick<Chain['blockExplorers'], 'default'> & {
-    default: { name: string; url: string };
-  };
-}
-
-class WalletProvider {
-  public chains: Record<string, ChainConfig> = {};
-  constructor(private runtime: IAgentRuntime) {
-    const defaultChains: Record<string, Chain> = { polygon: polygonChain, ethereum: ethereumChain };
-    Object.keys(defaultChains).forEach((chainKey) => {
-      const baseChain = defaultChains[chainKey];
-      const rpcUrlSetting = `RPC_URL_${chainKey.toUpperCase()}`;
-      const customRpcUrl = this.runtime.getSetting(rpcUrlSetting) as string;
-      const httpUrls = customRpcUrl ? [customRpcUrl] : [...baseChain.rpcUrls.default.http];
-      this.chains[chainKey] = {
-        ...baseChain,
-        rpcUrls: {
-          ...baseChain.rpcUrls,
-          default: { ...baseChain.rpcUrls.default, http: httpUrls },
-        },
-        blockExplorers: {
-          ...baseChain.blockExplorers,
-          default: {
-            name: baseChain.blockExplorers?.default?.name ?? '',
-            url: baseChain.blockExplorers?.default?.url ?? '',
-          },
-        },
-      } as ChainConfig;
-    });
-  }
-  getChainConfigs(chainName: string): ChainConfig {
-    const k = chainName.toLowerCase();
-    if (!this.chains[k]) throw new Error(`Chain ${k} not supported by WalletProvider`);
-    return this.chains[k];
-  }
-  getWalletClient(chainName: string): WalletClient<Transport, Chain, Account> {
-    const pk = this.runtime.getSetting('WALLET_PRIVATE_KEY') as `0x${string}`;
-    if (!pk || !pk.startsWith('0x')) throw new Error('WALLET_PRIVATE_KEY invalid');
-    const account = privateKeyToAccount(pk);
-    const chainConfig = this.getChainConfigs(chainName);
-    return createWalletClient({
-      account,
-      chain: chainConfig,
-      transport: http(chainConfig.rpcUrls.default.http[0]),
-    });
-  }
-  getPublicClient(chainName: string): PublicClient<Transport, Chain> {
-    const chainConfig = this.getChainConfigs(chainName);
-    return createPublicClient({
-      chain: chainConfig,
-      transport: fallback(chainConfig.rpcUrls.default.http.map((url) => http(url))),
-    });
-  }
-}
-async function initWalletProvider(runtime: IAgentRuntime): Promise<WalletProvider> {
-  return new WalletProvider(runtime);
-}
+import { parseUnits, formatUnits, type Address, type Hex, parseAbi, type Chain } from 'viem';
+import { WalletProvider, initWalletProvider } from '../providers/PolygonWalletProvider';
 
 interface SwapParams {
   chain: string; // e.g., "polygon"
@@ -151,44 +76,46 @@ class PolygonSwapActionRunner {
 
   constructor(walletProvider: WalletProvider) {
     this.walletProvider = walletProvider;
-    const extendedChains = Object.values(this.walletProvider.chains).map((chainConfig) => ({
-      ...chainConfig,
-      key: chainConfig.name.toLowerCase().replace(/\s+/g, '-') as ChainKey,
-      chainType: 'EVM',
-      coin: chainConfig.nativeCurrency.symbol,
-      mainnet: !chainConfig.testnet,
-      logoURI: '',
-      name: chainConfig.name,
-      nativeToken: {
-        address: '0x0000000000000000000000000000000000000000',
-        chainId: chainConfig.id,
-        symbol: chainConfig.nativeCurrency.symbol,
-        decimals: chainConfig.nativeCurrency.decimals,
-        name: chainConfig.nativeCurrency.name,
-        priceUSD: '0',
-        logoURI: '',
-        coinKey: chainConfig.nativeCurrency.symbol,
-      },
-      metamask: {
-        chainId: `0x${chainConfig.id.toString(16)}`,
-        blockExplorerUrls: [chainConfig.blockExplorers?.default?.url || ''],
-        chainName: chainConfig.name,
-        nativeCurrency: chainConfig.nativeCurrency,
-        rpcUrls: [...chainConfig.rpcUrls.default.http],
-      },
-    }));
+    const extendedChains = Object.values(this.walletProvider.chains).map(
+      (chainConfig: Chain) =>
+        ({
+          ...chainConfig,
+          key: chainConfig.name.toLowerCase().replace(/\s+/g, '-') as ChainKey,
+          chainType: 'EVM',
+          coin: chainConfig.nativeCurrency.symbol,
+          mainnet: !chainConfig.testnet,
+          logoURI: '',
+          nativeToken: {
+            address: '0x0000000000000000000000000000000000000000',
+            chainId: chainConfig.id,
+            symbol: chainConfig.nativeCurrency.symbol,
+            decimals: chainConfig.nativeCurrency.decimals,
+            name: chainConfig.nativeCurrency.name,
+            priceUSD: '0',
+            logoURI: '',
+            coinKey: chainConfig.nativeCurrency.symbol,
+          },
+          diamondAddress: '0x0000000000000000000000000000000000000000',
+          metamask: {
+            chainId: `0x${chainConfig.id.toString(16)}`,
+            blockExplorerUrls: [chainConfig.blockExplorers?.default?.url || ''],
+            chainName: chainConfig.name,
+            nativeCurrency: chainConfig.nativeCurrency,
+            rpcUrls: [...(chainConfig.rpcUrls.custom?.http || chainConfig.rpcUrls.default.http)],
+          },
+        }) as ExtendedChain
+    );
     this.lifiConfig = createConfig({ integrator: 'ElizaOS-PolygonSwap', chains: extendedChains });
   }
 
-  private async getTokenDecimals(chain: string, tokenAddress: Address): Promise<number> {
+  async getTokenDecimals(chainName: string, tokenAddress: Address): Promise<number> {
     if (
       tokenAddress.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ||
       tokenAddress.toLowerCase() === '0x0000000000000000000000000000000000000000'
     ) {
-      // Native token, use chain's native currency decimals
-      return this.walletProvider.getChainConfigs(chain).nativeCurrency.decimals;
+      return this.walletProvider.getChainConfigs(chainName).nativeCurrency.decimals;
     }
-    const publicClient = this.walletProvider.getPublicClient(chain);
+    const publicClient = this.walletProvider.getPublicClient(chainName);
     try {
       return await publicClient.readContract({
         address: tokenAddress,
@@ -197,14 +124,15 @@ class PolygonSwapActionRunner {
       });
     } catch (err: any) {
       logger.warn(
-        `Could not fetch decimals for ${tokenAddress} on ${chain}, defaulting to 18. Error: ${err.message}`
+        `Could not fetch decimals for ${tokenAddress} on ${chainName}, defaulting to 18. Error: ${err.message}`
       );
-      return 18; // Default to 18 if decimals call fails
+      return 18;
     }
   }
 
   async swap(params: SwapParams): Promise<Transaction> {
     const walletClient = this.walletProvider.getWalletClient(params.chain);
+    const publicClient = this.walletProvider.getPublicClient(params.chain);
     const [fromAddress] = await walletClient.getAddresses();
     const chainConfig = this.walletProvider.getChainConfigs(params.chain);
 
@@ -218,7 +146,7 @@ class PolygonSwapActionRunner {
       toTokenAddress: params.toToken,
       fromAmount: fromAmountWei,
       fromAddress,
-      toAddress: fromAddress, // LiFi needs a toAddress for same-chain swaps too
+      toAddress: fromAddress,
       options: { slippage: (params.slippage || 0.5) / 100, order: 'RECOMMENDED' as const },
     };
     logger.debug('Requesting LiFi swap routes with:', routesRequest);
@@ -231,58 +159,42 @@ class PolygonSwapActionRunner {
     const bestRoute: Route = routesResult.routes[0];
     logger.debug('Executing LiFi swap route:', JSON.stringify(bestRoute, null, 2));
 
-    // Execute the route
-    const execution = await executeRoute(walletClient, bestRoute);
+    const execution = await executeRoute(bestRoute, this.lifiConfig);
 
-    let txHash: `0x${string}` | undefined;
-    let toAmountMinFromStep: string | undefined;
-    let toAmountFromStep: string | undefined;
+    const process = execution.steps[0]?.execution?.process[0];
 
-    for (const step of execution.steps) {
-      const lifiStep = step as LiFiStep;
-      toAmountMinFromStep = lifiStep.estimate?.toAmountMin;
-      toAmountFromStep = lifiStep.estimate?.toAmount;
-      if (step.execution?.process) {
-        for (const process of step.execution.process) {
-          if (process.txHash) {
-            txHash = process.txHash as `0x${string}`;
-            logger.info(`Swap transaction hash: ${txHash} on chain ${lifiStep.action.fromChainId}`);
-            break;
-          }
-        }
-      }
-      if (txHash) break;
-    }
-
-    if (!txHash) {
-      logger.error('Swap transaction hash not found in LiFi execution result.');
+    if (!process?.txHash || process.status === 'FAILED') {
+      logger.error(
+        'Swap transaction hash not found or tx failed in LiFi execution result.',
+        process
+      );
       throw new Error('Swap transaction failed or hash not found.');
     }
+    const txHash = process.txHash as `0x${string}`;
 
-    const publicClient = this.walletProvider.getPublicClient(params.chain);
     logger.info(`Waiting for swap transaction receipt: ${txHash}`);
     const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
 
-    const toAddress =
+    const toLifiAddress =
       (bestRoute.steps[0]?.toolDetails as any)?.routerAddress || bestRoute.toToken.address;
     return {
       hash: txHash,
       from: fromAddress,
-      to: toAddress as Address,
+      to: toLifiAddress as Address,
       value:
-        bestRoute.fromToken.address === params.fromToken &&
-        params.fromToken.toLowerCase() === '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+        bestRoute.fromToken.address.toLowerCase() ===
+          '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee' ||
+        bestRoute.fromToken.address.toLowerCase() === '0x0000000000000000000000000000000000000000'
           ? parseUnits(params.amount, fromTokenDecimals)
           : BigInt(0),
       chainId: chainConfig.id,
-      logs: receipt.logs,
+      logs: receipt.logs as any[],
       data: bestRoute.steps[0]?.transactionRequest?.data as Hex | undefined,
-      toAmountMin: toAmountMinFromStep,
-      toAmount: toAmountFromStep,
+      toAmountMin: bestRoute.toAmountMin,
+      toAmount: bestRoute.toAmount,
     };
   }
 }
-// END
 
 export const swapPolygonAction: Action = {
   name: 'SWAP_POLYGON_TOKENS',
@@ -292,19 +204,20 @@ export const swapPolygonAction: Action = {
   validate: async (runtime: IAgentRuntime, _m: Memory, _s: State | undefined): Promise<boolean> => {
     logger.debug('Validating SWAP_POLYGON_TOKENS action...');
     const checks = [
-      runtime.getSetting('WALLET_PUBLIC_KEY'),
       runtime.getSetting('WALLET_PRIVATE_KEY'),
       runtime.getSetting('POLYGON_PLUGINS_ENABLED'),
     ];
     if (checks.some((c) => !c)) {
-      logger.error('Required settings (WALLET_*, POLYGON_PLUGINS_ENABLED) not configured.');
+      logger.error(
+        'Required settings (WALLET_PRIVATE_KEY, POLYGON_PLUGINS_ENABLED) not configured.'
+      );
       return false;
     }
-    if (
-      typeof runtime.getSetting('WALLET_PRIVATE_KEY') !== 'string' ||
-      !(runtime.getSetting('WALLET_PRIVATE_KEY') as string).startsWith('0x')
-    ) {
-      logger.error('WALLET_PRIVATE_KEY invalid.');
+    try {
+      await initWalletProvider(runtime);
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      logger.error(`WalletProvider initialization failed during validation: ${errMsg}`);
       return false;
     }
     return true;
@@ -324,17 +237,16 @@ export const swapPolygonAction: Action = {
       const actionRunner = new PolygonSwapActionRunner(walletProvider);
       const prompt = composePromptFromState({
         state,
-        template: swapTemplate,
-        message: message.content.text,
+        template: swapTemplate as unknown as TemplateType,
       });
       const modelResponse = await runtime.useModel(ModelType.LARGE, { prompt });
       let paramsJson;
       try {
-        const responseText = modelResponse.text || '';
-        const jsonString = responseText.replace(/^```json\n?|\n?```$/g, '');
+        const responseText = modelResponse || '';
+        const jsonString = responseText.replace(/^```json(\\r?\\n)?|(\\r?\\n)?```$/g, '');
         paramsJson = JSON.parse(jsonString);
       } catch (e) {
-        logger.error('Failed to parse LLM response for swap params:', modelResponse.text, e);
+        logger.error('Failed to parse LLM response for swap params:', modelResponse, e);
         throw new Error('Could not understand swap parameters.');
       }
 
@@ -353,11 +265,10 @@ export const swapPolygonAction: Action = {
       logger.debug('Swap parameters:', swapParams);
       const txResult = await actionRunner.swap(swapParams);
 
-      // For display, try to format the toAmountMin/toAmount if available
       let toAmountDisplay = 'unknown amount';
       if (txResult.toAmountMin) {
         try {
-          const toTokenDecimals = await (actionRunner as any).getTokenDecimals(
+          const toTokenDecimals = await actionRunner.getTokenDecimals(
             swapParams.chain,
             swapParams.toToken
           );
@@ -366,7 +277,7 @@ export const swapPolygonAction: Action = {
             toAmountDisplay = `${formatUnits(BigInt(txResult.toAmount), toTokenDecimals)}`;
           }
         } catch (e) {
-          logger.warn('Could not format toAmountMin');
+          logger.warn('Could not format toAmountMin/toAmount from LiFi result', e);
         }
       }
 
@@ -397,8 +308,10 @@ export const swapPolygonAction: Action = {
   },
   examples: [
     [
-      { role: 'user', content: { text: 'Swap 100 USDC for DAI on Polygon. Max 0.3% slippage.' } },
-      undefined,
+      {
+        name: 'Swap USDC for DAI',
+        content: { text: 'Swap 100 USDC for DAI on Polygon. Max 0.3% slippage.' },
+      },
     ],
-  ] as ActionExample[],
+  ],
 };

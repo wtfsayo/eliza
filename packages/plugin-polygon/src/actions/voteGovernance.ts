@@ -173,8 +173,7 @@ export const voteGovernanceAction: Action = {
 
       const prompt = composePromptFromState({
         state,
-        template: voteGovernanceTemplateObj as TemplateType,
-        message: message.content.text,
+        template: voteGovernanceTemplateObj as unknown as TemplateType,
       });
       const modelResponse = await runtime.useModel(ModelType.SMALL, { prompt });
       let paramsJson;
@@ -231,14 +230,14 @@ export const voteGovernanceAction: Action = {
   },
 
   examples: [
-    {
-      name: 'Vote FOR proposal',
-      content: [
-        {
+    [
+      {
+        name: 'Vote FOR proposal',
+        content: {
           role: 'user',
           content: { text: 'Vote FOR proposal 77 on Polygon governor 0xGovAddress.' },
         },
-      ],
-    },
+      },
+    ],
   ],
 };

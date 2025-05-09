@@ -13,7 +13,6 @@ import {
   type Provider,
   type Memory,
   type State,
-  type CacheManager,
   elizaLogger,
   type ProviderResult,
 } from '@elizaos/core';
@@ -44,7 +43,6 @@ export class WalletProvider {
 
   constructor(
     accountOrPrivateKey: PrivateKeyAccount | `0x${string}`,
-    private cacheManager: CacheManager,
     chains?: Record<string, Chain>
   ) {
     this.setAccount(accountOrPrivateKey);
@@ -110,20 +108,12 @@ export class WalletProvider {
   }
 
   async getWalletBalance(): Promise<string | null> {
-    const cacheKey = `walletBalance_${this.currentChain}`;
-    const cachedData = await this.getCachedData<string>(cacheKey);
-    if (cachedData) {
-      elizaLogger.log(`Returning cached wallet balance for chain: ${this.currentChain}`);
-      return cachedData;
-    }
-
     try {
       const client = this.getPublicClient(this.currentChain);
       const balance = await client.getBalance({
         address: this.account.address,
       });
       const balanceFormatted = formatUnits(balance, 18);
-      this.setCachedData<string>(cacheKey, balanceFormatted);
       elizaLogger.log('Wallet balance cached for chain: ', this.currentChain);
       return balanceFormatted;
     } catch (error) {
@@ -155,43 +145,6 @@ export class WalletProvider {
       this.addChain({ [chainName]: chain });
     }
     this.setCurrentChain(chainName);
-  }
-
-  private async readFromCache<T>(key: string): Promise<T | null> {
-    const cached = await this.cacheManager.get<T>(path.join(this.cacheKey, key));
-    return cached;
-  }
-
-  private async writeToCache<T>(key: string, data: T): Promise<void> {
-    await this.cacheManager.set(path.join(this.cacheKey, key), data, {
-      expires: Date.now() + this.CACHE_EXPIRY_SEC * 1000,
-    });
-  }
-
-  private async getCachedData<T>(key: string): Promise<T | null> {
-    // Check in-memory cache first
-    const cachedData = this.cache.get<T>(key);
-    if (cachedData) {
-      return cachedData;
-    }
-
-    // Check file-based cache
-    const fileCachedData = await this.readFromCache<T>(key);
-    if (fileCachedData) {
-      // Populate in-memory cache
-      this.cache.set(key, fileCachedData);
-      return fileCachedData;
-    }
-
-    return null;
-  }
-
-  private async setCachedData<T>(cacheKey: string, data: T): Promise<void> {
-    // Set in-memory cache
-    this.cache.set(cacheKey, data);
-
-    // Write to file-based cache
-    await this.writeToCache(cacheKey, data);
   }
 
   private setAccount = (accountOrPrivateKey: PrivateKeyAccount | `0x${string}`) => {
@@ -283,13 +236,14 @@ export const initWalletProvider = async (runtime: IAgentRuntime) => {
       'evm',
       runtime.agentId
     );
-    return new WalletProvider(deriveKeyResult.keypair, runtime.cache, chains);
+    runtime;
+    return new WalletProvider(deriveKeyResult.keypair, chains);
   } else {
     const privateKey = runtime.getSetting('EVM_PRIVATE_KEY') as `0x${string}`;
     if (!privateKey) {
       throw new Error('EVM_PRIVATE_KEY is missing');
     }
-    return new WalletProvider(privateKey, runtime.cache, chains);
+    return new WalletProvider(privateKey, chains);
   }
 };
 
@@ -306,7 +260,8 @@ export const evmWalletProvider: Provider = {
     } catch (error) {
       console.error('Error in EVM wallet provider:', error);
       const errorText = error instanceof Error ? error.message : String(error);
-      return { text: `Error in EVM wallet provider: ${errorText}`, error: true };
+      return { text: `Error in EVM wallet provider: ${errorText}` };
     }
   },
+  name: '',
 };
