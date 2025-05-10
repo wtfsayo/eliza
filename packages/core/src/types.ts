@@ -563,6 +563,13 @@ export type Route = {
 /**
  * Plugin for extending agent functionality
  */
+
+export type PluginEvents = {
+  [K in keyof EventPayloadMap]?: EventHandler<K>[];
+} & {
+  [key: string]: ((params: EventPayload) => Promise<any>)[];
+};
+
 export interface Plugin {
   name: string;
   description: string;
@@ -590,11 +597,7 @@ export interface Plugin {
   models?: {
     [key: string]: (...args: any[]) => Promise<any>;
   };
-  events?: {
-    [K in keyof EventPayloadMap]?: EventHandler<K>[];
-  } & {
-    [key: string]: ((params: EventPayload) => Promise<any>)[];
-  };
+  events?: PluginEvents;
   routes?: Route[];
   tests?: TestSuite[];
 }
@@ -706,7 +709,7 @@ export interface IDatabaseAdapter {
   getAgent(agentId: UUID): Promise<Agent | null>;
 
   /** Get all agents */
-  getAgents(): Promise<Agent[]>;
+  getAgents(): Promise<Partial<Agent>[]>;
 
   createAgent(agent: Partial<Agent>): Promise<boolean>;
 
