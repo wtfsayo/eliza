@@ -76,12 +76,28 @@ async function tryImporting(
 const importStrategies: ImportStrategy[] = [
   {
     name: 'direct path',
-    tryImport: async (repository: string) => tryImporting(repository, 'direct path', repository),
+    tryImport: async (repository: string) => {
+      // Only try direct import for actual paths, not package names
+      if (
+        repository.startsWith('/') ||
+        repository.startsWith('./') ||
+        repository.startsWith('../') ||
+        /^[a-zA-Z]:\\/.test(repository)
+      ) {
+        return tryImporting(repository, 'direct path', repository);
+      }
+      return null;
+    },
   },
   {
     name: 'local node_modules',
-    tryImport: async (repository: string) =>
-      tryImporting(resolveNodeModulesPath(repository), 'local node_modules', repository),
+    tryImport: async (repository: string) => {
+      // read package.json if present to honor module/main fields
+      const pkg = await readPackageJson(repository);
+      const entry = pkg?.module || pkg?.main || DEFAULT_ENTRY_POINT;
+      const fullPath = resolveNodeModulesPath(repository, entry);
+      return tryImporting(fullPath, `local node_modules (${entry})`, repository);
+    },
   },
   {
     name: 'global node_modules',
