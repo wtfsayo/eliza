@@ -126,16 +126,18 @@ node_modules
  */
 export const create = new Command()
   .name('create')
-  .description('Initialize a new project or plugin')
-  .option('-d, --dir <dir>', 'installation directory', '.')
-  .option('-y, --yes', 'skip confirmation', false)
-  .option('-t, --type <type>', 'type of template to use (project or plugin)', 'project')
-  .argument('[name]', 'name for the project or plugin')
+  .description('Initialize a new project (folder), plugin (folder), or agent (JSON file)')
+  .argument('[name]', 'name for the project, plugin, or agent')
+  .option('-d, --dir <dir>', 'installation directory (default: ".")')
+  .option('-y, --yes', 'skip confirmation (default: false)')
+  .option(
+    '-t, --type <type>',
+    'type of template to use (project, plugin, or agent) (default: "project")'
+  )
   .action(async (name, opts) => {
     // Set non-interactive mode if environment variable is set or if -y/--yes flag is present in process.argv
     if (
-      process.env.ELIZA_NONINTERACTIVE === '1' ||
-      process.env.ELIZA_NONINTERACTIVE === 'true' ||
+      process.env.ELIZA_NON_INTERACTIVE === 'true' ||
       process.argv.includes('-y') ||
       process.argv.includes('--yes')
     ) {
@@ -148,7 +150,7 @@ export const create = new Command()
     opts.yes = opts.yes === true || opts.yes === 'true';
 
     // Display banner and continue with initialization
-    await displayBanner();
+    displayBanner();
 
     try {
       // Parse options but use "" as the default for type to force prompting
