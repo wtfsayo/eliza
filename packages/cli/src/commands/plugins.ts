@@ -109,15 +109,8 @@ export const plugins = new Command()
   .description('Manage ElizaOS plugins')
   .option('--help', 'Show help for plugins command')
   .action(function () {
-    // Display banner before showing help
-    displayBanner()
-      .then(() => {
-        this.help();
-      })
-      .catch((err) => {
-        // Silently continue if banner display fails
-        this.help();
-      });
+    // Just show help directly without displaying the banner first
+    this.help();
   });
 
 export const pluginsCommand = plugins
