@@ -4,6 +4,9 @@ import {
   handleError,
   installPlugin,
   logHeader,
+  isMonorepoContext,
+  getLocalPackages,
+  UserEnvironment,
 } from '@/src/utils';
 import { getPluginRepository } from '@/src/utils/registry/index';
 import { logger } from '@elizaos/core';
@@ -193,6 +196,123 @@ plugins
       const npmPackageName = `@elizaos/${normalizedPluginName}`;
       const npmPackageNameWithTag = `${npmPackageName}${versionTag}`;
 
+      // Check if we're in a monorepo context and if the plugin exists in the workspace
+      const isMonorepo = await isMonorepoContext();
+      const localPackages = isMonorepo ? await getLocalPackages() : [];
+
+      // Check if the plugin is available in the workspace AND we can use workspace references
+      if (isMonorepo && localPackages.includes(npmPackageName)) {
+        try {
+          // Check if this is a workspace project that can use workspace dependencies
+          const pathInfo = await UserEnvironment.getInstance().getPathInfo();
+          const monorepoRoot = pathInfo.monorepoRoot;
+
+          // Only use workspace dependencies if this project is part of the monorepo structure
+          // i.e., if it's in the same directory as the monorepo root
+          if (monorepoRoot && cwd.startsWith(monorepoRoot)) {
+            // Check if the project has workspaces configured and that the plugin is in its workspaces
+            const packageJsonPath = path.join(cwd, 'package.json');
+            let hasWorkspaceConfig = false;
+            let canUseWorkspaceDependency = false;
+
+            try {
+              const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+              const packageJson = JSON.parse(packageJsonContent);
+
+              if (packageJson.workspaces) {
+                hasWorkspaceConfig = true;
+
+                // Special case for monorepo root
+                if (cwd === monorepoRoot) {
+                  // In monorepo root, plugins are in "packages/plugin-*" pattern
+                  // Don't try to npm install; instead add a workspace direct reference to package.json
+                  canUseWorkspaceDependency = false;
+
+                  logger.info(
+                    `Adding ${npmPackageName} as a workspace reference in monorepo root...`
+                  );
+
+                  try {
+                    // Read the package.json
+                    const packageJsonPath = path.join(cwd, 'package.json');
+                    const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+                    const packageJson = JSON.parse(packageJsonContent);
+
+                    // Ensure dependencies exist
+                    if (!packageJson.dependencies) {
+                      packageJson.dependencies = {};
+                    }
+
+                    // Add the workspace reference
+                    packageJson.dependencies[npmPackageName] = 'workspace:*';
+
+                    // Write the updated package.json
+                    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
+                    console.log(
+                      `Successfully added ${npmPackageName} as workspace reference in root package.json`
+                    );
+                    process.exit(0);
+                  } catch (error) {
+                    logger.warn(
+                      `Failed to add workspace reference to root package.json: ${error.message}`
+                    );
+                    // Continue with standard installation, though it will likely fail with dependency loop
+                  }
+                } else {
+                  // For other projects, check if their workspace pattern would include the plugin
+                  const pluginDir = `packages/${npmPackageName.split('/')[1]}`;
+
+                  // For simplicity, just use standard install for projects other than the monorepo root
+                  // This avoids complex workspace pattern matching logic
+                  canUseWorkspaceDependency = false;
+                }
+              }
+            } catch (err) {
+              // If we can't read or parse package.json, assume no workspace config
+              hasWorkspaceConfig = false;
+            }
+
+            if (hasWorkspaceConfig && canUseWorkspaceDependency) {
+              console.info(
+                `Detected plugin ${npmPackageName} in workspace, adding as workspace dependency...`
+              );
+
+              try {
+                // Add as a workspace dependency
+                await execa('bun', ['add', `${npmPackageName}@workspace:*`], {
+                  cwd,
+                  stdio: 'inherit',
+                });
+
+                console.log(`Successfully added ${npmPackageName} as workspace dependency`);
+                process.exit(0);
+              } catch (error) {
+                logger.warn(
+                  `Failed to add workspace dependency ${npmPackageName}: ${error.message}`
+                );
+                // Fall back to standard installation methods
+              }
+            } else {
+              // No workspace config found or can't use workspace dependency, use standard installation
+              if (hasWorkspaceConfig) {
+                logger.debug(
+                  `Project in ${cwd} has workspace configuration, but cannot use workspace reference for ${npmPackageName}.`
+                );
+              } else {
+                logger.debug(
+                  `Project in ${cwd} has no workspace configuration, using standard installation.`
+                );
+              }
+            }
+          }
+        } catch (error) {
+          logger.warn(`Error checking workspace configuration: ${error.message}`);
+          // Continue with standard installation
+        }
+      }
+
+      // Standard installation flow if not a workspace package
       console.info(`Attempting to install ${npmPackageNameWithTag} from npm registry...`);
 
       let success = await installPlugin(npmPackageName, cwd, tag, opts.branch);
