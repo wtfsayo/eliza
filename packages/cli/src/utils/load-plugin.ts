@@ -1,6 +1,10 @@
 import { logger } from '@elizaos/core';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface PackageJson {
   module?: string;
@@ -34,7 +38,9 @@ function getGlobalNodeModulesPath(): string {
  * Helper function to resolve a path within node_modules
  */
 function resolveNodeModulesPath(repository: string, ...segments: string[]): string {
-  return path.resolve(process.cwd(), 'node_modules', repository, ...segments);
+  // from this file: dist/utils → dist → cli → packages → eliza (repo root)
+  const projectRoot = path.resolve(__dirname, '../../../..');
+  return path.join(projectRoot, 'node_modules', repository, ...segments);
 }
 
 /**
@@ -61,7 +67,22 @@ async function tryImporting(
   repository: string
 ): Promise<any | null> {
   try {
-    const module = await import(importPath);
+    // Check if file exists for filesystem paths
+    if (importPath.startsWith('/')) {
+      if (!fs.existsSync(importPath)) {
+        logger.debug(`File does not exist at '${importPath}' for ${repository}`);
+        return null;
+      }
+      logger.debug(`Verified file exists at '${importPath}', attempting import`);
+    }
+
+    // Convert to file:// URL if needed
+    const specifier =
+      importPath.startsWith('/') || importPath.startsWith('./') || importPath.startsWith('../')
+        ? pathToFileURL(importPath).href
+        : importPath;
+
+    const module = await import(specifier);
     logger.debug(`Successfully loaded plugin '${repository}' using ${strategy} (${importPath})`);
     return module;
   } catch (error) {
