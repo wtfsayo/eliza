@@ -3,7 +3,30 @@ import type { Agent } from '@elizaos/core';
 import { logger } from '@elizaos/core';
 import { Command, OptionValues } from 'commander';
 import fs from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import prompts from 'prompts';
+import { spawn } from 'child_process';
+import { create } from '@/src/commands/create';
+
+/**
+ * Validates if the given object matches the Character interface structure.
+ * @param {unknown} character - The object to validate
+ * @returns {boolean} True if the object matches the Character interface structure
+ */
+function isValidCharacterJson(character: unknown): boolean {
+  return (
+    typeof character === 'object' &&
+    character !== null &&
+    typeof (character as any).name === 'string' &&
+    Array.isArray((character as any).plugins) &&
+    typeof (character as any).system === 'string' &&
+    Array.isArray((character as any).bio) &&
+    Array.isArray((character as any).messageExamples) &&
+    typeof (character as any).style === 'object' &&
+    (character as any).style !== null
+  );
+}
 
 // Helper function to determine the agent runtime URL
 export function getAgentRuntimeUrl(opts: OptionValues): string {
@@ -159,7 +182,7 @@ agent
   .command('get')
   .alias('g')
   .description('Get agent details')
-  .option('-n, --name <name>', 'agent id, name, or index number from list')
+  .option('-n, --name <n>', 'agent id, name, or index number from list')
   .option('-j, --json', 'display as JSON')
   .option('-o, --output <file>', 'save to file (default: {name}.json)')
   .action(async (opts) => {
@@ -228,148 +251,347 @@ agent
     }
   });
 
+/**
+ * Checks if an agent with the specified name already exists and is active
+ * @param {string} name - The agent name to check
+ * @param {OptionValues} opts - Command options containing potential info
+ * @returns {Promise<{exists: boolean, isActive: boolean, id?: string}>} - Status object
+ */
+async function checkAgentStatus(
+  name: string,
+  opts: OptionValues
+): Promise<{ exists: boolean; isActive: boolean; id?: string }> {
+  try {
+    const agents = await getAgents(opts);
+    const agent = agents.find((a) => a.name.toLowerCase() === name.toLowerCase());
+    if (!agent) {
+      return { exists: false, isActive: false };
+    }
+
+    return {
+      exists: true,
+      isActive: agent.status === 'active',
+      id: agent.id,
+    };
+  } catch (error) {
+    // If we can't check (e.g., server down), assume it doesn't exist
+    return { exists: false, isActive: false };
+  }
+}
+
 agent
   .command('start')
   .alias('s')
   .description('Start an agent')
-  .option('-n, --name <n>', 'character name to start the agent with')
-  .option('-j, --json <json>', 'character JSON string')
-  .option('--path <path>', 'local path to character JSON file')
-  .option('--remote-character <url>', 'remote URL to character JSON file')
-  .action(async (options) => {
+  .argument('[agent_name]', 'agent name to start')
+  .option('-n, --name <n>', 'agent name to start')
+  .option('--path <path>', 'path to character JSON file')
+  .action(async (agent_name, options) => {
     try {
-      console.debug('Starting agent start command action handler');
-      console.debug('Options object:', JSON.stringify(options));
-      console.debug('path option value:', options.path);
-      console.debug('name option value:', options.name);
-      console.debug('json option value:', options.json ? '[JSON string present]' : undefined);
-      console.debug('remoteCharacter option value:', options.remoteCharacter);
+      const baseUrl = getAgentsBaseUrl(options);
+      const headers = { 'Content-Type': 'application/json' };
 
-      // API Endpoint: POST /agents
-      const response: Response = await (async () => {
-        const payload: AgentStartPayload = {};
-        const headers = { 'Content-Type': 'application/json' };
-        const baseUrl = getAgentsBaseUrl(options);
-        console.debug(`Base URL determined: ${baseUrl}`);
+      // Use positional argument or the --name option
+      const agentName = agent_name || options.name;
 
-        let characterName = null;
-
-        async function createCharacter(payload) {
-          const response = await fetch(baseUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-          });
-          const data = await response.json();
-          return data.data.character.name;
+      // If name is provided, try to find the corresponding JSON file
+      if (agentName) {
+        // Check if agent already exists and is active
+        const status = await checkAgentStatus(agentName, options);
+        if (status.exists && status.isActive) {
+          console.error(`Agent '${agentName}' is already active!`);
+          process.exit(1);
         }
 
-        // Handle the path option first
-        if (options.path) {
-          console.debug('Using local path option:', options.path);
-          try {
-            const filePath = path.resolve(process.cwd(), options.path);
-            console.debug(`Resolved file path: ${filePath}`);
-            if (!fs.existsSync(filePath)) {
-              throw new Error(`File not found at path: ${filePath}`);
+        const jsonFile = `${agentName}.json`;
+        const filePath = path.resolve(process.cwd(), jsonFile);
+
+        if (!fs.existsSync(filePath)) {
+          console.error(
+            `There is no agent by the name '${agentName}', would you like to create one?`
+          );
+
+          // Offer to create the agent
+          const { wantToCreate } = await prompts({
+            type: 'confirm',
+            name: 'wantToCreate',
+            message: `Would you like to create a new agent named '${agentName}'?`,
+            initial: true,
+          });
+
+          if (wantToCreate) {
+            // Get the default character template
+            const { character: defaultCharacter } = await import('../characters/eliza');
+
+            // Create a new character based on the name
+            const newCharacter = {
+              ...defaultCharacter,
+              name: agentName,
+            };
+
+            // Write the character to a JSON file in the current directory
+            await writeFile(jsonFile, JSON.stringify(newCharacter, null, 2));
+            console.info(`Created new agent: ${jsonFile}`);
+
+            // First create the agent on the server
+            const createResponse = await fetch(baseUrl, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ characterJson: newCharacter }),
+            });
+
+            const createData = await createResponse.json();
+            if (!createData.success) {
+              throw new Error('Failed to create agent');
             }
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            console.debug(`Read file content, size: ${fileContent.length} bytes`);
-            payload.characterJson = JSON.parse(fileContent);
-            console.debug('Parsed character JSON from file');
-            characterName = await createCharacter(payload);
-          } catch (error) {
-            console.error('Error reading or parsing local JSON file:', error);
-            throw new Error(`Failed to read or parse local JSON file: ${error.message}`);
+          } else {
+            console.info('Operation cancelled.');
+            process.exit(0);
           }
-        }
+        } else {
+          // File exists, read it
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          const characterJson = JSON.parse(fileContent);
+          console.info(`Starting agent from ${jsonFile}`);
 
-        // Then handle other options
-        if (options.json) {
-          console.debug('Using JSON string option');
-          try {
-            payload.characterJson = JSON.parse(options.json);
-            console.debug('Parsed character JSON string');
-            characterName = await createCharacter(payload);
-          } catch (error) {
-            console.error('Error parsing JSON string:', error);
-            throw new Error(`Failed to parse JSON string: ${error.message}`);
+          // If agent exists but is not active, reactivate it
+          if (status.exists && !status.isActive && status.id) {
+            console.info(`Agent '${agentName}' exists but is not active. Reactivating...`);
+            const startResponse = await fetch(`${baseUrl}/${status.id}`, {
+              method: 'POST',
+              headers,
+            });
+
+            if (!startResponse.ok) {
+              throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
+            }
+
+            console.info(`Successfully reactivated agent '${agentName}'`);
+            process.exit(0);
           }
-        }
 
-        if (options.remoteCharacter) {
-          console.debug('Using remote character URL option');
-          if (
-            !options.remoteCharacter.startsWith('http://') &&
-            !options.remoteCharacter.startsWith('https://')
-          ) {
-            console.error('Invalid remote URL:', options.remoteCharacter);
-            throw new Error('Remote URL must start with http:// or https://');
-          }
-          payload.characterPath = options.remoteCharacter;
-          console.debug('Using remote character URL:', payload.characterPath);
-          characterName = await createCharacter(payload);
-        }
-
-        if (options.name) {
-          characterName = options.name;
-          console.debug('Using name option:', options.name);
-        }
-
-        if (characterName) {
-          const agentId = await resolveAgentId(characterName, options);
-          console.debug(`Resolved agent ID: ${agentId} for name: ${options.name}`);
-          return await fetch(`${baseUrl}/${agentId}`, {
+          // First create the agent
+          const createResponse = await fetch(baseUrl, {
             method: 'POST',
             headers,
+            body: JSON.stringify({ characterJson }),
           });
+          const createData = await createResponse.json();
+          if (!createData.success) {
+            throw new Error('Failed to create agent');
+          }
         }
 
-        console.debug('No specific start option provided, starting default agent');
-        // Default behavior: Start a default agent if no specific option is provided
-        return await fetch(baseUrl, {
+        // Find the agent by name
+        const agents = await getAgents(options);
+        const agentEntry = agents.find((a) => a.name.toLowerCase() === agentName.toLowerCase());
+        if (!agentEntry) {
+          throw new Error('Agent was created but not found in agent list');
+        }
+        const agentId = agentEntry.id;
+
+        // Then start the agent's runtime
+        const startResponse = await fetch(`${baseUrl}/${agentId}`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({}), // Empty body for default agent start
         });
-      })();
-
-      console.debug(`Response status: ${response.status} ${response.statusText}`);
-      if (!response.ok) {
-        let errorData: ApiResponse<unknown> | null = null;
-        try {
-          errorData = (await response.json()) as ApiResponse<unknown>;
-          console.debug('Received error data from server:', errorData);
-        } catch (jsonError) {
-          console.error('Failed to parse error response as JSON:', jsonError);
-          // Use status text if JSON parsing fails
-          throw new Error(`Failed to start agent: ${response.statusText}`);
+        if (!startResponse.ok) {
+          throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
         }
-        throw new Error(
-          errorData?.error?.message || `Failed to start agent: ${response.statusText}`
+
+        console.info(`Successfully started agent '${agentName}'`);
+        process.exit(0);
+      }
+
+      // If path is provided, start agent from that file
+      if (options.path) {
+        const filePath = path.resolve(process.cwd(), options.path);
+        if (!fs.existsSync(filePath)) {
+          throw new Error(`File not found at path: ${filePath}`);
+        }
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        const characterJson = JSON.parse(fileContent);
+        console.info(`Starting agent from ${filePath}`);
+
+        // First create the agent
+        const createResponse = await fetch(baseUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ characterJson }),
+        });
+        const createData = await createResponse.json();
+        if (!createData.success) {
+          throw new Error('Failed to create agent');
+        }
+        // Find the agent by name
+        const agents = await getAgents(options);
+        const agentEntry = agents.find(
+          (a) => a.name.toLowerCase() === characterJson.name.toLowerCase()
         );
+        if (!agentEntry) {
+          throw new Error('Agent was created but not found in agent list');
+        }
+        const agentId = agentEntry.id;
+
+        // Then start the agent's runtime
+        const startResponse = await fetch(`${baseUrl}/${agentId}`, {
+          method: 'POST',
+          headers,
+        });
+        if (!startResponse.ok) {
+          throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
+        }
+
+        console.info(`Successfully started agent from ${filePath}`);
+        process.exit(0);
       }
 
-      // Type assertion to handle the specific structure returned by the start endpoint
-      const data = (await response.json()) as ApiResponse<any>;
-      console.debug('Received successful response data:', data);
-      const result = data.data;
+      // If no options provided, scan for character files and prompt for selection
+      const characterFiles = fs
+        .readdirSync(process.cwd())
+        .filter((file) => file.endsWith('.json'))
+        .map((file) => {
+          try {
+            const content = fs.readFileSync(file, 'utf8');
+            const character = JSON.parse(content);
+            // Validate that the file matches the Character interface structure
+            if (isValidCharacterJson(character)) {
+              return {
+                title: `${character.name} (${file})`,
+                value: file,
+              };
+            }
+            return null;
+          } catch (e) {
+            return null;
+          }
+        })
+        .filter(Boolean);
 
-      if (!result) {
-        console.error('Server responded OK, but no agent data was returned');
-        throw new Error('Failed to start agent: No data returned from server');
+      // Add "Create new agent" option at the end of the list
+      const choices = [
+        ...characterFiles,
+        {
+          title: 'Create new agent',
+          value: 'create_new',
+        },
+      ];
+
+      const { selectedFile } = await prompts({
+        type: 'select',
+        name: 'selectedFile',
+        message: 'Select an agent to start or create a new one:',
+        choices,
+      });
+
+      if (!selectedFile) {
+        process.exit(0);
       }
-      console.debug('Agent start successful, result:', result);
 
-      // Correctly access the agent name from the nested character object
-      const agentName = result?.character?.name || 'unknown';
-      console.debug(`Successfully started agent ${agentName}`);
-      logger.success(`Agent ${agentName} started successfully!`);
-      console.log(`\x1b[32m✓ Agent ${agentName} started successfully!\x1b[0m`);
+      if (selectedFile === 'create_new') {
+        const { agentName } = await prompts({
+          type: 'text',
+          name: 'agentName',
+          message: 'What would you like to name your agent?',
+          validate: (value) => (value.length > 0 ? true : 'Please enter a name'),
+        });
+
+        // Create the new agent
+        try {
+          // Get the default character template
+          const { character: defaultCharacter } = await import('../characters/eliza');
+
+          // Create a new character based on the name
+          const newCharacter = {
+            ...defaultCharacter,
+            name: agentName,
+          };
+
+          // Write the character to a JSON file in the current directory
+          const characterPath = path.join(process.cwd(), `${agentName}.json`);
+          await writeFile(characterPath, JSON.stringify(newCharacter, null, 2));
+          console.info(`Successfully created agent: ${agentName}`);
+
+          // Read the newly created file
+          const fileContent = fs.readFileSync(characterPath, 'utf8');
+          const characterJson = JSON.parse(fileContent);
+          console.info(`Starting agent from ${characterPath}`);
+
+          // First create the agent
+          const createResponse = await fetch(baseUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ characterJson }),
+          });
+          const createData = await createResponse.json();
+          if (!createData.success) {
+            throw new Error('Failed to create agent');
+          }
+          // Find the agent by name
+          const agents = await getAgents(options);
+          const agentEntry = agents.find(
+            (a) => a.name.toLowerCase() === characterJson.name.toLowerCase()
+          );
+          if (!agentEntry) {
+            throw new Error('Agent was created but not found in agent list');
+          }
+          const agentId = agentEntry.id;
+
+          // Then start the agent's runtime
+          const startResponse = await fetch(`${baseUrl}/${agentId}`, {
+            method: 'POST',
+            headers,
+          });
+          if (!startResponse.ok) {
+            throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
+          }
+
+          console.info(`Successfully started agent from ${characterPath}`);
+          process.exit(0);
+        } catch (error) {
+          throw new Error(`Failed to create agent: ${error.message}`);
+        }
+      }
+
+      const fileContent = fs.readFileSync(selectedFile, 'utf8');
+      const characterJson = JSON.parse(fileContent);
+      console.info(`Starting agent from ${selectedFile}`);
+
+      // First create the agent
+      const createResponse = await fetch(baseUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ characterJson }),
+      });
+      const createData = await createResponse.json();
+      if (!createData.success) {
+        throw new Error('Failed to create agent');
+      }
+      // Find the agent by name
+      const agents = await getAgents(options);
+      const agentEntry = agents.find(
+        (a) => a.name.toLowerCase() === characterJson.name.toLowerCase()
+      );
+      if (!agentEntry) {
+        throw new Error('Agent was created but not found in agent list');
+      }
+      const agentId = agentEntry.id;
+
+      // Then start the agent's runtime
+      const startResponse = await fetch(`${baseUrl}/${agentId}`, {
+        method: 'POST',
+        headers,
+      });
+      if (!startResponse.ok) {
+        throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
+      }
+
+      console.info(`Successfully started agent from ${selectedFile}`);
+      process.exit(0);
     } catch (error) {
-      console.error('Error in agent start command:', error);
       await checkServer(options);
-      handleError(error);
+      console.error(`Error: ${error.message}`);
+      process.exit(1);
     }
   });
 
@@ -377,7 +599,7 @@ agent
   .command('stop')
   .alias('st')
   .description('Stop an agent')
-  .requiredOption('-n, --name <name>', 'agent id, name, or index number from list')
+  .requiredOption('-n, --name <n>', 'agent id, name, or index number from list')
   .action(async (opts) => {
     try {
       const resolvedAgentId = await resolveAgentId(opts.name, opts);
@@ -406,7 +628,7 @@ agent
   .command('remove')
   .alias('rm')
   .description('Remove an agent')
-  .requiredOption('-n, --name <name>', 'agent id, name, or index number from list')
+  .requiredOption('-n, --name <n>', 'agent id, name, or index number from list')
   .action(async (opts) => {
     try {
       const resolvedAgentId = await resolveAgentId(opts.name, opts);
@@ -438,7 +660,7 @@ agent
 agent
   .command('set')
   .description('Update agent configuration')
-  .requiredOption('-n, --name <name>', 'agent id, name, or index number from list')
+  .requiredOption('-n, --name <n>', 'agent id, name, or index number from list')
   .option('-c, --config <json>', 'agent configuration as JSON string')
   .option('-f, --file <path>', 'path to agent configuration JSON file')
   .action(async (opts) => {
@@ -480,10 +702,7 @@ agent
         );
       }
 
-      const data = (await response.json()) as ApiResponse<{ id: string }>;
-      const result = data.data;
-
-      console.log(`Successfully updated configuration for agent ${result?.id || resolvedAgentId}`);
+      logger.success(`Successfully updated agent configuration`);
     } catch (error) {
       await checkServer(opts);
       handleError(error);
