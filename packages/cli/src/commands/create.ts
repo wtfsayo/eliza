@@ -35,7 +35,7 @@ import { z } from 'zod';
 const initOptionsSchema = z.object({
   dir: z.string().default('.'),
   yes: z.boolean().default(false),
-  type: z.enum(['project', 'plugin']).default('project'),
+  type: z.enum(['project', 'plugin', 'agent']).default('project'),
 });
 
 /**
@@ -177,6 +177,7 @@ export const create = new Command()
                 title: 'Plugin - Can be added to the registry and installed by others',
                 value: 'plugin',
               },
+              { title: 'Agent - An ElizaOS agent', value: 'agent' },
             ],
             initial: 0,
           });
@@ -188,8 +189,10 @@ export const create = new Command()
         }
       } else {
         // Validate the provided type if -t was used
-        if (!['project', 'plugin'].includes(projectType)) {
-          console.error(`Invalid type: ${projectType}. Must be either 'project' or 'plugin'`);
+        if (!['project', 'plugin', 'agent'].includes(projectType)) {
+          console.error(
+            `Invalid type: ${projectType}. Must be either 'project', 'plugin', or 'agent'`
+          );
           process.exit(1);
         }
       }
@@ -311,7 +314,26 @@ export const create = new Command()
         }
       }
 
-      if (options.type === 'plugin') {
+      if (options.type === 'agent') {
+        // Get the default character template
+        const { character: defaultCharacter } = await import('../characters/eliza');
+
+        // Create a new character based on the name
+        const newCharacter = {
+          ...defaultCharacter,
+          name: projectName,
+        };
+
+        // Write the character to a JSON file in the current directory
+        const characterPath = path.join(process.cwd(), `${projectName}.json`);
+        await fs.writeFile(characterPath, JSON.stringify(newCharacter, null, 2));
+
+        console.log('Agent initialized successfully!');
+        console.info(
+          `\nYour agent is ready! Here's what you can do next:\n1. Run \`elizaos agent start -n ${projectName}\` to start your agent`
+        );
+        process.exit(0);
+      } else if (options.type === 'plugin') {
         // Create directory if it doesn't exist
         if (!existsSync(targetDir)) {
           await fs.mkdir(targetDir, { recursive: true });
