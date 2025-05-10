@@ -165,14 +165,36 @@ agent
   .command('get')
   .alias('g')
   .description('Get agent details')
-  .requiredOption('-n, --name <name>', 'agent id, name, or index number from list')
-  .option('-j, --json', 'output as JSON')
-  .option('-o, --output <file>', 'output to file (default: {name}.json)')
+  .option('-n, --name <name>', 'agent id, name, or index number from list')
+  .option('-j, --json', 'display as JSON')
+  .option('-o, --output <file>', 'save to file (default: {name}.json)')
   .action(async (opts) => {
     try {
-      const resolvedAgentId = await resolveAgentId(opts.name, opts);
       const baseUrl = getAgentsBaseUrl(opts);
 
+      // If no name is provided, list all agents
+      if (!opts.name) {
+        const agents = await getAgents(opts);
+        if (opts.json) {
+          console.info(JSON.stringify(agents, null, 2));
+        } else {
+          console.info('\nAvailable agents:');
+          if (agents.length === 0) {
+            console.info('No agents found');
+          } else {
+            console.table(
+              agents.map((agent) => ({
+                Name: agent.name,
+                ID: agent.id,
+                Status: agent.status || 'unknown',
+              }))
+            );
+          }
+        }
+        process.exit(0);
+      }
+
+      const resolvedAgentId = await resolveAgentId(opts.name, opts);
       console.info(`Getting agent ${resolvedAgentId}`);
 
       // API Endpoint: GET /agents/:agentId
@@ -185,16 +207,24 @@ agent
 
       const { data: agent } = (await response.json()) as ApiResponse<Agent>;
 
-      // The displayAgent function expects a character object
-      displayAgent(agent, 'Agent Details');
-
-      // check if json argument is provided
-      if (opts.json) {
-        const jsonPath = opts.output || path.join(process.cwd(), `${agent.name || 'agent'}.json`);
-        // exclude id and status fields from the json
+      // Handle output options
+      if (opts.output) {
+        // Save to specified file
+        const jsonPath = opts.output.endsWith('.json') ? opts.output : `${opts.output}.json`;
         const { id, createdAt, updatedAt, enabled, ...agentConfig } = agent;
         fs.writeFileSync(jsonPath, JSON.stringify(agentConfig, null, 2));
         console.log(`Saved agent configuration to ${jsonPath}`);
+        process.exit(0);
+      }
+
+      // Display the agent
+      if (opts.json) {
+        // Display as JSON
+        const { id, createdAt, updatedAt, enabled, ...agentConfig } = agent;
+        console.info(JSON.stringify(agentConfig, null, 2));
+      } else {
+        // Display formatted
+        displayAgent(agent, 'Agent Details');
       }
 
       process.exit(0);
