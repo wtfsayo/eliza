@@ -7,7 +7,6 @@ import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import prompts from 'prompts';
 import { spawn } from 'child_process';
-import { create } from '@/src/commands/create';
 
 /**
  * Validates if the given object matches the Character interface structure.
@@ -107,7 +106,7 @@ async function resolveAgentId(idOrNameOrIndex: string, opts: OptionValues): Prom
   }
 
   // If no agent is found, throw an error
-  console.error(`Agent not found: ${idOrNameOrIndex}`);
+  throw new Error(`Agent not found: ${idOrNameOrIndex}`);
 }
 
 export const agent = new Command()
@@ -233,9 +232,14 @@ agent
       // API Endpoint: GET /agents/:agentId
       const response = await fetch(`${baseUrl}/${resolvedAgentId}`);
       if (!response.ok) {
-        const errorData = (await response.json()) as ApiResponse<unknown>;
-        logger.error(`Failed to get agent: ${errorData.error?.message || response.statusText}`);
-        process.exit(1);
+        try {
+          const errorData = (await response.json()) as ApiResponse<unknown>;
+          logger.error(`Failed to get agent: ${errorData.error?.message || response.statusText}`);
+          process.exit(1);
+        } catch (jsonError) {
+          logger.error(`Failed to get agent: ${response.status} ${response.statusText}`);
+          process.exit(1);
+        }
       }
 
       const { data: agent } = (await response.json()) as ApiResponse<Agent>;
@@ -358,10 +362,16 @@ agent
               headers,
               body: JSON.stringify({ characterJson: newCharacter }),
             });
-
+            if (!createResponse.ok) {
+              throw new Error(
+                `Server error ${createResponse.status}: ${createResponse.statusText}`
+              );
+            }
             const createData = await createResponse.json();
             if (!createData.success) {
-              throw new Error('Failed to create agent');
+              throw new Error(
+                `Failed to create agent: ${createData.error?.message || 'Unknown error'}`
+              );
             }
           } else {
             console.info('Operation cancelled.');
@@ -395,9 +405,14 @@ agent
             headers,
             body: JSON.stringify({ characterJson }),
           });
+          if (!createResponse.ok) {
+            throw new Error(`Server error ${createResponse.status}: ${createResponse.statusText}`);
+          }
           const createData = await createResponse.json();
           if (!createData.success) {
-            throw new Error('Failed to create agent');
+            throw new Error(
+              `Failed to create agent: ${createData.error?.message || 'Unknown error'}`
+            );
           }
         }
 
@@ -415,7 +430,16 @@ agent
           headers,
         });
         if (!startResponse.ok) {
-          throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
+          try {
+            const errorData = (await startResponse.json()) as ApiResponse<unknown>;
+            throw new Error(
+              `Failed to start agent runtime: ${errorData.error?.message || startResponse.statusText}`
+            );
+          } catch (jsonError) {
+            throw new Error(
+              `Failed to start agent runtime: ${startResponse.status} ${startResponse.statusText}`
+            );
+          }
         }
 
         console.info(`Successfully started agent '${agentName}'`);
@@ -438,9 +462,14 @@ agent
           headers,
           body: JSON.stringify({ characterJson }),
         });
+        if (!createResponse.ok) {
+          throw new Error(`Server error ${createResponse.status}: ${createResponse.statusText}`);
+        }
         const createData = await createResponse.json();
         if (!createData.success) {
-          throw new Error('Failed to create agent');
+          throw new Error(
+            `Failed to create agent: ${createData.error?.message || 'Unknown error'}`
+          );
         }
         // Find the agent by name
         const agents = await getAgents(options);
@@ -458,7 +487,16 @@ agent
           headers,
         });
         if (!startResponse.ok) {
-          throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
+          try {
+            const errorData = (await startResponse.json()) as ApiResponse<unknown>;
+            throw new Error(
+              `Failed to start agent runtime: ${errorData.error?.message || startResponse.statusText}`
+            );
+          } catch (jsonError) {
+            throw new Error(
+              `Failed to start agent runtime: ${startResponse.status} ${startResponse.statusText}`
+            );
+          }
         }
 
         console.info(`Successfully started agent from ${filePath}`);
@@ -542,9 +580,14 @@ agent
             headers,
             body: JSON.stringify({ characterJson }),
           });
+          if (!createResponse.ok) {
+            throw new Error(`Server error ${createResponse.status}: ${createResponse.statusText}`);
+          }
           const createData = await createResponse.json();
           if (!createData.success) {
-            throw new Error('Failed to create agent');
+            throw new Error(
+              `Failed to create agent: ${createData.error?.message || 'Unknown error'}`
+            );
           }
           // Find the agent by name
           const agents = await getAgents(options);
@@ -562,7 +605,16 @@ agent
             headers,
           });
           if (!startResponse.ok) {
-            throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
+            try {
+              const errorData = (await startResponse.json()) as ApiResponse<unknown>;
+              throw new Error(
+                `Failed to start agent runtime: ${errorData.error?.message || startResponse.statusText}`
+              );
+            } catch (jsonError) {
+              throw new Error(
+                `Failed to start agent runtime: ${startResponse.status} ${startResponse.statusText}`
+              );
+            }
           }
 
           console.info(`Successfully started agent from ${characterPath}`);
@@ -582,9 +634,12 @@ agent
         headers,
         body: JSON.stringify({ characterJson }),
       });
+      if (!createResponse.ok) {
+        throw new Error(`Server error ${createResponse.status}: ${createResponse.statusText}`);
+      }
       const createData = await createResponse.json();
       if (!createData.success) {
-        throw new Error('Failed to create agent');
+        throw new Error(`Failed to create agent: ${createData.error?.message || 'Unknown error'}`);
       }
       // Find the agent by name
       const agents = await getAgents(options);
@@ -602,7 +657,16 @@ agent
         headers,
       });
       if (!startResponse.ok) {
-        throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
+        try {
+          const errorData = (await startResponse.json()) as ApiResponse<unknown>;
+          throw new Error(
+            `Failed to start agent runtime: ${errorData.error?.message || startResponse.statusText}`
+          );
+        } catch (jsonError) {
+          throw new Error(
+            `Failed to start agent runtime: ${startResponse.status} ${startResponse.statusText}`
+          );
+        }
       }
 
       console.info(`Successfully started agent from ${selectedFile}`);
@@ -665,8 +729,14 @@ agent
       const response = await fetch(`${baseUrl}/${resolvedAgentId}`, { method: 'PUT' });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as ApiResponse<unknown>;
-        throw new Error(errorData.error?.message || `Failed to stop agent: ${response.statusText}`);
+        try {
+          const errorData = (await response.json()) as ApiResponse<unknown>;
+          throw new Error(
+            errorData.error?.message || `Failed to stop agent: ${response.statusText}`
+          );
+        } catch (jsonError) {
+          throw new Error(`Failed to stop agent: ${response.status} ${response.statusText}`);
+        }
       }
 
       logger.success(`Successfully stopped agent ${opts.name}`);
@@ -728,10 +798,14 @@ agent
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as ApiResponse<unknown>;
-        throw new Error(
-          errorData.error?.message || `Failed to remove agent: ${response.statusText}`
-        );
+        try {
+          const errorData = (await response.json()) as ApiResponse<unknown>;
+          throw new Error(
+            errorData.error?.message || `Failed to remove agent: ${response.statusText}`
+          );
+        } catch (jsonError) {
+          throw new Error(`Failed to remove agent: ${response.status} ${response.statusText}`);
+        }
       }
 
       // Server returns 204 No Content for successful deletion, no need to parse response
@@ -794,10 +868,14 @@ agent
       // Get the current configuration for the agent
       const response = await fetch(`${baseUrl}/${resolvedAgentId}`);
       if (!response.ok) {
-        const errorData = (await response.json()) as ApiResponse<unknown>;
-        throw new Error(
-          errorData.error?.message || `Failed to fetch agent: ${response.statusText}`
-        );
+        try {
+          const errorData = (await response.json()) as ApiResponse<unknown>;
+          throw new Error(
+            errorData.error?.message || `Failed to fetch agent: ${response.statusText}`
+          );
+        } catch (jsonError) {
+          throw new Error(`Failed to fetch agent: ${response.status} ${response.statusText}`);
+        }
       }
 
       const { data: agent } = (await response.json()) as ApiResponse<Agent>;
@@ -942,7 +1020,9 @@ agent
             throw new Error(errorMessage);
           } catch (jsonError) {
             // If we can't parse the error as JSON, use the status text
-            throw new Error(`Failed to update agent configuration: ${updateResponse.statusText}`);
+            throw new Error(
+              `Failed to update agent configuration: ${updateResponse.status} ${updateResponse.statusText}`
+            );
           }
         }
 

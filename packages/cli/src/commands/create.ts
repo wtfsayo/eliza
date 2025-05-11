@@ -150,7 +150,7 @@ export const create = new Command()
     opts.yes = opts.yes === true || opts.yes === 'true';
 
     // Display banner and continue with initialization
-    displayBanner();
+    await displayBanner();
 
     try {
       // Parse options but use "" as the default for type to force prompting
@@ -326,8 +326,23 @@ export const create = new Command()
           name: projectName,
         };
 
-        // Write the character to a JSON file in the current directory
-        const characterPath = path.join(process.cwd(), `${projectName}.json`);
+        // Respect the specified output directory
+        const outputDir = path.resolve(options.dir === '.' ? process.cwd() : options.dir);
+        const characterPath = path.join(outputDir, `${projectName}.json`);
+
+        // Check if the file already exists before writing
+        if (existsSync(characterPath) && !options.yes) {
+          console.error(colors.red(`Error: File ${characterPath} already exists.`));
+          console.error('Use --yes to overwrite or choose a different name.');
+          process.exit(1);
+        }
+
+        // Create directory if it doesn't exist (ensure parent dir exists)
+        if (!existsSync(outputDir)) {
+          await fs.mkdir(outputDir, { recursive: true });
+        }
+
+        // Write the character to a JSON file
         await fs.writeFile(characterPath, JSON.stringify(newCharacter, null, 2));
 
         console.log('Agent initialized successfully!');

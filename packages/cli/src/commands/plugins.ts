@@ -107,14 +107,7 @@ export const findPluginPackageName = (
 
 // --- End Helper Functions ---
 
-export const plugins = new Command()
-  .name('plugins')
-  .description('Manage ElizaOS plugins')
-  .option('-h, --help', 'Show help for plugins command')
-  .action(function () {
-    // Just show help directly without displaying the banner first
-    this.help();
-  });
+export const plugins = new Command().name('plugins').description('Manage ElizaOS plugins');
 
 export const pluginsCommand = plugins
   .command('list')
@@ -209,11 +202,11 @@ plugins
 
           // Only use workspace dependencies if this project is part of the monorepo structure
           // i.e., if it's in the same directory as the monorepo root
-          if (monorepoRoot && cwd.startsWith(monorepoRoot)) {
+          if (monorepoRoot && path.relative(monorepoRoot, cwd).startsWith('..') === false) {
             // Check if the project has workspaces configured and that the plugin is in its workspaces
             const packageJsonPath = path.join(cwd, 'package.json');
             let hasWorkspaceConfig = false;
-            let canUseWorkspaceDependency = false;
+            let canUseWorkspaceDependency = true; // Default to true, disable only when we find a specific reason not to
 
             try {
               const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
@@ -246,8 +239,10 @@ plugins
                     // Add the workspace reference
                     packageJson.dependencies[npmPackageName] = 'workspace:*';
 
-                    // Write the updated package.json
-                    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+                    // Write the updated package.json using an atomic approach
+                    const tempFile = `${packageJsonPath}.tmp`;
+                    fs.writeFileSync(tempFile, JSON.stringify(packageJson, null, 2));
+                    fs.renameSync(tempFile, packageJsonPath);
 
                     console.log(
                       `Successfully added ${npmPackageName} as workspace reference in root package.json`
