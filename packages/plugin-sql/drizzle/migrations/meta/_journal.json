@@ -5,8 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1746884807264,
-      "tag": "0000_snapshot",
+      "when": 1747000557496,
+      "tag": "0000_create_extensions",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1747000574755,
+      "tag": "0001_init",
       "breakpoints": true
     }
   ]
