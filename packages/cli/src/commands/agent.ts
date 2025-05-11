@@ -745,10 +745,13 @@ agent
 
 agent
   .command('set')
-  .description('Update agent configuration')
+  .description(
+    'Update agent configuration on the server (changes will not affect local JSON files)'
+  )
   .option('-n, --name <n>', 'agent id, name, or index number from list')
-  .option('-c, --config <json>', 'agent configuration as JSON string')
-  .option('-f, --file <path>', 'path to agent configuration JSON file')
+  .option('-c, --config <json>', 'agent configuration as JSON string (advanced mode)')
+  .option('-f, --file <path>', 'path to agent configuration JSON file (advanced mode)')
+  .option('-i, --interactive', 'use interactive mode (default when no config or file provided)')
   .action(async (opts) => {
     try {
       // Get the base URL once
@@ -786,10 +789,115 @@ agent
       }
 
       const resolvedAgentId = await resolveAgentId(opts.name, opts);
-      console.info(`Updating configuration for agent ${resolvedAgentId}`);
+      console.info(`Fetching current configuration for agent ${resolvedAgentId}...`);
+
+      // Get the current configuration for the agent
+      const response = await fetch(`${baseUrl}/${resolvedAgentId}`);
+      if (!response.ok) {
+        const errorData = (await response.json()) as ApiResponse<unknown>;
+        throw new Error(
+          errorData.error?.message || `Failed to fetch agent: ${response.statusText}`
+        );
+      }
+
+      const { data: agent } = (await response.json()) as ApiResponse<Agent>;
+      const { id, createdAt, updatedAt, enabled, ...currentConfig } = agent;
 
       let config: Record<string, unknown>;
-      if (opts.config) {
+
+      // Use interactive mode if explicitly requested or no other mode specified
+      if (opts.interactive || (!opts.config && !opts.file)) {
+        console.info('\nUpdating agent configuration interactively...');
+        console.info('(Press Enter to keep current values, Ctrl+C to cancel)');
+        console.info(
+          'Note: Changes will update the agent on the server but will not modify local JSON files.\n'
+        );
+
+        // Prompt for basic agent properties
+        const responses = await prompts([
+          {
+            type: 'text',
+            name: 'name',
+            message: 'Agent name:',
+            initial: agent.name,
+          },
+          {
+            type: 'text',
+            name: 'username',
+            message: 'Username:',
+            initial: agent.username || agent.name?.toLowerCase().replace(/\s+/g, '_'),
+          },
+          {
+            type: 'text',
+            name: 'bio',
+            message: 'Bio (comma-separated list):',
+            initial: Array.isArray(agent.bio) ? agent.bio.join(', ') : agent.bio || '',
+          },
+          {
+            type: 'text',
+            name: 'plugins',
+            message: 'Plugins (comma-separated list):',
+            initial: Array.isArray(agent.plugins) ? agent.plugins.join(', ') : '',
+          },
+          {
+            type: 'confirm',
+            name: 'advancedConfig',
+            message: 'Would you like to edit more advanced configuration options?',
+            initial: false,
+          },
+        ]);
+
+        // Exit if user cancelled
+        if (!responses.name) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Start with a copy of the current config so we keep fields we don't modify
+        config = { ...currentConfig };
+
+        // Update the basic fields
+        config.name = responses.name;
+        config.username = responses.username;
+
+        // Split comma-separated values for bio and plugins
+        config.bio = responses.bio ? responses.bio.split(',').map((item) => item.trim()) : [];
+        config.plugins = responses.plugins
+          ? responses.plugins.split(',').map((item) => item.trim())
+          : [];
+
+        // If user wants advanced configuration, open the full config in a temp file for editing
+        if (responses.advancedConfig) {
+          const tempFile = path.join(process.cwd(), `${agent.name}-config-temp.json`);
+
+          // Write the current config to a temporary file
+          fs.writeFileSync(tempFile, JSON.stringify(config, null, 2));
+
+          console.info(`\nOpening advanced configuration in ${tempFile}`);
+          console.info('Edit the file, save it, then close the editor to continue.');
+
+          // Use the default editor to open the file (e.g., EDITOR env var)
+          const editorCmd = process.env.EDITOR || 'nano';
+
+          try {
+            // Use spawn to open the editor and wait for it to close
+            const edit = spawn(editorCmd, [tempFile], { stdio: 'inherit' });
+            await new Promise((resolve) => {
+              edit.on('exit', resolve);
+            });
+
+            // Read the updated config from the file
+            const updatedConfig = JSON.parse(fs.readFileSync(tempFile, 'utf8'));
+            config = updatedConfig;
+
+            // Clean up the temp file
+            fs.unlinkSync(tempFile);
+          } catch (error) {
+            console.error(`Error opening editor: ${error.message}`);
+            console.info('Continuing with basic configuration...');
+          }
+        }
+      } else if (opts.config) {
         try {
           config = JSON.parse(opts.config);
         } catch (error) {
@@ -801,27 +909,44 @@ agent
         } catch (error) {
           throw new Error(`Failed to read or parse config file: ${error.message}`);
         }
-      } else {
-        throw new Error(
-          'Please provide either a config JSON string (-c) or a config file path (-f)'
-        );
       }
 
-      // API Endpoint: PATCH /agents/:agentId
-      const response = await fetch(`${baseUrl}/${resolvedAgentId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
-      });
+      console.info('Updating agent configuration...');
 
-      if (!response.ok) {
-        const errorData = (await response.json()) as ApiResponse<unknown>;
-        throw new Error(
-          errorData.error?.message || `Failed to update agent configuration: ${response.statusText}`
+      try {
+        // API Endpoint: PATCH /agents/:agentId
+        const updateResponse = await fetch(`${baseUrl}/${resolvedAgentId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config),
+        });
+
+        if (!updateResponse.ok) {
+          // Try to parse the error response
+          try {
+            const errorData = await updateResponse.json();
+            const errorMessage =
+              errorData.error?.message ||
+              `Failed to update agent configuration: ${updateResponse.statusText}`;
+            throw new Error(errorMessage);
+          } catch (jsonError) {
+            // If we can't parse the error as JSON, use the status text
+            throw new Error(`Failed to update agent configuration: ${updateResponse.statusText}`);
+          }
+        }
+
+        logger.success(`Successfully updated agent configuration`);
+        console.info(
+          `Tip: To update your local file, run "elizaos agent get -n ${agent.name} -o your-file.json"`
         );
+      } catch (updateError) {
+        console.error(`Error updating agent configuration: ${updateError.message}`);
+        if (config) {
+          console.log('Configuration attempted to update:');
+          console.log(JSON.stringify(config, null, 2));
+        }
+        throw new Error(`Failed to update agent: ${updateError.message}`);
       }
-
-      logger.success(`Successfully updated agent configuration`);
     } catch (error) {
       await checkServer(opts);
       handleError(error);
