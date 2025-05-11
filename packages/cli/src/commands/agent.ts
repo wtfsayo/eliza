@@ -169,10 +169,10 @@ agent
       if (opts.json) {
         console.info(JSON.stringify(agentData, null, 2));
       } else {
-        console.info('\nAvailable agents:');
         if (agentData.length === 0) {
           console.info('No agents found');
         } else {
+          console.info('\nAvailable agents:');
           console.table(agentData);
         }
       }
