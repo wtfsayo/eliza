@@ -152,7 +152,7 @@ interface ApiResponse<T> {
 agent
   .command('list')
   .alias('ls')
-  .description('List available agents')
+  .description('List agents currently running on the server')
   .option('-j, --json', 'output as JSON')
   .action(async (opts) => {
     try {
@@ -187,7 +187,7 @@ agent
 agent
   .command('get')
   .alias('g')
-  .description('Get agent details')
+  .description('Get agent details from the server (use -o to save to a local file)')
   .option('-n, --name <n>', 'agent id, name, or index number from list')
   .option('-j, --json', 'display as JSON')
   .option('-o, --output [file]', 'save to file (default: {agent_name}.json)')
@@ -234,7 +234,7 @@ agent
       const response = await fetch(`${baseUrl}/${resolvedAgentId}`);
       if (!response.ok) {
         const errorData = (await response.json()) as ApiResponse<unknown>;
-        logger.error(`Failed to get agent`);
+        logger.error(`Failed to get agent: ${errorData.error?.message || response.statusText}`);
         process.exit(1);
       }
 
@@ -243,7 +243,7 @@ agent
       // Handle output options
       if (opts.output !== undefined) {
         // If --output was provided with no value, use agent name as filename
-        const outputPath = opts.output === true ? agent.name : opts.output;
+        const outputPath = opts.output === true ? `${agent.name}.json` : opts.output;
 
         // Save to specified file
         const jsonPath = outputPath.endsWith('.json') ? outputPath : `${outputPath}.json`;
@@ -810,7 +810,12 @@ agent
         console.info('\nUpdating agent configuration interactively...');
         console.info('(Press Enter to keep current values, Ctrl+C to cancel)');
         console.info(
-          'Note: Changes will update the agent on the server but will not modify local JSON files.\n'
+          '\nNOTE: Changes will update the agent on the server but will NOT modify local JSON files.'
+        );
+        console.info(
+          'After making changes, use "elizaos agent get -n ' +
+            agent.name +
+            ' -o <filename>" to save the updated configuration locally.\n'
         );
 
         // Prompt for basic agent properties
@@ -875,6 +880,7 @@ agent
 
           console.info(`\nOpening advanced configuration in ${tempFile}`);
           console.info('Edit the file, save it, then close the editor to continue.');
+          console.info('IMPORTANT: Make sure to save valid JSON before closing the editor.');
 
           // Use the default editor to open the file (e.g., EDITOR env var)
           const editorCmd = process.env.EDITOR || 'nano';
@@ -887,8 +893,13 @@ agent
             });
 
             // Read the updated config from the file
-            const updatedConfig = JSON.parse(fs.readFileSync(tempFile, 'utf8'));
-            config = updatedConfig;
+            try {
+              const updatedConfig = JSON.parse(fs.readFileSync(tempFile, 'utf8'));
+              config = updatedConfig;
+            } catch (parseError) {
+              console.error(`Error parsing JSON from edited file: ${parseError.message}`);
+              console.info('Continuing with basic configuration...');
+            }
 
             // Clean up the temp file
             fs.unlinkSync(tempFile);
@@ -936,6 +947,9 @@ agent
         }
 
         logger.success(`Successfully updated agent configuration`);
+        console.info(
+          `\nNote: These changes only affected the server configuration, not your local files.`
+        );
         console.info(
           `Tip: To update your local file, run "elizaos agent get -n ${agent.name} -o your-file.json"`
         );
