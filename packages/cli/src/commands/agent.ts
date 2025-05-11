@@ -190,31 +190,41 @@ agent
   .description('Get agent details')
   .option('-n, --name <n>', 'agent id, name, or index number from list')
   .option('-j, --json', 'display as JSON')
-  .option('-o, --output <file>', 'save to file (default: {name}.json)')
+  .option('-o, --output [file]', 'save to file (default: {agent_name}.json)')
   .action(async (opts) => {
     try {
       const baseUrl = getAgentsBaseUrl(opts);
 
-      // If no name is provided, list all agents
+      // If no name is provided, show interactive selector
       if (!opts.name) {
         const agents = await getAgents(opts);
-        if (opts.json) {
-          console.info(JSON.stringify(agents, null, 2));
-        } else {
-          console.info('\nAvailable agents:');
-          if (agents.length === 0) {
-            console.info('No agents found');
-          } else {
-            console.table(
-              agents.map((agent) => ({
-                Name: agent.name,
-                ID: agent.id,
-                Status: agent.status || 'unknown',
-              }))
-            );
-          }
+
+        if (agents.length === 0) {
+          console.info('No agents found');
+          process.exit(0);
         }
-        process.exit(0);
+
+        // Always prompt the user to select an agent if no name is provided,
+        // regardless of json or output options
+        const { selectedAgent } = await prompts({
+          type: 'select',
+          name: 'selectedAgent',
+          message: 'Select an agent to view details:',
+          choices: agents.map((agent, index) => ({
+            title: `${agent.name} (${agent.status || 'unknown'})`,
+            value: agent.id,
+          })),
+          initial: 0,
+        });
+
+        // Exit if user cancelled
+        if (!selectedAgent) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Set the selected agent ID as the name option
+        opts.name = selectedAgent;
       }
 
       const resolvedAgentId = await resolveAgentId(opts.name, opts);
@@ -231,9 +241,12 @@ agent
       const { data: agent } = (await response.json()) as ApiResponse<Agent>;
 
       // Handle output options
-      if (opts.output) {
+      if (opts.output !== undefined) {
+        // If --output was provided with no value, use agent name as filename
+        const outputPath = opts.output === true ? agent.name : opts.output;
+
         // Save to specified file
-        const jsonPath = opts.output.endsWith('.json') ? opts.output : `${opts.output}.json`;
+        const jsonPath = outputPath.endsWith('.json') ? outputPath : `${outputPath}.json`;
         const { id, createdAt, updatedAt, enabled, ...agentConfig } = agent;
         fs.writeFileSync(jsonPath, JSON.stringify(agentConfig, null, 2));
         console.log(`Saved agent configuration to ${jsonPath}`);
