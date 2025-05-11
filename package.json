@@ -1,12 +1,11 @@
 {
   "name": "eliza",
   "scripts": {
-    "preinstall": "only-allow bun",
     "start": "cd ./packages/the-org && bun run start",
     "start-cli": "cd ./packages/cli && bun run cli start",
     "start:debug": "cross-env NODE_NO_WARNINGS=1 LOG_LEVEL=debug elizaos start",
     "start:app": "turbo run start --filter=./packages/app",
-    "dev": "turbo run dev --filter=./packages/the-org",
+    "dev": "LOG_LEVEL=debug FORCE_COLOR=0 NODE_ENV=production CI=true PGLITE_DATA_DIR=$HOME/.eliza/db DATABASE_TYPE=postgres POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/eliza turbo run build --filter=./packages/core --filter=./packages/plugin-discord && LOG_LEVEL=debug FORCE_COLOR=0 NODE_ENV=production CI=true PGLITE_DATA_DIR=$HOME/.eliza/db DATABASE_TYPE=postgres POSTGRES_URL=postgresql://postgres:postgres@localhost:5432/eliza turbo run dev --filter=./packages/the-org",
     "build:docs": "turbo run build --filter=@elizaos/docs",
     "build:client": "turbo run build --filter=@elizaos/client",
     "build": "turbo run build --filter=@elizaos/client && turbo run build --filter=!@elizaos/docs",
@@ -40,7 +39,6 @@
     "husky": "^9.1.7",
     "lerna": "8.1.4",
     "lint-staged": "^15.5.0",
-    "only-allow": "^1.2.1",
     "sharp": "0.33.5",
     "tsup": "8.4.0",
     "turbo": "^2.4.4",

@@ -20,7 +20,7 @@ import {
   type TextChannel,
 } from 'discord.js';
 import { AttachmentManager } from './attachments';
-import { DiscordEventTypes } from './types';
+import { DiscordEventTypes, DiscordActionRow, DiscordComponentOptions } from './types';
 import { canSendMessage, sendMessageInChunks } from './utils';
 
 /**
@@ -115,6 +115,8 @@ export class MessageManager {
       channelId: message.channel.id,
       serverId,
       type,
+      worldId: createUniqueUuid(this.runtime, serverId) as UUID,
+      worldName: message.guild?.name,
     });
 
     try {
@@ -191,7 +193,10 @@ export class MessageManager {
         createdAt: message.createdTimestamp,
       };
 
-      const callback: HandlerCallback = async (content: Content, files: any[]) => {
+      const callback: HandlerCallback = async (
+        content: Content,
+        files: Array<{ attachment: Buffer | string; name: string }>
+      ) => {
         try {
           if (message.id && !content.inReplyTo) {
             content.inReplyTo = createUniqueUuid(this.runtime, message.id);
