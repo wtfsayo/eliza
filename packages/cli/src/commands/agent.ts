@@ -618,12 +618,47 @@ agent
   .command('stop')
   .alias('st')
   .description('Stop an agent')
-  .requiredOption('-n, --name <n>', 'agent id, name, or index number from list')
+  .option('-n, --name <n>', 'agent id, name, or index number from list')
   .action(async (opts) => {
     try {
-      const resolvedAgentId = await resolveAgentId(opts.name, opts);
+      // Get the base URL once
       const baseUrl = getAgentsBaseUrl(opts);
 
+      // If no name is provided, show interactive selector with active agents
+      if (!opts.name) {
+        const agents = await getAgents(opts);
+
+        // Filter to only show active agents
+        const activeAgents = agents.filter((agent) => agent.status === 'active');
+
+        if (activeAgents.length === 0) {
+          console.info('No active agents found');
+          process.exit(0);
+        }
+
+        // Prompt the user to select an agent to stop
+        const { selectedAgent } = await prompts({
+          type: 'select',
+          name: 'selectedAgent',
+          message: 'Select an agent to stop:',
+          choices: activeAgents.map((agent, index) => ({
+            title: `${agent.name} (${agent.id})`,
+            value: agent.id,
+          })),
+          initial: 0,
+        });
+
+        // Exit if user cancelled
+        if (!selectedAgent) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Set the selected agent ID as the name option
+        opts.name = selectedAgent;
+      }
+
+      const resolvedAgentId = await resolveAgentId(opts.name, opts);
       console.info(`Stopping agent ${resolvedAgentId}`);
 
       // API Endpoint: PUT /agents/:agentId (not /agents/:agentId/stop)
@@ -647,12 +682,44 @@ agent
   .command('remove')
   .alias('rm')
   .description('Remove an agent')
-  .requiredOption('-n, --name <n>', 'agent id, name, or index number from list')
+  .option('-n, --name <n>', 'agent id, name, or index number from list')
   .action(async (opts) => {
     try {
-      const resolvedAgentId = await resolveAgentId(opts.name, opts);
+      // Get the base URL once
       const baseUrl = getAgentsBaseUrl(opts);
 
+      // If no name is provided, show interactive selector
+      if (!opts.name) {
+        const agents = await getAgents(opts);
+
+        if (agents.length === 0) {
+          console.info('No agents found');
+          process.exit(0);
+        }
+
+        // Prompt the user to select an agent to remove
+        const { selectedAgent } = await prompts({
+          type: 'select',
+          name: 'selectedAgent',
+          message: 'Select an agent to remove:',
+          choices: agents.map((agent, index) => ({
+            title: `${agent.name} (${agent.status || 'unknown'})`,
+            value: agent.id,
+          })),
+          initial: 0,
+        });
+
+        // Exit if user cancelled
+        if (!selectedAgent) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Set the selected agent ID as the name option
+        opts.name = selectedAgent;
+      }
+
+      const resolvedAgentId = await resolveAgentId(opts.name, opts);
       console.info(`Removing agent ${resolvedAgentId}`);
 
       // API Endpoint: DELETE /agents/:agentId
@@ -679,13 +746,46 @@ agent
 agent
   .command('set')
   .description('Update agent configuration')
-  .requiredOption('-n, --name <n>', 'agent id, name, or index number from list')
+  .option('-n, --name <n>', 'agent id, name, or index number from list')
   .option('-c, --config <json>', 'agent configuration as JSON string')
   .option('-f, --file <path>', 'path to agent configuration JSON file')
   .action(async (opts) => {
     try {
-      const resolvedAgentId = await resolveAgentId(opts.name, opts);
+      // Get the base URL once
+      const baseUrl = getAgentsBaseUrl(opts);
 
+      // If no name is provided, show interactive selector
+      if (!opts.name) {
+        const agents = await getAgents(opts);
+
+        if (agents.length === 0) {
+          console.info('No agents found');
+          process.exit(0);
+        }
+
+        // Prompt the user to select an agent to configure
+        const { selectedAgent } = await prompts({
+          type: 'select',
+          name: 'selectedAgent',
+          message: 'Select an agent to configure:',
+          choices: agents.map((agent, index) => ({
+            title: `${agent.name} (${agent.status || 'unknown'})`,
+            value: agent.id,
+          })),
+          initial: 0,
+        });
+
+        // Exit if user cancelled
+        if (!selectedAgent) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Set the selected agent ID as the name option
+        opts.name = selectedAgent;
+      }
+
+      const resolvedAgentId = await resolveAgentId(opts.name, opts);
       console.info(`Updating configuration for agent ${resolvedAgentId}`);
 
       let config: Record<string, unknown>;
@@ -708,7 +808,7 @@ agent
       }
 
       // API Endpoint: PATCH /agents/:agentId
-      const response = await fetch(`${getAgentsBaseUrl(opts)}/${resolvedAgentId}`, {
+      const response = await fetch(`${baseUrl}/${resolvedAgentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
