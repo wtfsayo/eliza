@@ -204,7 +204,6 @@ export abstract class BaseDrizzleAdapter<
       const row = rows[0];
       return {
         ...row,
-        username: row.username || '',
         id: row.id as UUID,
       };
     });
@@ -741,8 +740,8 @@ export abstract class BaseDrizzleAdapter<
         if (!entitiesByIdMap.has(entityId)) {
           const entity: Entity = {
             ...row.entity,
-            id: entityId,
-            agentId: row.entity.agentId as UUID,
+            id: stringToUuid(entityId),
+            agentId: stringToUuid(row.entity.agentId),
             metadata: row.entity.metadata as { [key: string]: any },
             components: includeComponents ? [] : undefined,
           };
@@ -1302,16 +1301,9 @@ export abstract class BaseDrizzleAdapter<
   }): Promise<void> {
     return this.withDatabase(async () => {
       try {
-        // Sanitize JSON body to prevent Unicode escape sequence errors
-        const sanitizedBody = this.sanitizeJsonObject(params.body);
-
-        // Serialize to JSON string first for an additional layer of protection
-        // This ensures any problematic characters are properly escaped during JSON serialization
-        const jsonString = JSON.stringify(sanitizedBody);
-
         await this.db.transaction(async (tx) => {
           await tx.insert(logTable).values({
-            body: sql`${jsonString}::jsonb`,
+            body: sql`${params.body}::jsonb`,
             entityId: params.entityId,
             roomId: params.roomId,
             type: params.type,
@@ -1327,49 +1319,6 @@ export abstract class BaseDrizzleAdapter<
         throw error;
       }
     });
-  }
-
-  /**
-   * Sanitizes a JSON object by replacing problematic Unicode escape sequences
-   * that could cause errors during JSON serialization/storage
-   *
-   * @param value - The value to sanitize
-   * @returns The sanitized value
-   */
-  private sanitizeJsonObject(value: unknown): unknown {
-    if (value === null || value === undefined) {
-      return value;
-    }
-
-    if (typeof value === 'string') {
-      // Handle multiple cases that can cause PostgreSQL/PgLite JSON parsing errors:
-      // 1. Remove null bytes (U+0000) which are not allowed in PostgreSQL text fields
-      // 2. Escape single backslashes that might be interpreted as escape sequences
-      // 3. Fix broken Unicode escape sequences (\u not followed by 4 hex digits)
-      return value
-        .replace(/\u0000/g, '') // Remove null bytes
-        .replace(/\\(?!["\\/bfnrtu])/g, '\\\\') // Escape single backslashes not part of valid escape sequences
-        .replace(/\\u(?![0-9a-fA-F]{4})/g, '\\\\u'); // Fix malformed Unicode escape sequences
-    }
-
-    if (typeof value === 'object') {
-      if (Array.isArray(value)) {
-        return value.map((item) => this.sanitizeJsonObject(item));
-      } else {
-        const result: Record<string, unknown> = {};
-        for (const [key, val] of Object.entries(value)) {
-          // Also sanitize object keys
-          const sanitizedKey =
-            typeof key === 'string'
-              ? key.replace(/\u0000/g, '').replace(/\\u(?![0-9a-fA-F]{4})/g, '\\\\u')
-              : key;
-          result[sanitizedKey] = this.sanitizeJsonObject(val);
-        }
-        return result;
-      }
-    }
-
-    return value;
   }
 
   /**
@@ -1609,7 +1558,7 @@ export abstract class BaseDrizzleAdapter<
           entityId: memory.entityId,
           roomId: memory.roomId,
           worldId: memory.worldId, // Include worldId
-          agentId: this.agentId,
+          agentId: memory.agentId,
           unique: memory.unique ?? isUnique,
           createdAt: memory.createdAt,
         },
@@ -1948,8 +1897,6 @@ export abstract class BaseDrizzleAdapter<
     worldId,
     metadata,
   }: Room): Promise<UUID> {
-    if (!worldId) throw new Error('worldId is required');
-
     return this.withDatabase(async () => {
       const newRoomId = id || v4();
       await this.db
@@ -2506,9 +2453,6 @@ export abstract class BaseDrizzleAdapter<
    * @returns {Promise<UUID>} A Promise that resolves to the ID of the created task.
    */
   async createTask(task: Task): Promise<UUID> {
-    if (!task.worldId) {
-      throw new Error('worldId is required');
-    }
     return this.withRetry(async () => {
       return this.withDatabase(async () => {
         const now = new Date();
@@ -2535,14 +2479,10 @@ export abstract class BaseDrizzleAdapter<
 
   /**
    * Asynchronously retrieves tasks based on specified parameters.
-   * @param params Object containing optional roomId, tags, and entityId to filter tasks
+   * @param params Object containing optional roomId and tags to filter tasks
    * @returns Promise resolving to an array of Task objects
    */
-  async getTasks(params: {
-    roomId?: UUID;
-    tags?: string[];
-    entityId?: UUID; // Added entityId parameter
-  }): Promise<Task[]> {
+  async getTasks(params: { roomId?: UUID; tags?: string[] }): Promise<Task[]> {
     return this.withRetry(async () => {
       return this.withDatabase(async () => {
         const result = await this.db

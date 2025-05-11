@@ -28,9 +28,7 @@ async function runMigrations() {
       process.exit(1);
     }
   } else {
-    let elizaDbDir =
-      process.env.PGLITE_DATA_DIR ??
-      path.join(os.homedir(), '.eliza', stringToUuid(process.cwd()), 'pglite');
+    let elizaDbDir = process.env.PGLITE_DATA_DIR;
     if (!elizaDbDir) {
       const homeDir = os.homedir();
       const elizaDir = path.join(homeDir, '.eliza');
