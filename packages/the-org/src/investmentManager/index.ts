@@ -34,7 +34,7 @@ dotenv.config({ path: '../../.env' });
 const character: Character = {
   name: 'Spartan',
   plugins: [
-    '@elizaos/plugin-sql',
+    '@elizaos/plugin-mysql',
     '@elizaos/plugin-anthropic',
     '@elizaos/plugin-openai',
     '@elizaos/plugin-discord',
