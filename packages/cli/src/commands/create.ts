@@ -35,7 +35,7 @@ import { z } from 'zod';
 const initOptionsSchema = z.object({
   dir: z.string().default('.'),
   yes: z.boolean().default(false),
-  type: z.enum(['project', 'plugin']).default('project'),
+  type: z.enum(['project', 'plugin', 'agent']).default('project'),
 });
 
 /**
@@ -126,16 +126,18 @@ node_modules
  */
 export const create = new Command()
   .name('create')
-  .description('Initialize a new project or plugin')
-  .option('-d, --dir <dir>', 'installation directory', '.')
-  .option('-y, --yes', 'skip confirmation', false)
-  .option('-t, --type <type>', 'type of template to use (project or plugin)', 'project')
-  .argument('[name]', 'name for the project or plugin')
+  .description('Initialize a new project (folder), plugin (folder), or agent (JSON file)')
+  .argument('[name]', 'name for the project, plugin, or agent')
+  .option('-d, --dir <dir>', 'installation directory (default: ".")')
+  .option('-y, --yes', 'skip confirmation (default: false)')
+  .option(
+    '-t, --type <type>',
+    'type of template to use (project, plugin, or agent) (default: "project")'
+  )
   .action(async (name, opts) => {
     // Set non-interactive mode if environment variable is set or if -y/--yes flag is present in process.argv
     if (
-      process.env.ELIZA_NONINTERACTIVE === '1' ||
-      process.env.ELIZA_NONINTERACTIVE === 'true' ||
+      process.env.ELIZA_NON_INTERACTIVE === 'true' ||
       process.argv.includes('-y') ||
       process.argv.includes('--yes')
     ) {
@@ -177,6 +179,7 @@ export const create = new Command()
                 title: 'Plugin - Can be added to the registry and installed by others',
                 value: 'plugin',
               },
+              { title: 'Agent - An ElizaOS agent', value: 'agent' },
             ],
             initial: 0,
           });
@@ -188,8 +191,10 @@ export const create = new Command()
         }
       } else {
         // Validate the provided type if -t was used
-        if (!['project', 'plugin'].includes(projectType)) {
-          console.error(`Invalid type: ${projectType}. Must be either 'project' or 'plugin'`);
+        if (!['project', 'plugin', 'agent'].includes(projectType)) {
+          console.error(
+            `Invalid type: ${projectType}. Must be either 'project', 'plugin', or 'agent'`
+          );
           process.exit(1);
         }
       }
@@ -311,7 +316,49 @@ export const create = new Command()
         }
       }
 
-      if (options.type === 'plugin') {
+      if (options.type === 'agent') {
+        // Get the default character template
+        const { character: defaultCharacter } = await import('../characters/eliza');
+
+        // Create a new character based on the name
+        const newCharacter = {
+          ...defaultCharacter,
+          name: projectName,
+        };
+
+        // Respect the specified output directory
+        const outputDir = path.resolve(options.dir === '.' ? process.cwd() : options.dir);
+        const characterPath = path.join(outputDir, `${projectName}.json`);
+
+        // Check if the file already exists before writing
+        if (existsSync(characterPath)) {
+          if (!options.yes) {
+            console.error(colors.red(`Error: File ${characterPath} already exists.`));
+            console.error('Use --yes to overwrite or choose a different name.');
+            process.exit(1);
+          } else {
+            console.warn(
+              colors.yellow(
+                `Warning: Overwriting existing file ${characterPath} (--yes flag provided)`
+              )
+            );
+          }
+        }
+
+        // Create directory if it doesn't exist (ensure parent dir exists)
+        if (!existsSync(outputDir)) {
+          await fs.mkdir(outputDir, { recursive: true });
+        }
+
+        // Write the character to a JSON file
+        await fs.writeFile(characterPath, JSON.stringify(newCharacter, null, 2));
+
+        console.log('Agent initialized successfully!');
+        console.info(
+          `\nYour agent is ready! Here's what you can do next:\n1. Run \`elizaos agent start -n ${projectName}\` to start your agent`
+        );
+        process.exit(0);
+      } else if (options.type === 'plugin') {
         // Create directory if it doesn't exist
         if (!existsSync(targetDir)) {
           await fs.mkdir(targetDir, { recursive: true });
@@ -332,8 +379,8 @@ export const create = new Command()
 
           // Skip building in test environments to avoid tsup dependency issues
           if (
-            process.env.ELIZA_NONINTERACTIVE === '1' ||
-            process.env.ELIZA_NONINTERACTIVE === 'true'
+            process.env.ELIZA_NON_INTERACTIVE === '1' ||
+            process.env.ELIZA_NON_INTERACTIVE === 'true'
           ) {
             console.log('Skipping build in non-interactive mode');
           } else {
@@ -405,8 +452,8 @@ export const create = new Command()
 
         // Skip building in test environments to avoid tsup dependency issues
         if (
-          process.env.ELIZA_NONINTERACTIVE === '1' ||
-          process.env.ELIZA_NONINTERACTIVE === 'true'
+          process.env.ELIZA_NON_INTERACTIVE === '1' ||
+          process.env.ELIZA_NON_INTERACTIVE === 'true'
         ) {
           console.log('Skipping build in non-interactive mode');
         } else {

@@ -3,7 +3,29 @@ import type { Agent } from '@elizaos/core';
 import { logger } from '@elizaos/core';
 import { Command, OptionValues, Option } from 'commander';
 import fs from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import prompts from 'prompts';
+import { spawn } from 'child_process';
+
+/**
+ * Validates if the given object matches the Character interface structure.
+ * @param {unknown} character - The object to validate
+ * @returns {boolean} True if the object matches the Character interface structure
+ */
+function isValidCharacterJson(character: unknown): boolean {
+  return (
+    typeof character === 'object' &&
+    character !== null &&
+    typeof (character as any).name === 'string' &&
+    Array.isArray((character as any).plugins) &&
+    typeof (character as any).system === 'string' &&
+    Array.isArray((character as any).bio) &&
+    Array.isArray((character as any).messageExamples) &&
+    typeof (character as any).style === 'object' &&
+    (character as any).style !== null
+  );
+}
 
 // Helper function to determine the agent runtime URL
 export function getAgentRuntimeUrl(opts: OptionValues): string {
@@ -80,11 +102,14 @@ async function resolveAgentId(idOrNameOrIndex: string, opts: OptionValues): Prom
 
   // Try to find agent by index
   if (!Number.isNaN(Number(idOrNameOrIndex))) {
-    return agents[Number(idOrNameOrIndex)].id;
+    const idx = Number(idOrNameOrIndex);
+    if (idx >= 0 && idx < agents.length) {
+      return agents[idx].id;
+    }
   }
 
   // If no agent is found, throw an error
-  console.error(`Agent not found: ${idOrNameOrIndex}`);
+  throw new Error(`Agent not found: ${idOrNameOrIndex}`);
 }
 
 export const agent = new Command()
@@ -129,7 +154,7 @@ interface ApiResponse<T> {
 agent
   .command('list')
   .alias('ls')
-  .description('List available agents')
+  .description('List agents currently running on the server')
   .option('-j, --json', 'output as JSON')
   .action(async (opts) => {
     try {
@@ -146,10 +171,10 @@ agent
       if (opts.json) {
         console.info(JSON.stringify(agentData, null, 2));
       } else {
-        console.info('\nAvailable agents:');
         if (agentData.length === 0) {
           console.info('No agents found');
         } else {
+          console.info('\nAvailable agents:');
           console.table(agentData);
         }
       }
@@ -164,37 +189,85 @@ agent
 agent
   .command('get')
   .alias('g')
-  .description('Get agent details')
-  .requiredOption('-n, --name <name>', 'agent id, name, or index number from list')
-  .option('-j, --json', 'output as JSON')
-  .option('-o, --output <file>', 'output to file (default: {name}.json)')
+  .description('Get agent details from the server (use -o to save to a local file)')
+  .option('-n, --name <n>', 'agent id, name, or index number from list')
+  .option('-j, --json', 'display as JSON')
+  .option('-o, --output [file]', 'save to file (default: {agent_name}.json)')
   .action(async (opts) => {
     try {
-      const resolvedAgentId = await resolveAgentId(opts.name, opts);
       const baseUrl = getAgentsBaseUrl(opts);
 
+      // If no name is provided, show interactive selector
+      if (!opts.name) {
+        const agents = await getAgents(opts);
+
+        if (agents.length === 0) {
+          console.info('No agents found');
+          process.exit(0);
+        }
+
+        // Always prompt the user to select an agent if no name is provided,
+        // regardless of json or output options
+        const { selectedAgent } = await prompts({
+          type: 'select',
+          name: 'selectedAgent',
+          message: 'Select an agent to view details:',
+          choices: agents.map((agent, index) => ({
+            title: `${agent.name} (${agent.status || 'unknown'})`,
+            value: agent.id,
+          })),
+          initial: 0,
+        });
+
+        // Exit if user cancelled
+        if (!selectedAgent) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Set the selected agent ID as the name option
+        opts.name = selectedAgent;
+      }
+
+      const resolvedAgentId = await resolveAgentId(opts.name, opts);
       console.info(`Getting agent ${resolvedAgentId}`);
 
       // API Endpoint: GET /agents/:agentId
       const response = await fetch(`${baseUrl}/${resolvedAgentId}`);
       if (!response.ok) {
-        const errorData = (await response.json()) as ApiResponse<unknown>;
-        logger.error(`Failed to get agent`);
-        process.exit(1);
+        try {
+          const errorData = (await response.json()) as ApiResponse<unknown>;
+          logger.error(`Failed to get agent: ${errorData.error?.message || response.statusText}`);
+          process.exit(1);
+        } catch (jsonError) {
+          logger.error(`Failed to get agent: ${response.status} ${response.statusText}`);
+          process.exit(1);
+        }
       }
 
       const { data: agent } = (await response.json()) as ApiResponse<Agent>;
 
-      // The displayAgent function expects a character object
-      displayAgent(agent, 'Agent Details');
+      // Handle output options
+      if (opts.output !== undefined) {
+        // If --output was provided with no value, use agent name as filename
+        const outputPath = opts.output === true ? `${agent.name}.json` : opts.output;
 
-      // check if json argument is provided
-      if (opts.json) {
-        const jsonPath = opts.output || path.join(process.cwd(), `${agent.name || 'agent'}.json`);
-        // exclude id and status fields from the json
+        // Save to specified file
+        const jsonPath = outputPath.endsWith('.json') ? outputPath : `${outputPath}.json`;
         const { id, createdAt, updatedAt, enabled, ...agentConfig } = agent;
         fs.writeFileSync(jsonPath, JSON.stringify(agentConfig, null, 2));
         console.log(`Saved agent configuration to ${jsonPath}`);
+        process.exit(0);
+      }
+
+      // Display the agent
+      if (opts.json) {
+        // Display as JSON
+        const { id, createdAt, updatedAt, enabled, ...agentConfig } = agent;
+        console.info(JSON.stringify(agentConfig, null, 2));
+      } else {
+        // Display formatted
+        displayAgent(agent, 'Agent Details');
       }
 
       process.exit(0);
@@ -204,148 +277,310 @@ agent
     }
   });
 
+/**
+ * Checks if an agent with the specified name already exists and is active
+ * @param {string} name - The agent name to check
+ * @param {OptionValues} opts - Command options containing potential info
+ * @returns {Promise<{exists: boolean, isActive: boolean, id?: string}>} - Status object
+ */
+async function checkAgentStatus(
+  name: string,
+  opts: OptionValues
+): Promise<{ exists: boolean; isActive: boolean; id?: string }> {
+  try {
+    const agents = await getAgents(opts);
+    const agent = agents.find((a) => a.name.toLowerCase() === name.toLowerCase());
+    if (!agent) {
+      return { exists: false, isActive: false };
+    }
+
+    return {
+      exists: true,
+      isActive: agent.status === 'active',
+      id: agent.id,
+    };
+  } catch (error) {
+    // If we can't check (e.g., server down), assume it doesn't exist
+    return { exists: false, isActive: false };
+  }
+}
+
+/**
+ * Helper function to create and start an agent from a character JSON object
+ * @param {Record<string, unknown>} characterJson - The character JSON object
+ * @param {OptionValues} options - Command options
+ * @param {string} [filePath] - Optional file path for logging purposes
+ * @returns {Promise<void>} A promise that resolves when the agent is created and started
+ * @throws {Error} If the agent creation or start process fails
+ */
+async function createAndStartAgent(
+  characterJson: Record<string, unknown>,
+  options: OptionValues,
+  filePath?: string
+): Promise<void> {
+  const baseUrl = getAgentsBaseUrl(options);
+  const headers = { 'Content-Type': 'application/json' };
+
+  // First create the agent
+  console.info(`Creating agent${filePath ? ` from ${filePath}` : ''}...`);
+  const createResponse = await fetch(baseUrl, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ characterJson }),
+  });
+
+  if (!createResponse.ok) {
+    throw new Error(`Server error ${createResponse.status}: ${createResponse.statusText}`);
+  }
+
+  const createData = await createResponse.json();
+  if (!createData.success) {
+    throw new Error(`Failed to create agent: ${createData.error?.message || 'Unknown error'}`);
+  }
+
+  // Find the agent by name
+  const agents = await getAgents(options);
+  const agentEntry = agents.find(
+    (a) => a.name.toLowerCase() === (characterJson.name as string).toLowerCase()
+  );
+
+  if (!agentEntry) {
+    throw new Error('Agent was created but not found in agent list');
+  }
+
+  const agentId = agentEntry.id;
+
+  // Then start the agent's runtime
+  console.info(`Starting agent runtime...`);
+  const startResponse = await fetch(`${baseUrl}/${agentId}`, {
+    method: 'POST',
+    headers,
+  });
+
+  if (!startResponse.ok) {
+    try {
+      const errorData = (await startResponse.json()) as ApiResponse<unknown>;
+      throw new Error(
+        `Failed to start agent runtime: ${errorData.error?.message || startResponse.statusText}`
+      );
+    } catch (jsonError) {
+      throw new Error(
+        `Failed to start agent runtime: ${startResponse.status} ${startResponse.statusText}`
+      );
+    }
+  }
+
+  console.info(`Successfully started agent${filePath ? ` from ${filePath}` : ''}`);
+}
+
 agent
   .command('start')
   .alias('s')
   .description('Start an agent')
-  .option('-n, --name <n>', 'character name to start the agent with')
-  .option('-j, --json <json>', 'character JSON string')
-  .option('--path <path>', 'local path to character JSON file')
-  .option('--remote-character <url>', 'remote URL to character JSON file')
-  .action(async (options) => {
+  .argument('[agent_name]', 'agent name to start')
+  .option('-n, --name <n>', 'agent name to start')
+  .option('--path <path>', 'path to character JSON file')
+  .action(async (agent_name, options) => {
     try {
-      console.debug('Starting agent start command action handler');
-      console.debug('Options object:', JSON.stringify(options));
-      console.debug('path option value:', options.path);
-      console.debug('name option value:', options.name);
-      console.debug('json option value:', options.json ? '[JSON string present]' : undefined);
-      console.debug('remoteCharacter option value:', options.remoteCharacter);
+      const baseUrl = getAgentsBaseUrl(options);
+      const headers = { 'Content-Type': 'application/json' };
 
-      // API Endpoint: POST /agents
-      const response: Response = await (async () => {
-        const payload: AgentStartPayload = {};
-        const headers = { 'Content-Type': 'application/json' };
-        const baseUrl = getAgentsBaseUrl(options);
-        console.debug(`Base URL determined: ${baseUrl}`);
+      // Use positional argument or the --name option
+      const agentName = agent_name || options.name;
 
-        let characterName = null;
-
-        async function createCharacter(payload) {
-          const response = await fetch(baseUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-          });
-          const data = await response.json();
-          return data.data.character.name;
+      // If name is provided, try to find the corresponding JSON file
+      if (agentName) {
+        // Check if agent already exists and is active
+        const status = await checkAgentStatus(agentName, options);
+        if (status.exists && status.isActive) {
+          console.error(`Agent '${agentName}' is already active!`);
+          process.exit(1);
         }
 
-        // Handle the path option first
-        if (options.path) {
-          console.debug('Using local path option:', options.path);
-          try {
-            const filePath = path.resolve(process.cwd(), options.path);
-            console.debug(`Resolved file path: ${filePath}`);
-            if (!fs.existsSync(filePath)) {
-              throw new Error(`File not found at path: ${filePath}`);
+        const jsonFile = `${agentName}.json`;
+        const filePath = path.resolve(process.cwd(), jsonFile);
+
+        if (!fs.existsSync(filePath)) {
+          console.error(
+            `There is no agent by the name '${agentName}', would you like to create one?`
+          );
+
+          // Offer to create the agent
+          const { wantToCreate } = await prompts({
+            type: 'confirm',
+            name: 'wantToCreate',
+            message: `Would you like to create a new agent named '${agentName}'?`,
+            initial: true,
+          });
+
+          if (wantToCreate) {
+            // Get the default character template
+            const { character: defaultCharacter } = await import('../characters/eliza');
+
+            // Create a new character based on the name
+            const newCharacter = {
+              ...defaultCharacter,
+              name: agentName,
+            };
+
+            // Write the character to a JSON file in the current directory
+            await writeFile(jsonFile, JSON.stringify(newCharacter, null, 2));
+            console.info(`Created new agent: ${jsonFile}`);
+
+            // Create and start the agent
+            await createAndStartAgent(newCharacter, options, jsonFile);
+            process.exit(0);
+          } else {
+            console.info('Operation cancelled.');
+            process.exit(0);
+          }
+        } else {
+          // File exists, read it
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          const characterJson = JSON.parse(fileContent);
+          console.info(`Found agent configuration in ${jsonFile}`);
+
+          // If agent exists but is not active, reactivate it
+          if (status.exists && !status.isActive && status.id) {
+            console.info(`Agent '${agentName}' exists but is not active. Reactivating...`);
+            const startResponse = await fetch(`${baseUrl}/${status.id}`, {
+              method: 'POST',
+              headers,
+            });
+
+            if (!startResponse.ok) {
+              throw new Error(`Failed to start agent runtime: ${startResponse.statusText}`);
             }
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            console.debug(`Read file content, size: ${fileContent.length} bytes`);
-            payload.characterJson = JSON.parse(fileContent);
-            console.debug('Parsed character JSON from file');
-            characterName = await createCharacter(payload);
-          } catch (error) {
-            console.error('Error reading or parsing local JSON file:', error);
-            throw new Error(`Failed to read or parse local JSON file: ${error.message}`);
+
+            console.info(`Successfully reactivated agent '${agentName}'`);
+            process.exit(0);
+          }
+
+          // Create and start the agent
+          await createAndStartAgent(characterJson, options, jsonFile);
+          process.exit(0);
+        }
+      }
+
+      // If path is provided, start agent from that file
+      if (options.path) {
+        const filePath = path.resolve(process.cwd(), options.path);
+        if (!fs.existsSync(filePath)) {
+          throw new Error(`File not found at path: ${filePath}`);
+        }
+        const fileContent = fs.readFileSync(filePath, 'utf8');
+        const characterJson = JSON.parse(fileContent);
+
+        // Check if agent already exists and is active
+        if (characterJson.name) {
+          const status = await checkAgentStatus(characterJson.name as string, options);
+          if (status.exists && status.isActive) {
+            console.error(`Agent '${characterJson.name}' is already active!`);
+            process.exit(1);
           }
         }
 
-        // Then handle other options
-        if (options.json) {
-          console.debug('Using JSON string option');
+        // Create and start the agent
+        await createAndStartAgent(characterJson, options, filePath);
+        process.exit(0);
+      }
+
+      // If no options provided, scan for character files and prompt for selection
+      const characterFiles = fs
+        .readdirSync(process.cwd())
+        .filter((file) => file.endsWith('.json'))
+        .map((file) => {
           try {
-            payload.characterJson = JSON.parse(options.json);
-            console.debug('Parsed character JSON string');
-            characterName = await createCharacter(payload);
-          } catch (error) {
-            console.error('Error parsing JSON string:', error);
-            throw new Error(`Failed to parse JSON string: ${error.message}`);
+            const content = fs.readFileSync(file, 'utf8');
+            const character = JSON.parse(content);
+            // Validate that the file matches the Character interface structure
+            if (isValidCharacterJson(character)) {
+              return {
+                title: `${character.name} (${file})`,
+                value: file,
+              };
+            }
+            return null;
+          } catch (e) {
+            return null;
           }
-        }
-
-        if (options.remoteCharacter) {
-          console.debug('Using remote character URL option');
-          if (
-            !options.remoteCharacter.startsWith('http://') &&
-            !options.remoteCharacter.startsWith('https://')
-          ) {
-            console.error('Invalid remote URL:', options.remoteCharacter);
-            throw new Error('Remote URL must start with http:// or https://');
-          }
-          payload.characterPath = options.remoteCharacter;
-          console.debug('Using remote character URL:', payload.characterPath);
-          characterName = await createCharacter(payload);
-        }
-
-        if (options.name) {
-          characterName = options.name;
-          console.debug('Using name option:', options.name);
-        }
-
-        if (characterName) {
-          const agentId = await resolveAgentId(characterName, options);
-          console.debug(`Resolved agent ID: ${agentId} for name: ${options.name}`);
-          return await fetch(`${baseUrl}/${agentId}`, {
-            method: 'POST',
-            headers,
-          });
-        }
-
-        console.debug('No specific start option provided, starting default agent');
-        // Default behavior: Start a default agent if no specific option is provided
-        return await fetch(baseUrl, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({}), // Empty body for default agent start
-        });
-      })();
-
-      console.debug(`Response status: ${response.status} ${response.statusText}`);
-      if (!response.ok) {
-        let errorData: ApiResponse<unknown> | null = null;
-        try {
-          errorData = (await response.json()) as ApiResponse<unknown>;
-          console.debug('Received error data from server:', errorData);
-        } catch (jsonError) {
-          console.error('Failed to parse error response as JSON:', jsonError);
-          // Use status text if JSON parsing fails
-          throw new Error(`Failed to start agent: ${response.statusText}`);
-        }
-        throw new Error(
-          errorData?.error?.message || `Failed to start agent: ${response.statusText}`
+        })
+        .filter(
+          (entry): entry is { title: string; value: string } =>
+            entry !== null && entry !== undefined
         );
+
+      // Add "Create new agent" option at the end of the list
+      const choices = [
+        ...characterFiles,
+        {
+          title: 'Create new agent',
+          value: 'create_new',
+        },
+      ];
+
+      const { selectedFile } = await prompts({
+        type: 'select',
+        name: 'selectedFile',
+        message: 'Select an agent to start or create a new one:',
+        choices,
+      });
+
+      if (!selectedFile) {
+        process.exit(0);
       }
 
-      // Type assertion to handle the specific structure returned by the start endpoint
-      const data = (await response.json()) as ApiResponse<any>;
-      console.debug('Received successful response data:', data);
-      const result = data.data;
+      if (selectedFile === 'create_new') {
+        const { agentName } = await prompts({
+          type: 'text',
+          name: 'agentName',
+          message: 'What would you like to name your agent?',
+          validate: (value) => (value.length > 0 ? true : 'Please enter a name'),
+        });
 
-      if (!result) {
-        console.error('Server responded OK, but no agent data was returned');
-        throw new Error('Failed to start agent: No data returned from server');
+        // Create the new agent
+        try {
+          // Get the default character template
+          const { character: defaultCharacter } = await import('../characters/eliza');
+
+          // Create a new character based on the name
+          const newCharacter = {
+            ...defaultCharacter,
+            name: agentName,
+          };
+
+          // Write the character to a JSON file in the current directory
+          const characterPath = path.join(process.cwd(), `${agentName}.json`);
+          await writeFile(characterPath, JSON.stringify(newCharacter, null, 2));
+          console.info(`Successfully created agent: ${agentName}`);
+
+          // Create and start the agent
+          await createAndStartAgent(newCharacter, options, characterPath);
+          process.exit(0);
+        } catch (error) {
+          throw new Error(`Failed to create agent: ${error.message}`);
+        }
       }
-      console.debug('Agent start successful, result:', result);
 
-      // Correctly access the agent name from the nested character object
-      const agentName = result?.character?.name || 'unknown';
-      console.debug(`Successfully started agent ${agentName}`);
-      logger.success(`Agent ${agentName} started successfully!`);
-      console.log(`\x1b[32m✓ Agent ${agentName} started successfully!\x1b[0m`);
+      const fileContent = fs.readFileSync(selectedFile, 'utf8');
+      const characterJson = JSON.parse(fileContent);
+
+      // Check if agent already exists and is active
+      if (characterJson.name) {
+        const status = await checkAgentStatus(characterJson.name as string, options);
+        if (status.exists && status.isActive) {
+          console.error(`Agent '${characterJson.name}' is already active!`);
+          process.exit(1);
+        }
+      }
+
+      // Create and start the agent
+      await createAndStartAgent(characterJson, options, selectedFile);
+      process.exit(0);
     } catch (error) {
-      console.error('Error in agent start command:', error);
       await checkServer(options);
-      handleError(error);
+      console.error(`Error: ${error.message}`);
+      process.exit(1);
     }
   });
 
@@ -353,20 +588,61 @@ agent
   .command('stop')
   .alias('st')
   .description('Stop an agent')
-  .requiredOption('-n, --name <name>', 'agent id, name, or index number from list')
+  .option('-n, --name <n>', 'agent id, name, or index number from list')
   .action(async (opts) => {
     try {
-      const resolvedAgentId = await resolveAgentId(opts.name, opts);
+      // Get the base URL once
       const baseUrl = getAgentsBaseUrl(opts);
 
+      // If no name is provided, show interactive selector with active agents
+      if (!opts.name) {
+        const agents = await getAgents(opts);
+
+        // Filter to only show active agents
+        const activeAgents = agents.filter((agent) => agent.status === 'active');
+
+        if (activeAgents.length === 0) {
+          console.info('No active agents found');
+          process.exit(0);
+        }
+
+        // Prompt the user to select an agent to stop
+        const { selectedAgent } = await prompts({
+          type: 'select',
+          name: 'selectedAgent',
+          message: 'Select an agent to stop:',
+          choices: activeAgents.map((agent, index) => ({
+            title: `${agent.name} (${agent.id})`,
+            value: agent.id,
+          })),
+          initial: 0,
+        });
+
+        // Exit if user cancelled
+        if (!selectedAgent) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Set the selected agent ID as the name option
+        opts.name = selectedAgent;
+      }
+
+      const resolvedAgentId = await resolveAgentId(opts.name, opts);
       console.info(`Stopping agent ${resolvedAgentId}`);
 
       // API Endpoint: PUT /agents/:agentId (not /agents/:agentId/stop)
       const response = await fetch(`${baseUrl}/${resolvedAgentId}`, { method: 'PUT' });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as ApiResponse<unknown>;
-        throw new Error(errorData.error?.message || `Failed to stop agent: ${response.statusText}`);
+        try {
+          const errorData = (await response.json()) as ApiResponse<unknown>;
+          throw new Error(
+            errorData.error?.message || `Failed to stop agent: ${response.statusText}`
+          );
+        } catch (jsonError) {
+          throw new Error(`Failed to stop agent: ${response.status} ${response.statusText}`);
+        }
       }
 
       logger.success(`Successfully stopped agent ${opts.name}`);
@@ -382,12 +658,44 @@ agent
   .command('remove')
   .alias('rm')
   .description('Remove an agent')
-  .requiredOption('-n, --name <name>', 'agent id, name, or index number from list')
+  .option('-n, --name <n>', 'agent id, name, or index number from list')
   .action(async (opts) => {
     try {
-      const resolvedAgentId = await resolveAgentId(opts.name, opts);
+      // Get the base URL once
       const baseUrl = getAgentsBaseUrl(opts);
 
+      // If no name is provided, show interactive selector
+      if (!opts.name) {
+        const agents = await getAgents(opts);
+
+        if (agents.length === 0) {
+          console.info('No agents found');
+          process.exit(0);
+        }
+
+        // Prompt the user to select an agent to remove
+        const { selectedAgent } = await prompts({
+          type: 'select',
+          name: 'selectedAgent',
+          message: 'Select an agent to remove:',
+          choices: agents.map((agent, index) => ({
+            title: `${agent.name} (${agent.status || 'unknown'})`,
+            value: agent.id,
+          })),
+          initial: 0,
+        });
+
+        // Exit if user cancelled
+        if (!selectedAgent) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Set the selected agent ID as the name option
+        opts.name = selectedAgent;
+      }
+
+      const resolvedAgentId = await resolveAgentId(opts.name, opts);
       console.info(`Removing agent ${resolvedAgentId}`);
 
       // API Endpoint: DELETE /agents/:agentId
@@ -396,10 +704,14 @@ agent
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as ApiResponse<unknown>;
-        throw new Error(
-          errorData.error?.message || `Failed to remove agent: ${response.statusText}`
-        );
+        try {
+          const errorData = (await response.json()) as ApiResponse<unknown>;
+          throw new Error(
+            errorData.error?.message || `Failed to remove agent: ${response.statusText}`
+          );
+        } catch (jsonError) {
+          throw new Error(`Failed to remove agent: ${response.status} ${response.statusText}`);
+        }
       }
 
       // Server returns 204 No Content for successful deletion, no need to parse response
@@ -413,18 +725,174 @@ agent
 
 agent
   .command('set')
-  .description('Update agent configuration')
-  .requiredOption('-n, --name <name>', 'agent id, name, or index number from list')
-  .option('-c, --config <json>', 'agent configuration as JSON string')
-  .option('-f, --file <path>', 'path to agent configuration JSON file')
+  .description(
+    'Update agent configuration on the server (changes will not affect local JSON files)'
+  )
+  .option('-n, --name <n>', 'agent id, name, or index number from list')
+  .option('-c, --config <json>', 'agent configuration as JSON string (advanced mode)')
+  .option('-f, --file <path>', 'path to agent configuration JSON file (advanced mode)')
+  .option('-i, --interactive', 'use interactive mode (default when no config or file provided)')
   .action(async (opts) => {
     try {
-      const resolvedAgentId = await resolveAgentId(opts.name, opts);
+      // Get the base URL once
+      const baseUrl = getAgentsBaseUrl(opts);
 
-      console.info(`Updating configuration for agent ${resolvedAgentId}`);
+      // If no name is provided, show interactive selector
+      if (!opts.name) {
+        const agents = await getAgents(opts);
+
+        if (agents.length === 0) {
+          console.info('No agents found');
+          process.exit(0);
+        }
+
+        // Prompt the user to select an agent to configure
+        const { selectedAgent } = await prompts({
+          type: 'select',
+          name: 'selectedAgent',
+          message: 'Select an agent to configure:',
+          choices: agents.map((agent, index) => ({
+            title: `${agent.name} (${agent.status || 'unknown'})`,
+            value: agent.id,
+          })),
+          initial: 0,
+        });
+
+        // Exit if user cancelled
+        if (!selectedAgent) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Set the selected agent ID as the name option
+        opts.name = selectedAgent;
+      }
+
+      const resolvedAgentId = await resolveAgentId(opts.name, opts);
+      console.info(`Fetching current configuration for agent ${resolvedAgentId}...`);
+
+      // Get the current configuration for the agent
+      const response = await fetch(`${baseUrl}/${resolvedAgentId}`);
+      if (!response.ok) {
+        try {
+          const errorData = (await response.json()) as ApiResponse<unknown>;
+          throw new Error(
+            errorData.error?.message || `Failed to fetch agent: ${response.statusText}`
+          );
+        } catch (jsonError) {
+          throw new Error(`Failed to fetch agent: ${response.status} ${response.statusText}`);
+        }
+      }
+
+      const { data: agent } = (await response.json()) as ApiResponse<Agent>;
+      const { id, createdAt, updatedAt, enabled, ...currentConfig } = agent;
 
       let config: Record<string, unknown>;
-      if (opts.config) {
+
+      // Use interactive mode if explicitly requested or no other mode specified
+      if (opts.interactive || (!opts.config && !opts.file)) {
+        console.info('\nUpdating agent configuration interactively...');
+        console.info('(Press Enter to keep current values, Ctrl+C to cancel)');
+        console.info(
+          '\nNOTE: Changes will update the agent on the server but will NOT modify local JSON files.'
+        );
+        console.info(
+          'After making changes, use "elizaos agent get -n ' +
+            agent.name +
+            ' -o <filename>" to save the updated configuration locally.\n'
+        );
+
+        // Prompt for basic agent properties
+        const responses = await prompts([
+          {
+            type: 'text',
+            name: 'name',
+            message: 'Agent name:',
+            initial: agent.name,
+          },
+          {
+            type: 'text',
+            name: 'username',
+            message: 'Username:',
+            initial: agent.username || agent.name?.toLowerCase().replace(/\s+/g, '_'),
+          },
+          {
+            type: 'text',
+            name: 'bio',
+            message: 'Bio (comma-separated list):',
+            initial: Array.isArray(agent.bio) ? agent.bio.join(', ') : agent.bio || '',
+          },
+          {
+            type: 'text',
+            name: 'plugins',
+            message: 'Plugins (comma-separated list):',
+            initial: Array.isArray(agent.plugins) ? agent.plugins.join(', ') : '',
+          },
+          {
+            type: 'confirm',
+            name: 'advancedConfig',
+            message: 'Would you like to edit more advanced configuration options?',
+            initial: false,
+          },
+        ]);
+
+        // Exit if user cancelled
+        if (!responses.name) {
+          console.info('Operation cancelled');
+          process.exit(0);
+        }
+
+        // Start with a copy of the current config so we keep fields we don't modify
+        config = { ...currentConfig };
+
+        // Update the basic fields
+        config.name = responses.name;
+        config.username = responses.username;
+
+        // Split comma-separated values for bio and plugins
+        config.bio = responses.bio ? responses.bio.split(',').map((item) => item.trim()) : [];
+        config.plugins = responses.plugins
+          ? responses.plugins.split(',').map((item) => item.trim())
+          : [];
+
+        // If user wants advanced configuration, open the full config in a temp file for editing
+        if (responses.advancedConfig) {
+          const tempFile = path.join(process.cwd(), `${agent.name}-config-temp.json`);
+
+          // Write the current config to a temporary file
+          fs.writeFileSync(tempFile, JSON.stringify(config, null, 2));
+
+          console.info(`\nOpening advanced configuration in ${tempFile}`);
+          console.info('Edit the file, save it, then close the editor to continue.');
+          console.info('IMPORTANT: Make sure to save valid JSON before closing the editor.');
+
+          // Use the default editor to open the file (e.g., EDITOR env var)
+          const editorCmd = process.env.EDITOR || 'nano';
+
+          try {
+            // Use spawn to open the editor and wait for it to close
+            const edit = spawn(editorCmd, [tempFile], { stdio: 'inherit' });
+            await new Promise((resolve) => {
+              edit.on('exit', resolve);
+            });
+
+            // Read the updated config from the file
+            try {
+              const updatedConfig = JSON.parse(fs.readFileSync(tempFile, 'utf8'));
+              config = updatedConfig;
+            } catch (parseError) {
+              console.error(`Error parsing JSON from edited file: ${parseError.message}`);
+              console.info('Continuing with basic configuration...');
+            }
+
+            // Clean up the temp file
+            fs.unlinkSync(tempFile);
+          } catch (error) {
+            console.error(`Error opening editor: ${error.message}`);
+            console.info('Continuing with basic configuration...');
+          }
+        }
+      } else if (opts.config) {
         try {
           config = JSON.parse(opts.config);
         } catch (error) {
@@ -436,30 +904,49 @@ agent
         } catch (error) {
           throw new Error(`Failed to read or parse config file: ${error.message}`);
         }
-      } else {
-        throw new Error(
-          'Please provide either a config JSON string (-c) or a config file path (-f)'
-        );
       }
 
-      // API Endpoint: PATCH /agents/:agentId
-      const response = await fetch(`${getAgentsBaseUrl(opts)}/${resolvedAgentId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(config),
-      });
+      console.info('Updating agent configuration...');
 
-      if (!response.ok) {
-        const errorData = (await response.json()) as ApiResponse<unknown>;
-        throw new Error(
-          errorData.error?.message || `Failed to update agent configuration: ${response.statusText}`
+      try {
+        // API Endpoint: PATCH /agents/:agentId
+        const updateResponse = await fetch(`${baseUrl}/${resolvedAgentId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(config),
+        });
+
+        if (!updateResponse.ok) {
+          // Try to parse the error response
+          try {
+            const errorData = await updateResponse.json();
+            const errorMessage =
+              errorData.error?.message ||
+              `Failed to update agent configuration: ${updateResponse.statusText}`;
+            throw new Error(errorMessage);
+          } catch (jsonError) {
+            // If we can't parse the error as JSON, use the status text
+            throw new Error(
+              `Failed to update agent configuration: ${updateResponse.status} ${updateResponse.statusText}`
+            );
+          }
+        }
+
+        logger.success(`Successfully updated agent configuration`);
+        console.info(
+          `\nNote: These changes only affected the server configuration, not your local files.`
         );
+        console.info(
+          `Tip: To update your local file, run "elizaos agent get -n ${agent.name} -o your-file.json"`
+        );
+      } catch (updateError) {
+        console.error(`Error updating agent configuration: ${updateError.message}`);
+        if (config) {
+          console.log('Configuration attempted to update:');
+          console.log(JSON.stringify(config, null, 2));
+        }
+        throw new Error(`Failed to update agent: ${updateError.message}`);
       }
-
-      const data = (await response.json()) as ApiResponse<{ id: string }>;
-      const result = data.data;
-
-      console.log(`Successfully updated configuration for agent ${result?.id || resolvedAgentId}`);
     } catch (error) {
       await checkServer(opts);
       handleError(error);
