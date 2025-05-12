@@ -9,9 +9,10 @@ import prompts from 'prompts';
 import { spawn } from 'child_process';
 
 /**
- * Validates if the given object matches the Character interface structure.
- * @param {unknown} character - The object to validate
- * @returns {boolean} True if the object matches the Character interface structure
+ * Checks whether a given object conforms to the expected structure of a Character JSON.
+ *
+ * @param character - The object to validate.
+ * @returns True if {@link character} has all required Character properties; otherwise, false.
  */
 function isValidCharacterJson(character: unknown): boolean {
   return (
@@ -27,7 +28,13 @@ function isValidCharacterJson(character: unknown): boolean {
   );
 }
 
-// Helper function to determine the agent runtime URL
+/**
+ * Returns the base URL for the agent runtime server based on CLI options, environment variables, or defaults.
+ *
+ * Prefers the `remoteUrl` option, then the `AGENT_RUNTIME_URL` environment variable, and finally defaults to `http://localhost:<port>`.
+ *
+ * @returns The agent runtime server URL without a trailing slash.
+ */
 export function getAgentRuntimeUrl(opts: OptionValues): string {
   return (
     opts.remoteUrl?.replace(/\/$/, '') || // Use the flag if provided
@@ -73,12 +80,14 @@ export async function getAgents(opts: OptionValues): Promise<AgentBasic[]> {
 
 // Utility function to resolve agent ID from name, index, or direct ID
 /**
- * Resolves the ID of an agent based on the provided name, ID, or index.
+ * Resolves an agent's unique ID from a given name, ID, or numeric index.
  *
- * @param {string} idOrNameOrIndex - The name, ID, or index of the agent to resolve.
- * @param {OptionValues} opts - The command options potentially containing the remote URL.
- * @returns {Promise<string>} The resolved ID of the agent.
- * @throws {Error} If the agent is not found.
+ * Searches the list of agents for a case-insensitive name match, exact ID match, or valid index, and returns the corresponding agent's ID.
+ *
+ * @param idOrNameOrIndex - The agent's name, ID, or zero-based index in the agents list.
+ * @returns The resolved agent ID.
+ *
+ * @throws {Error} If no agent matches the provided identifier.
  */
 async function resolveAgentId(idOrNameOrIndex: string, opts: OptionValues): Promise<string> {
   // First try to get all agents to find by name
@@ -278,10 +287,13 @@ agent
   });
 
 /**
- * Checks if an agent with the specified name already exists and is active
- * @param {string} name - The agent name to check
- * @param {OptionValues} opts - Command options containing potential info
- * @returns {Promise<{exists: boolean, isActive: boolean, id?: string}>} - Status object
+ * Determines whether an agent with the given name exists and is currently active.
+ *
+ * Attempts to fetch the list of agents and checks for a case-insensitive name match. If the agent is found, returns its existence, active status, and ID. If the agent is not found or the server is unreachable, returns `exists: false` and `isActive: false`.
+ *
+ * @param name - The name of the agent to check.
+ * @param opts - Command options that may affect the agent lookup.
+ * @returns An object indicating whether the agent exists, whether it is active, and its ID if found.
  */
 async function checkAgentStatus(
   name: string,
@@ -306,12 +318,13 @@ async function checkAgentStatus(
 }
 
 /**
- * Helper function to create and start an agent from a character JSON object
- * @param {Record<string, unknown>} characterJson - The character JSON object
- * @param {OptionValues} options - Command options
- * @param {string} [filePath] - Optional file path for logging purposes
- * @returns {Promise<void>} A promise that resolves when the agent is created and started
- * @throws {Error} If the agent creation or start process fails
+ * Creates an agent from a character JSON object and starts its runtime on the server.
+ *
+ * @param characterJson - The character definition to use for agent creation.
+ * @param options - Command options controlling server connection and behavior.
+ * @param filePath - Optional path to the character JSON file, used for logging.
+ *
+ * @throws {Error} If agent creation fails, if the agent cannot be found after creation, or if starting the agent runtime fails.
  */
 async function createAndStartAgent(
   characterJson: Record<string, unknown>,

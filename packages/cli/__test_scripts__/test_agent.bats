@@ -1,4 +1,28 @@
-#!/usr/bin/env bats
+# Sets up the test environment and starts the agent server for BATS test execution.
+#
+# Globals:
+#   TEST_SERVER_PORT: Port number for the test server.
+#   TEST_SERVER_URL: Base URL for the test server.
+#   TEST_TMP_DIR: Temporary directory for test data and logs.
+#   ELIZAOS_CMD: Command to invoke the CLI binary.
+#   ELIZA_NON_INTERACTIVE: Forces CLI to run in non-interactive mode.
+#   PGLITE_DATABASE_ONLY: Configures the server to use database-only mode.
+#   SERVER_PID: Process ID of the started server, exported for teardown.
+#
+# Arguments:
+#   None.
+#
+# Outputs:
+#   Writes server logs to $TEST_TMP_DIR/server.log.
+#   Prints status messages to STDOUT.
+#
+# Returns:
+#   Exits with status 1 if the server fails to start within the timeout.
+#
+# Example:
+#
+#   setup_file
+#   # Sets up environment, starts the server, and waits for readiness before running tests.
 
 setup_file() {
   # Create unique test directories and environment
@@ -82,6 +106,20 @@ EOF
   export SERVER_PID
 }
 
+# Cleans up resources after the test suite by stopping the server and removing temporary files.
+#
+# Globals:
+# * SERVER_PID: PID of the running server process to be terminated.
+# * TEST_TMP_DIR: Path to the temporary test directory to be removed.
+#
+# Outputs:
+# * Logs actions to STDOUT, including server shutdown and directory removal.
+#
+# Example:
+#
+# ```bash
+# teardown_file
+# ```
 teardown_file() {
   echo "Running teardown..."
   if [ -n "$SERVER_PID" ]; then

@@ -105,31 +105,36 @@ export const findPluginPackageName = (
 };
 
 /**
- * Checks if the current directory is part of a monorepo project
- * @param {string} cwd - Current working directory
- * @param {string} monorepoRoot - Path to the monorepo root
- * @returns {boolean} True if the directory is in the monorepo structure
+ * Determines whether the specified directory is within the given monorepo root.
+ *
+ * @param cwd - The directory to check.
+ * @param monorepoRoot - The root path of the monorepo.
+ * @returns True if {@link cwd} is inside the monorepo; otherwise, false.
  */
 async function isInMonorepoProject(cwd: string, monorepoRoot: string): Promise<boolean> {
   return monorepoRoot && !path.relative(monorepoRoot, cwd).startsWith('..');
 }
 
 /**
- * Checks if the current directory is the monorepo root
- * @param {string} cwd - Current working directory
- * @param {string} monorepoRoot - Path to the monorepo root
- * @returns {boolean} True if the directory is the monorepo root
+ * Determines whether the current working directory is the monorepo root.
+ *
+ * @param cwd - The current working directory path.
+ * @param monorepoRoot - The path to the monorepo root directory.
+ * @returns True if {@link cwd} is the same as {@link monorepoRoot}; otherwise, false.
  */
 function isMonorepoRoot(cwd: string, monorepoRoot: string): boolean {
   return cwd === monorepoRoot;
 }
 
 /**
- * Add a workspace reference to the package.json in the monorepo root
- * @param {string} packageJsonPath - Path to package.json
- * @param {Record<string, unknown>} packageJson - Parsed package.json content
- * @param {string} npmPackageName - Name of the package to add
- * @returns {Promise<boolean>} True if the reference was successfully added
+ * Adds a workspace dependency reference to the root package.json in a monorepo.
+ *
+ * Updates the dependencies field to include the specified npm package with a version of 'workspace:*', writing changes atomically.
+ *
+ * @param packageJsonPath - Path to the root package.json file.
+ * @param packageJson - Parsed contents of the root package.json.
+ * @param npmPackageName - Name of the package to add as a workspace reference.
+ * @returns True if the workspace reference was successfully added; false otherwise.
  */
 async function addWorkspaceReference(
   packageJsonPath: string,
@@ -161,10 +166,13 @@ async function addWorkspaceReference(
 }
 
 /**
- * Add a workspace dependency using available package manager
- * @param {string} cwd - Current working directory
- * @param {string} npmPackageName - Name of the package to add
- * @returns {Promise<boolean>} True if the dependency was successfully added
+ * Adds a package as a workspace dependency in the current project using the first available package manager.
+ *
+ * Attempts to use Bun, then pnpm, and finally npm to add the specified package as a workspace dependency. Logs progress and returns whether the operation succeeded.
+ *
+ * @param cwd - The directory in which to run the package manager command.
+ * @param npmPackageName - The name of the package to add as a workspace dependency.
+ * @returns True if the dependency was successfully added; otherwise, false.
  */
 async function addWorkspaceDependency(cwd: string, npmPackageName: string): Promise<boolean> {
   try {
@@ -214,9 +222,12 @@ async function addWorkspaceDependency(cwd: string, npmPackageName: string): Prom
 }
 
 /**
- * Reads and parses package.json to determine workspace configuration
- * @param {string} packageJsonPath - Path to package.json
- * @returns {Promise<{hasWorkspaceConfig: boolean, packageJson: Record<string, any> | null}>}
+ * Determines if a package.json file contains workspace configuration.
+ *
+ * Reads and parses the specified package.json file, returning whether it includes a `workspaces` field and the parsed JSON object.
+ *
+ * @param packageJsonPath - The file path to the package.json to inspect.
+ * @returns An object containing a boolean indicating presence of workspace configuration and the parsed package.json, or null if reading or parsing fails.
  */
 async function getWorkspaceConfig(packageJsonPath: string): Promise<{
   hasWorkspaceConfig: boolean;

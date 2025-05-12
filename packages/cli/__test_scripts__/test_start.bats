@@ -1,4 +1,30 @@
-#!/usr/bin/env bats
+# Sets up the test environment for ElizaOS server startup tests.
+#
+# Globals:
+#
+# * TEST_TMP_DIR: Path to a temporary directory for test artifacts.
+# * ELIZAOS_CMD: Command to launch the ElizaOS server.
+# * ELIZA_NON_INTERACTIVE: Flag to run ElizaOS in non-interactive mode.
+# * TEST_SERVER_PORT: Port number for the test server instance.
+# * PGLITE_DATABASE_ONLY: Flag to use the database without creating tables.
+#
+# Arguments:
+#
+# * None
+#
+# Outputs:
+#
+# * None
+#
+# Returns:
+#
+# * None
+#
+# Example:
+#
+# ```bash
+# setup
+# ```
 
 setup() {
   export TEST_TMP_DIR="$(mktemp -d /var/tmp/eliza-test-start-XXXXXX)"
@@ -8,6 +34,22 @@ setup() {
   export PGLITE_DATABASE_ONLY=true # Tell server to use database without creating tables
 }
 
+# Cleans up resources after each test by stopping the ElizaOS server and removing the temporary test directory.
+#
+# Globals:
+#
+# * SERVER_PID: If set, the process ID of the running ElizaOS server to terminate.
+# * TEST_TMP_DIR: The path to the temporary directory created for test artifacts.
+#
+# Outputs:
+#
+# * Logs messages to STDOUT when stopping the server and removing the test directory.
+#
+# Example:
+#
+# ```bash
+# teardown
+# ```
 teardown() {
   if [ -n "$SERVER_PID" ]; then
     echo "Stopping server with PID: $SERVER_PID"
