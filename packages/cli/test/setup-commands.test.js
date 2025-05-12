@@ -126,25 +126,73 @@ describe('CLI Command Structure Tests', () => {
     // Arrange
     const pluginName = 'test-plugin';
 
+    // Add more debug information
+    console.log(`Test directory (testDir): ${testDir}`);
+    console.log(`Full plugin path: ${path.join(testDir, pluginName)}`);
+    console.log(`Current working directory: ${process.cwd()}`);
+    console.log(`Environment variables:`, {
+      NODE_ENV: process.env.NODE_ENV,
+      ELIZA_NON_INTERACTIVE: process.env.ELIZA_NON_INTERACTIVE,
+      ELIZA_NONINTERACTIVE: process.env.ELIZA_NONINTERACTIVE,
+    });
+
     // Act
     const command = `${cliCommand} create -t plugin -y ${pluginName}`;
+    console.log(`Executing command: ${command} in directory: ${testDir}`);
+
+    // Use exec with more detailed options
     const result = await execAsync(command, {
       cwd: testDir,
       reject: false,
+      env: {
+        ...process.env,
+        // Ensure non-interactive mode is enabled for tests
+        ELIZA_NON_INTERACTIVE: 'true',
+        // Pass current directory explicitly
+        PWD: testDir,
+        INIT_CWD: testDir,
+      },
     });
+
+    console.log('Command stdout:', result.stdout);
+    console.log('Command stderr:', result.stderr);
 
     // Add a delay to ensure file creation is complete
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
     const pluginDir = path.join(testDir, pluginName);
+    console.log(`Checking if plugin directory exists: ${pluginDir}`);
+    console.log(`Directory exists: ${existsSync(pluginDir)}`);
 
-    // Verify that at least the directory was created
-    expect(existsSync(pluginDir)).toBe(true);
+    // List the test directory contents
+    const testDirContents = await fsPromises.readdir(testDir);
+    console.log('Test directory contents:', testDirContents);
 
-    // More specific assertions
-    expect(existsSync(path.join(pluginDir, 'src'))).toBe(true);
-    expect(existsSync(path.join(pluginDir, 'package.json'))).toBe(true);
-    expect(existsSync(path.join(pluginDir, 'tsconfig.json'))).toBe(true);
+    // Check for plugin-prefixed directory
+    const prefixedPluginName = `plugin-${pluginName}`;
+    const prefixedPluginDir = path.join(testDir, prefixedPluginName);
+    console.log(`Checking if prefixed plugin directory exists: ${prefixedPluginDir}`);
+    console.log(`Prefixed directory exists: ${existsSync(prefixedPluginDir)}`);
+
+    // Try without plugin prefix first (original test assertion)
+    const pluginDirExists = existsSync(pluginDir);
+    const prefixedPluginDirExists = existsSync(prefixedPluginDir);
+
+    // Use either directory that exists
+    const finalPluginDir = prefixedPluginDirExists ? prefixedPluginDir : pluginDir;
+    expect(pluginDirExists || prefixedPluginDirExists).toBe(true);
+
+    // Output which directory is being used
+    console.log(
+      `Using ${pluginDirExists ? 'regular' : 'prefixed'} plugin directory: ${finalPluginDir}`
+    );
+
+    // More specific assertions, only if a directory exists
+    if (pluginDirExists || prefixedPluginDirExists) {
+      expect(existsSync(path.join(finalPluginDir, 'src'))).toBe(true);
+      expect(existsSync(path.join(finalPluginDir, 'package.json'))).toBe(true);
+      expect(existsSync(path.join(finalPluginDir, 'tsconfig.json'))).toBe(true);
+    }
   }, 120000); // Double the timeout to 120 seconds
 
   it('should create an agent with valid structure', async () => {

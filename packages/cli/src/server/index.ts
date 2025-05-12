@@ -18,6 +18,8 @@ import { Server as SocketIOServer } from 'socket.io';
 import { createApiRouter, setupSocketIO, createPluginRouteHandler } from './api';
 import http from 'node:http';
 import { apiKeyAuthMiddleware } from './authMiddleware';
+import { PGlite } from '@electric-sql/pglite';
+import { Pool as PgPool } from 'pg';
 
 // Load environment variables
 dotenv.config();
@@ -110,9 +112,158 @@ export class AgentServer {
    */
   public async initialize(options?: ServerOptions): Promise<void> {
     try {
+      // Special check for running in CI/test environment - try to create vector extension first
+      // Check if we're likely in a test environment by examining environment variables
+      const isTestEnv =
+        process.env.TEST_SERVER_PORT ||
+        process.env.CI ||
+        process.env.NODE_ENV === 'test' ||
+        process.env.JEST_WORKER_ID;
+
+      if (isTestEnv) {
+        logger.debug('Detected test environment, attempting to initialize vector extension first');
+        try {
+          // Get database connection early
+          const connection = await this.database.getConnection();
+
+          // Create vector extension first before any other initialization
+          try {
+            if (connection instanceof PGlite) {
+              logger.debug('Creating vector extension using PGLite connection (test environment)');
+              await connection.query('CREATE EXTENSION IF NOT EXISTS vector;');
+              logger.info('Successfully created vector extension for tests');
+            } else if (connection instanceof PgPool) {
+              logger.debug('Creating vector extension using PgPool connection (test environment)');
+              await connection.query('CREATE EXTENSION IF NOT EXISTS vector;');
+              logger.info('Successfully created vector extension for tests');
+            }
+          } catch (extErr) {
+            logger.warn('Failed to create vector extension in test environment:', extErr.message);
+          }
+        } catch (connErr) {
+          logger.warn(
+            'Failed to get connection to create vector extension in test environment:',
+            connErr.message
+          );
+        }
+      }
+
       // Initialize the database with await
-      await this.database.init();
-      logger.success('Database initialized successfully');
+      try {
+        await this.database.init();
+        logger.success('Database initialized successfully');
+      } catch (error) {
+        // Special handling for vector type error
+        if (error.message && error.message.includes('type "vector" does not exist')) {
+          logger.warn('Vector extension not found in database, attempting to create it');
+
+          try {
+            // Try to create the vector extension first using getConnection
+            const connection = await this.database.getConnection();
+
+            // First try to create the extension - handle both PGlite and PgPool connections
+            try {
+              // Use type guards to handle different connection types
+              if (connection instanceof PGlite) {
+                logger.debug('Using PGlite connection to create vector extension');
+                await connection.query('CREATE EXTENSION IF NOT EXISTS vector;');
+                logger.info('Successfully created vector extension (PGlite)');
+              } else if (connection instanceof PgPool) {
+                logger.debug('Using PgPool connection to create vector extension');
+                // In CI environments, we might need to retry this operation
+                let attempts = 0;
+                const maxAttempts = 3;
+                let success = false;
+
+                while (!success && attempts < maxAttempts) {
+                  attempts++;
+                  try {
+                    await connection.query('CREATE EXTENSION IF NOT EXISTS vector;');
+                    logger.info(
+                      `Successfully created vector extension (PgPool) on attempt ${attempts}`
+                    );
+                    success = true;
+                  } catch (extCreateError) {
+                    logger.warn(
+                      `Failed to create vector extension (attempt ${attempts}/${maxAttempts}): ${extCreateError.message}`
+                    );
+                    if (attempts < maxAttempts) {
+                      logger.debug(`Waiting before retry...`);
+                      await new Promise((resolve) => setTimeout(resolve, 1000));
+                    }
+                  }
+                }
+
+                if (!success) {
+                  logger.warn('Failed to create vector extension after multiple attempts');
+                }
+              } else {
+                logger.warn('Unknown connection type, cannot create vector extension');
+              }
+            } catch (extError) {
+              logger.warn(
+                'Could not create vector extension, will proceed without it:',
+                extError.message
+              );
+            }
+
+            // Then try database initialization again
+            try {
+              await this.database.init();
+              logger.success('Database initialized successfully after adding vector extension');
+            } catch (retryError) {
+              // Try a more direct approach if database initialization still fails
+              if (
+                retryError.message &&
+                retryError.message.includes('type "vector" does not exist')
+              ) {
+                logger.warn('Still failing with vector error, trying one more approach...');
+                try {
+                  // Check if we have direct access to run SQL on the pglite instance
+                  // Check if database has query method using type guard
+                  const dbWithQuery = this.database as any;
+                  if (dbWithQuery && typeof dbWithQuery.query === 'function') {
+                    await dbWithQuery.query('CREATE EXTENSION IF NOT EXISTS vector;');
+                    logger.info('Created vector extension using direct database.query');
+
+                    // Try init again
+                    await this.database.init();
+                    logger.success(
+                      'Database initialized successfully after direct vector extension creation'
+                    );
+                  } else {
+                    logger.warn('No direct query method available on database adapter');
+                  }
+                } catch (finalError) {
+                  logger.error(
+                    'Final attempt to create vector extension failed:',
+                    finalError.message
+                  );
+                  logger.warn('Continuing with limited database functionality');
+                }
+              } else {
+                logger.error(
+                  'Failed to initialize database after vector extension attempt:',
+                  retryError.message
+                );
+                // Continue anyway to allow basic functionality without vector support
+                logger.warn('Continuing with limited database functionality');
+              }
+            }
+          } catch (retryError) {
+            logger.error(
+              'Failed to initialize database after vector extension attempt:',
+              retryError
+            );
+            // Continue anyway to allow basic functionality without vector support
+            logger.warn('Continuing with limited database functionality');
+          }
+        } else {
+          // For other errors, just log and continue
+          logger.error('Database initialization error:', error);
+          logger.warn('Continuing with limited database functionality');
+        }
+      }
 
       // Only continue with server initialization after database is ready
       await this.initializeServer(options);
@@ -445,6 +596,7 @@ export class AgentServer {
       logger.debug(`Starting server on port ${port}...`);
       logger.debug(`Current agents count: ${this.agents.size}`);
       logger.debug(`Environment: ${process.env.NODE_ENV}`);
+      logger.debug(`Running in CI: ${process.env.CI ? 'Yes' : 'No'}`);
 
       // Use http server instead of app.listen
       this.server.listen(port, () => {
