@@ -16,3 +16,6 @@ export * from './utils';
 // Export instrumentation types and service
 export * from './instrumentation/types';
 export * from './instrumentation/service';
+
+// Cloudflare based llm logging
+export * from './cloudflare';
