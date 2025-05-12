@@ -182,19 +182,26 @@ export async function configureDatabaseSettings(reconfigure = false): Promise<st
   // Set up directories and env file
   const { elizaDbDir, envFilePath } = await ensureElizaDir();
   await ensureEnvFile(envFilePath);
-  await loadEnvironment(elizaDbDir);
+  await loadEnvironment(elizaDbDir); // Ensure env is loaded before checking process.env
 
   // Check if we already have database configuration in env
+  const mysqlUrl = process.env.MYSQL_URL;
   let postgresUrl = process.env.POSTGRES_URL;
   const pgliteDataDir = process.env.PGLITE_DATA_DIR;
 
-  // If we already have a postgres URL configured and not reconfiguring, use that
+  // 1. Prioritize MySQL if already configured and not reconfiguring
+  if (mysqlUrl && !reconfigure) {
+    logger.debug('Using existing MySQL configuration via MYSQL_URL');
+    return null; // Indicate MySQL is used, similar to PGLite
+  }
+
+  // 2. Check Postgres if not using MySQL
   if (postgresUrl && !reconfigure) {
     logger.debug('Using existing PostgreSQL configuration');
     return postgresUrl;
   }
 
-  // If we already have PGLITE_DATA_DIR set in env and not reconfiguring, use PGLite
+  // 3. Check PGLite if not using MySQL or Postgres
   if (pgliteDataDir && !reconfigure) {
     logger.debug(`Using existing PGLite configuration: ${pgliteDataDir}`);
 
@@ -207,8 +214,9 @@ export async function configureDatabaseSettings(reconfigure = false): Promise<st
     return null;
   }
 
+  // 4. If no existing configuration or reconfigure is true, prompt the user
   try {
-    // Prompt for database selection
+    logger.info(reconfigure ? 'Reconfiguring database...' : 'No database configured, prompting...');
     const { database } = await prompts({
       type: 'select',
       name: 'database',
