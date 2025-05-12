@@ -74,10 +74,7 @@ export const characterProvider: Provider = {
         ? character.adjectives[Math.floor(Math.random() * character.adjectives.length)]
         : '';
 
-<<<<<<< HEAD
-=======
     //const adjective = adjectiveString ? `${character.name} is ${adjectiveString}` : '';
->>>>>>> 3ab5b7215 (don't include adjective twice, fix topic/adjective usage)
     const adjective = adjectiveString || '';
 
     // Format post examples
@@ -193,19 +190,10 @@ export const characterProvider: Provider = {
       system,
     };
 
-<<<<<<< HEAD
-    const topicSentence = topicString
-      ? `${character.name} is currently interested in ${topicString}`
-      : '';
-    const adjectiveSentence = adjectiveString ? `${character.name} is ${adjectiveString}` : '';
-    // Combine all text sections
-    const text = [bio, adjectiveSentence, topicSentence, topics, directions, examples, system]
-=======
     const topic2 = topicString ? `${character.name} is currently interested in ${topicString}` : '';
     const adjective2 = adjectiveString ? `${character.name} is ${adjectiveString}` : '';
     // Combine all text sections
     const text = [bio, adjective2, topic2, topics, directions, examples, system]
->>>>>>> 3ab5b7215 (don't include adjective twice, fix topic/adjective usage)
       .filter(Boolean)
       .join('\n\n');
 
