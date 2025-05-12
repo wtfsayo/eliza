@@ -342,8 +342,8 @@ const messageReceivedHandler = async ({
           latestResponseIds.delete(runtime.agentId);
         }
 
-        if (responseContent?.providers?.length && responseContent.providers.length > 0) {
-          state = await runtime.composeState(message, undefined, [...responseContent?.providers]);
+        if (responseContent?.providers?.length && responseContent?.providers?.length > 0) {
+          state = await runtime.composeState(message, responseContent?.providers || []);
         }
 
         if (
@@ -435,13 +435,12 @@ const messageReceivedHandler = async ({
         roomId: message.roomId,
         entityId: message.entityId,
         startTime,
-        status: 'completed',
+        status: 'error',
         endTime: Date.now(),
         duration: Date.now() - startTime,
         error: error.message,
         source: 'messageHandler',
       });
-      throw error;
     }
   })();
 
@@ -530,10 +529,10 @@ const postGeneratedHandler = async ({
   // generate thought of which providers to use using messageHandlerTemplate
 
   // Compose state with relevant context for tweet generation
-  let state = await runtime.composeState(message, undefined, [
+  let state = await runtime.composeState(message, [
     'PROVIDERS',
     'CHARACTER',
-    //'RECENT_MESSAGES',
+    'RECENT_MESSAGES',
     'ENTITIES',
   ]);
 

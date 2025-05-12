@@ -13,6 +13,8 @@ import type {
   UUID,
   World,
 } from './types';
+import { type Pool as PgPool } from 'pg';
+import { PGlite } from '@electric-sql/pglite';
 
 /**
  * An abstract class representing a database adapter for managing various entities
@@ -42,6 +44,12 @@ export abstract class DatabaseAdapter<DB = unknown> implements IDatabaseAdapter 
    * @returns A Promise that resolves when closing is complete.
    */
   abstract close(): Promise<void>;
+
+  /**
+   * Retrieves a connection to the database.
+   * @returns A Promise that resolves to the database connection.
+   */
+  abstract getConnection(): Promise<PGlite | PgPool>;
 
   /**
    * Retrieves an account by its ID.
@@ -521,7 +529,7 @@ export abstract class DatabaseAdapter<DB = unknown> implements IDatabaseAdapter 
    * @param params Object containing optional roomId and tags to filter tasks
    * @returns Promise resolving to an array of Task objects
    */
-  abstract getTasks(params: { roomId?: UUID; tags?: string[] }): Promise<Task[]>;
+  abstract getTasks(params: { roomId?: UUID; tags?: string[]; entityId?: UUID }): Promise<Task[]>;
 
   /**
    * Retrieves a specific task by its ID.

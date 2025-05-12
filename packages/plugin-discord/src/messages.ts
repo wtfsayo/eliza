@@ -20,7 +20,7 @@ import {
   type TextChannel,
 } from 'discord.js';
 import { AttachmentManager } from './attachments';
-import { DiscordEventTypes } from './types';
+import { DiscordEventTypes, DiscordActionRow, DiscordComponentOptions } from './types';
 import { canSendMessage, sendMessageInChunks } from './utils';
 
 /**
@@ -115,6 +115,8 @@ export class MessageManager {
       channelId: message.channel.id,
       serverId,
       type,
+      worldId: createUniqueUuid(this.runtime, serverId) as UUID,
+      worldName: message.guild?.name,
     });
 
     try {
@@ -150,7 +152,10 @@ export class MessageManager {
       // Start the typing indicator
       const startTyping = () => {
         try {
-          channel.sendTyping();
+          // sendTyping is not available at test time
+          if (channel.sendTyping) {
+            channel.sendTyping();
+          }
         } catch (err) {
           logger.warn('Error sending typing indicator:', err);
         }
@@ -191,7 +196,10 @@ export class MessageManager {
         createdAt: message.createdTimestamp,
       };
 
-      const callback: HandlerCallback = async (content: Content, files: any[]) => {
+      const callback: HandlerCallback = async (
+        content: Content,
+        files: Array<{ attachment: Buffer | string; name: string }>
+      ) => {
         try {
           if (message.id && !content.inReplyTo) {
             content.inReplyTo = createUniqueUuid(this.runtime, message.id);
