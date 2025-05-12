@@ -331,10 +331,18 @@ export const create = new Command()
         const characterPath = path.join(outputDir, `${projectName}.json`);
 
         // Check if the file already exists before writing
-        if (existsSync(characterPath) && !options.yes) {
-          console.error(colors.red(`Error: File ${characterPath} already exists.`));
-          console.error('Use --yes to overwrite or choose a different name.');
-          process.exit(1);
+        if (existsSync(characterPath)) {
+          if (!options.yes) {
+            console.error(colors.red(`Error: File ${characterPath} already exists.`));
+            console.error('Use --yes to overwrite or choose a different name.');
+            process.exit(1);
+          } else {
+            console.warn(
+              colors.yellow(
+                `Warning: Overwriting existing file ${characterPath} (--yes flag provided)`
+              )
+            );
+          }
         }
 
         // Create directory if it doesn't exist (ensure parent dir exists)
@@ -371,8 +379,8 @@ export const create = new Command()
 
           // Skip building in test environments to avoid tsup dependency issues
           if (
-            process.env.ELIZA_NONINTERACTIVE === '1' ||
-            process.env.ELIZA_NONINTERACTIVE === 'true'
+            process.env.ELIZA_NON_INTERACTIVE === '1' ||
+            process.env.ELIZA_NON_INTERACTIVE === 'true'
           ) {
             console.log('Skipping build in non-interactive mode');
           } else {
@@ -444,8 +452,8 @@ export const create = new Command()
 
         // Skip building in test environments to avoid tsup dependency issues
         if (
-          process.env.ELIZA_NONINTERACTIVE === '1' ||
-          process.env.ELIZA_NONINTERACTIVE === 'true'
+          process.env.ELIZA_NON_INTERACTIVE === '1' ||
+          process.env.ELIZA_NON_INTERACTIVE === 'true'
         ) {
           console.log('Skipping build in non-interactive mode');
         } else {

@@ -1,5 +1,4 @@
 import {
-  displayBanner,
   getCliInstallTag,
   handleError,
   installPlugin,
@@ -105,6 +104,136 @@ export const findPluginPackageName = (
   return null; // Not found
 };
 
+/**
+ * Checks if the current directory is part of a monorepo project
+ * @param {string} cwd - Current working directory
+ * @param {string} monorepoRoot - Path to the monorepo root
+ * @returns {boolean} True if the directory is in the monorepo structure
+ */
+async function isInMonorepoProject(cwd: string, monorepoRoot: string): Promise<boolean> {
+  return monorepoRoot && !path.relative(monorepoRoot, cwd).startsWith('..');
+}
+
+/**
+ * Checks if the current directory is the monorepo root
+ * @param {string} cwd - Current working directory
+ * @param {string} monorepoRoot - Path to the monorepo root
+ * @returns {boolean} True if the directory is the monorepo root
+ */
+function isMonorepoRoot(cwd: string, monorepoRoot: string): boolean {
+  return cwd === monorepoRoot;
+}
+
+/**
+ * Add a workspace reference to the package.json in the monorepo root
+ * @param {string} packageJsonPath - Path to package.json
+ * @param {Record<string, unknown>} packageJson - Parsed package.json content
+ * @param {string} npmPackageName - Name of the package to add
+ * @returns {Promise<boolean>} True if the reference was successfully added
+ */
+async function addWorkspaceReference(
+  packageJsonPath: string,
+  packageJson: Record<string, any>,
+  npmPackageName: string
+): Promise<boolean> {
+  try {
+    logger.info(`Adding ${npmPackageName} as a workspace reference in monorepo root...`);
+
+    // Ensure dependencies exist
+    if (!packageJson.dependencies) {
+      packageJson.dependencies = {};
+    }
+
+    // Add the workspace reference
+    packageJson.dependencies[npmPackageName] = 'workspace:*';
+
+    // Write the updated package.json using an atomic approach
+    const tempFile = `${packageJsonPath}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(packageJson, null, 2));
+    fs.renameSync(tempFile, packageJsonPath);
+
+    console.log(`Successfully added ${npmPackageName} as workspace reference in root package.json`);
+    return true;
+  } catch (error) {
+    logger.warn(`Failed to add workspace reference to root package.json: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Add a workspace dependency using available package manager
+ * @param {string} cwd - Current working directory
+ * @param {string} npmPackageName - Name of the package to add
+ * @returns {Promise<boolean>} True if the dependency was successfully added
+ */
+async function addWorkspaceDependency(cwd: string, npmPackageName: string): Promise<boolean> {
+  try {
+    console.info(
+      `Detected plugin ${npmPackageName} in workspace, adding as workspace dependency...`
+    );
+
+    // Check if bun is available
+    try {
+      await execa('bun', ['--version'], { stdio: 'pipe' });
+
+      // Add as a workspace dependency using bun
+      await execa('bun', ['add', `${npmPackageName}@workspace:*`], {
+        cwd,
+        stdio: 'inherit',
+      });
+
+      console.log(`Successfully added ${npmPackageName} as workspace dependency`);
+      return true;
+    } catch (bunError) {
+      // Bun not available, try with npm/pnpm
+      logger.info('Bun not available, falling back to npm for workspace dependency');
+
+      // First check if pnpm is available
+      try {
+        await execa('pnpm', ['--version'], { stdio: 'pipe' });
+        await execa('pnpm', ['add', `${npmPackageName}@workspace:*`], {
+          cwd,
+          stdio: 'inherit',
+        });
+        console.log(`Successfully added ${npmPackageName} as workspace dependency with pnpm`);
+        return true;
+      } catch (pnpmError) {
+        // Finally fall back to npm
+        await execa('npm', ['install', `${npmPackageName}@workspace:*`], {
+          cwd,
+          stdio: 'inherit',
+        });
+        console.log(`Successfully added ${npmPackageName} as workspace dependency with npm`);
+        return true;
+      }
+    }
+  } catch (error) {
+    logger.warn(`Failed to add workspace dependency ${npmPackageName}: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Reads and parses package.json to determine workspace configuration
+ * @param {string} packageJsonPath - Path to package.json
+ * @returns {Promise<{hasWorkspaceConfig: boolean, packageJson: Record<string, any> | null}>}
+ */
+async function getWorkspaceConfig(packageJsonPath: string): Promise<{
+  hasWorkspaceConfig: boolean;
+  packageJson: Record<string, any> | null;
+}> {
+  try {
+    const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+    const packageJson = JSON.parse(packageJsonContent);
+    const hasWorkspaceConfig = !!packageJson.workspaces;
+
+    return { hasWorkspaceConfig, packageJson };
+  } catch (err) {
+    logger.debug(`Failed to read or parse package.json: ${err.message}`);
+    return { hasWorkspaceConfig: false, packageJson: null };
+  }
+}
+
 // --- End Helper Functions ---
 
 export const plugins = new Command().name('plugins').description('Manage ElizaOS plugins');
@@ -155,8 +284,8 @@ export const pluginsCommand = plugins
 plugins
   .command('add')
   .alias('install')
-  .description('Add a plugins to the project')
-  .argument('<plugin>', 'plugins name (e.g., "abc", "plugin-abc", "elizaos/plugin-abc")')
+  .description('Add a plugin to the project')
+  .argument('<plugin>', 'plugin name (e.g., "abc", "plugin-abc", "elizaos/plugin-abc")')
   .option('-n, --no-env-prompt', 'Skip prompting for environment variables')
   .option(
     '-b, --branch <branchName>',
@@ -193,112 +322,30 @@ plugins
       const isMonorepo = await isMonorepoContext();
       const localPackages = isMonorepo ? await getLocalPackages() : [];
 
-      // Check if the plugin is available in the workspace AND we can use workspace references
+      // Check if the plugin is available in the workspace
       if (isMonorepo && localPackages.includes(npmPackageName)) {
         try {
-          // Check if this is a workspace project that can use workspace dependencies
+          // Get monorepo context information
           const pathInfo = await UserEnvironment.getInstance().getPathInfo();
           const monorepoRoot = pathInfo.monorepoRoot;
 
-          // Only use workspace dependencies if this project is part of the monorepo structure
-          // i.e., if it's in the same directory as the monorepo root
-          if (monorepoRoot && path.relative(monorepoRoot, cwd).startsWith('..') === false) {
-            // Check if the project has workspaces configured and that the plugin is in its workspaces
+          // Check if we're in the monorepo structure
+          if (await isInMonorepoProject(cwd, monorepoRoot)) {
             const packageJsonPath = path.join(cwd, 'package.json');
-            let hasWorkspaceConfig = false;
-            let canUseWorkspaceDependency = true; // Default to true, disable only when we find a specific reason not to
+            const { hasWorkspaceConfig, packageJson } = await getWorkspaceConfig(packageJsonPath);
 
-            try {
-              const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
-              const packageJson = JSON.parse(packageJsonContent);
-
-              if (packageJson.workspaces) {
-                hasWorkspaceConfig = true;
-
-                // Special case for monorepo root
-                if (cwd === monorepoRoot) {
-                  // In monorepo root, plugins are in "packages/plugin-*" pattern
-                  // Don't try to npm install; instead add a workspace direct reference to package.json
-                  canUseWorkspaceDependency = false;
-
-                  logger.info(
-                    `Adding ${npmPackageName} as a workspace reference in monorepo root...`
-                  );
-
-                  try {
-                    // Read the package.json
-                    const packageJsonPath = path.join(cwd, 'package.json');
-                    const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
-                    const packageJson = JSON.parse(packageJsonContent);
-
-                    // Ensure dependencies exist
-                    if (!packageJson.dependencies) {
-                      packageJson.dependencies = {};
-                    }
-
-                    // Add the workspace reference
-                    packageJson.dependencies[npmPackageName] = 'workspace:*';
-
-                    // Write the updated package.json using an atomic approach
-                    const tempFile = `${packageJsonPath}.tmp`;
-                    fs.writeFileSync(tempFile, JSON.stringify(packageJson, null, 2));
-                    fs.renameSync(tempFile, packageJsonPath);
-
-                    console.log(
-                      `Successfully added ${npmPackageName} as workspace reference in root package.json`
-                    );
-                    process.exit(0);
-                  } catch (error) {
-                    logger.warn(
-                      `Failed to add workspace reference to root package.json: ${error.message}`
-                    );
-                    // Continue with standard installation, though it will likely fail with dependency loop
-                  }
-                } else {
-                  // For other projects, check if their workspace pattern would include the plugin
-                  const pluginDir = `packages/${npmPackageName.split('/')[1]}`;
-
-                  // For simplicity, just use standard install for projects other than the monorepo root
-                  // This avoids complex workspace pattern matching logic
-                  canUseWorkspaceDependency = false;
-                }
-              }
-            } catch (err) {
-              // If we can't read or parse package.json, assume no workspace config
-              hasWorkspaceConfig = false;
-            }
-
-            if (hasWorkspaceConfig && canUseWorkspaceDependency) {
-              console.info(
-                `Detected plugin ${npmPackageName} in workspace, adding as workspace dependency...`
+            if (!hasWorkspaceConfig || !packageJson) {
+              logger.debug(
+                `Project in ${cwd} has no workspace configuration, using standard installation.`
               );
-
-              try {
-                // Add as a workspace dependency
-                await execa('bun', ['add', `${npmPackageName}@workspace:*`], {
-                  cwd,
-                  stdio: 'inherit',
-                });
-
-                console.log(`Successfully added ${npmPackageName} as workspace dependency`);
+            } else if (isMonorepoRoot(cwd, monorepoRoot)) {
+              // For monorepo root, add a workspace reference to package.json
+              if (await addWorkspaceReference(packageJsonPath, packageJson, npmPackageName)) {
                 process.exit(0);
-              } catch (error) {
-                logger.warn(
-                  `Failed to add workspace dependency ${npmPackageName}: ${error.message}`
-                );
-                // Fall back to standard installation methods
               }
-            } else {
-              // No workspace config found or can't use workspace dependency, use standard installation
-              if (hasWorkspaceConfig) {
-                logger.debug(
-                  `Project in ${cwd} has workspace configuration, but cannot use workspace reference for ${npmPackageName}.`
-                );
-              } else {
-                logger.debug(
-                  `Project in ${cwd} has no workspace configuration, using standard installation.`
-                );
-              }
+            } else if (await addWorkspaceDependency(cwd, npmPackageName)) {
+              // For other projects in the monorepo, add as workspace dependency
+              process.exit(0);
             }
           }
         } catch (error) {
@@ -307,7 +354,7 @@ plugins
         }
       }
 
-      // Standard installation flow if not a workspace package
+      // Standard installation flow if not a workspace package or above approaches failed
       console.info(`Attempting to install ${npmPackageNameWithTag} from npm registry...`);
 
       let success = await installPlugin(npmPackageName, cwd, tag, opts.branch);
@@ -390,7 +437,7 @@ plugins
   .command('remove')
   .aliases(['delete', 'del', 'rm'])
   .description('Remove a plugin from the project')
-  .argument('<plugin>', 'plugins name (e.g., "abc", "plugin-abc", "elizaos/plugin-abc")')
+  .argument('<plugin>', 'plugin name (e.g., "abc", "plugin-abc", "elizaos/plugin-abc")')
   .action(async (plugin, _opts) => {
     try {
       const cwd = process.cwd();
@@ -413,15 +460,39 @@ plugins
 
       console.info(`Removing ${packageNameToRemove}...`);
       try {
-        await execa('bun', ['remove', packageNameToRemove], {
-          cwd,
-          stdio: 'inherit',
-        });
+        // Check if bun is available
+        try {
+          await execa('bun', ['--version'], { stdio: 'pipe' });
+
+          // Remove using bun
+          await execa('bun', ['remove', packageNameToRemove], {
+            cwd,
+            stdio: 'inherit',
+          });
+        } catch (bunError) {
+          // Bun not available, try with pnpm or npm
+          logger.info('Bun not available, falling back to npm/pnpm for package removal');
+
+          // First check if pnpm is available
+          try {
+            await execa('pnpm', ['--version'], { stdio: 'pipe' });
+            await execa('pnpm', ['remove', packageNameToRemove], {
+              cwd,
+              stdio: 'inherit',
+            });
+          } catch (pnpmError) {
+            // Finally fall back to npm
+            await execa('npm', ['uninstall', packageNameToRemove], {
+              cwd,
+              stdio: 'inherit',
+            });
+          }
+        }
       } catch (execError) {
-        logger.error(`Failed to run 'bun remove ${packageNameToRemove}': ${execError.message}`);
+        logger.error(`Failed to remove ${packageNameToRemove}: ${execError.message}`);
         if (execError.stderr?.includes('not found')) {
           logger.info(
-            `'bun remove' indicated package was not found. Continuing with directory removal attempt.`
+            `Package removal indicated package was not found. Continuing with directory removal attempt.`
           );
         } else {
           handleError(execError);
