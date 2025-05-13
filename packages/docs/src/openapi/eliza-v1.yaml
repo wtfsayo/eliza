@@ -893,7 +893,7 @@ paths:
                 entityId:
                   type: string
                   format: uuid
-                  description: Entity ID to add to the room
+                  description: Optional Entity ID to add to the room
       responses:
         '201':
           description: Room created successfully

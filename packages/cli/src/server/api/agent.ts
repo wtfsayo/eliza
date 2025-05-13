@@ -1,7 +1,7 @@
 import type { AgentServer } from '@/src/server';
 import { upload } from '@/src/server/loader';
 import { convertToAudioBuffer } from '@/src/utils';
-import type { Agent, Character, Content, IAgentRuntime, Memory, UUID } from '@elizaos/core';
+import type { Agent, Character, Content, Entity, IAgentRuntime, Memory, UUID } from '@elizaos/core';
 import {
   ChannelType,
   MemoryType,
@@ -1347,11 +1347,13 @@ export function agentRouter(
     }
 
     try {
+      const source = 'api';
+
       const newRoomId = await runtime.createRoom({
         id: roomId,
         name,
         worldId,
-        source: 'api',
+        source,
         type: ChannelType.API,
         channelId: agentId,
         serverId: agentId,
@@ -1359,26 +1361,31 @@ export function agentRouter(
 
       // Ensure room exists
       await runtime.ensureRoomExists({
-        id: roomId,
+        id: newRoomId,
         name,
-        source: 'api',
+        source,
         type: ChannelType.API,
         worldId,
       });
 
       // Add the agent as participant
-      await runtime.addParticipant(agentId, roomId);
-      await runtime.ensureParticipantInRoom(agentId, roomId);
+      await runtime.addParticipant(agentId, newRoomId);
+      await runtime.ensureParticipantInRoom(agentId, newRoomId);
+
+      // Array to hold entities
+      let entities: Entity[] = [];
 
       // Add entity as participant, optionally
       if (entityId) {
-        await runtime.addParticipant(entityId, roomId);
-        await runtime.ensureParticipantInRoom(entityId, roomId);
-        await runtime.setParticipantUserState(roomId, entityId, 'FOLLOWED');
+        await runtime.addParticipant(entityId, newRoomId);
+        await runtime.ensureParticipantInRoom(entityId, newRoomId);
+        await runtime.setParticipantUserState(newRoomId, entityId, 'FOLLOWED');
+
+        entities = await runtime.getEntitiesForRoom(newRoomId);
       }
 
       // Return created room details
-      sendSuccess(res, { id: newRoomId, name, worldId, entityId }, 201);
+      sendSuccess(res, { id: newRoomId, name, worldId, entityId, source, entities }, 201);
     } catch (error) {
       logger.error('[ROOM CREATE] Error creating room:', error);
       sendError(res, 500, 'CREATE_ERROR', 'Failed to create room', (error as Error).message);
