@@ -1313,6 +1313,78 @@ export function agentRouter(
     }
   );
 
+  // Create a new room
+  // This endpoint is used to create a new room for an agent
+  // It requires the agent ID, room name, world ID, and optionally roomId and entityId
+  // The agent will be added as a participant to the new room
+  // The entity will be added as a participant if provided
+  router.post('/:agentId/rooms', async (req: CustomRequest, res) => {
+    const agentId = validateUuid(req.params.agentId);
+    if (!agentId) {
+      return sendError(res, 400, 'INVALID_ID', 'Invalid agent ID format');
+    }
+    const runtime = agents.get(agentId);
+    if (!runtime) {
+      return sendError(res, 404, 'NOT_FOUND', 'Agent not found');
+    }
+
+    const { name, worldId, roomId, entityId } = req.body;
+
+    if (!name || !worldId) {
+      return sendError(res, 400, 'BAD_REQUEST', 'name and worldId are all required');
+    }
+
+    if (!validateUuid(worldId)) {
+      return sendError(res, 400, 'INVALID_ID', 'worldId is not a valid UUID');
+    }
+
+    if (roomId && !validateUuid(roomId)) {
+      return sendError(res, 400, 'INVALID_ID', 'roomId is not a valid UUID');
+    }
+
+    if (entityId && !validateUuid(entityId)) {
+      return sendError(res, 400, 'INVALID_ID', 'entityId is not a valid UUID');
+    }
+
+    try {
+      const newRoomId = await runtime.createRoom({
+        id: roomId,
+        name,
+        worldId,
+        source: 'api',
+        type: ChannelType.API,
+        channelId: agentId,
+        serverId: agentId,
+      });
+
+      // Ensure room exists
+      await runtime.ensureRoomExists({
+        id: roomId,
+        name,
+        source: 'api',
+        type: ChannelType.API,
+        worldId,
+      });
+
+      // Add the agent as participant
+      await runtime.addParticipant(agentId, roomId);
+      await runtime.ensureParticipantInRoom(agentId, roomId);
+
+      // Add entity as participant, optionally
+      if (entityId) {
+        await runtime.addParticipant(entityId, roomId);
+        await runtime.ensureParticipantInRoom(entityId, roomId);
+        await runtime.setParticipantUserState(roomId, entityId, 'FOLLOWED');
+      }
+
+      // Return created room details
+      sendSuccess(res, { id: newRoomId, name, worldId, entityId }, 201);
+    } catch (error) {
+      logger.error('[ROOM CREATE] Error creating room:', error);
+      sendError(res, 500, 'CREATE_ERROR', 'Failed to create room', (error as Error).message);
+    }
+  });
+
   // Get memories for a specific room
   router.get('/:agentId/rooms/:roomId/memories', async (req, res) => {
     const agentId = validateUuid(req.params.agentId);
