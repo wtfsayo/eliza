@@ -56,12 +56,16 @@ async function verifyPluginImport(repository: string, context: string): Promise<
 }
 
 /**
- * Attempts to install a plugin in a specific directory
- * @param {string} repository - The plugin repository to install
- * @param {string} versionString - Version string for installation
- * @param {string} directory - Directory to install in
- * @param {string} context - Description of the installation context for logging
- * @returns {boolean} - Whether the installation and import verification was successful
+ * Installs a plugin in the specified directory and verifies its importability.
+ *
+ * Attempts installation using the provided options and checks if the plugin can be successfully imported after installation.
+ *
+ * @param packageName - The name of the plugin package to install.
+ * @param versionString - The version of the plugin to install.
+ * @param directory - The target directory for installation.
+ * @param context - A description of the installation context for logging purposes.
+ * @param options - Installation strategy options.
+ * @returns `true` if installation and import verification succeed; otherwise, `false`.
  */
 async function attemptInstallation(
   packageName: string,

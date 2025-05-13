@@ -1,8 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 
 /**
- * Function to fetch plugins data from the registry API.
- * @returns {Object} A promise representing the result of the fetch request
+ * Fetches and returns a list of available plugin names using a query hook.
+ *
+ * The returned list includes only plugin identifiers containing the substring "plugin", sorted alphabetically.
+ *
+ * @returns The result of the query containing the filtered and sorted plugin names.
+ *
+ * @remark The plugin list is currently hardcoded and not fetched from the remote registry.
  */
 export function usePlugins() {
   return useQuery({

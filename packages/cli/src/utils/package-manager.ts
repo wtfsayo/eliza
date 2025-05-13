@@ -59,15 +59,15 @@ export function getInstallCommand(packageManager: string, isGlobal: boolean): st
 }
 
 /**
- * Installs a package using the appropriate package manager, attempting multiple strategies if necessary.
+ * Attempts to install a package using the detected package manager, trying npm registry, GitHub, and monorepo sources as needed.
  *
- * Tries to install the specified package from the npm registry, GitHub repositories, or a monorepo, based on the provided options and available sources. Handles normalization of plugin package names and supports version or tag specification.
+ * Normalizes the package name for ElizaOS plugins and supports installation by version or tag. Tries each enabled strategy in order—npm registry, GitHub organizations, then monorepo—returning success on the first successful installation.
  *
- * @param packageName - The name of the package to install. Can be a scoped package, organization/repo, or plugin name.
- * @param versionOrTag - Optional version or tag to install. If omitted, installs the latest version.
- * @param directory - The directory in which to run the installation.
- * @param options - Optional settings to control which installation strategies to attempt and monorepo details.
- * @returns A promise resolving to an object indicating whether installation succeeded and the installed package identifier, or null if all methods failed.
+ * @param packageName - The package to install; may be a scoped name, organization/repo, or plugin identifier.
+ * @param versionOrTag - Optional version or tag to install; defaults to latest if omitted.
+ * @param directory - Directory in which to run the installation; defaults to the current working directory.
+ * @param options - Controls which installation strategies to attempt and monorepo details.
+ * @returns A promise resolving to an object with installation success status and the installed package identifier, or null if all strategies fail.
  */
 export async function executeInstallation(
   packageName: string,
