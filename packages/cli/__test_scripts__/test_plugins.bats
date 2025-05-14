@@ -128,8 +128,8 @@ teardown() {
   echo "STDOUT: $output"
   echo "STATUS: $status"
   [ "$status" -eq 0 ]
-  grep '@fleek-platform/eliza-plugin-mcp' package.json
-  [ -d "node_modules/@fleek-platform/eliza-plugin-mcp" ]
+  grep 'github:elizaos-plugins/plugin-openrouter#1.x' package.json
+  [ -d "node_modules/@elizaos/plugin-openrouter" ]
 }
 
 # Checks that the plugins help command displays usage information.
