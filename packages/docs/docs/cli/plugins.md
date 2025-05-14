@@ -14,7 +14,7 @@ The `plugins` command helps developers manage ElizaOS plugins within a project, 
 
 | Subcommand          | Aliases               | Description                                        | Arguments                                                                | Options                                                                                         |
 | ------------------- | --------------------- | -------------------------------------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| `list`              | `l`, `ls`             | List available plugins to install into the project |                                                                          | `-t, --type <type>` (filter by type: adapter, client, plugin)                                   |
+| `list`              | `l`, `ls`             | List available plugins to install into the project |                                                                          |                                                                                                 |
 | `add`               | `install`             | Add a plugin to the project                        | `<plugin>` (Plugin name e.g., "abc", "plugin-abc", "elizaos/plugin-abc") | `-n, --no-env-prompt`, `-b, --branch <branchName>` (default: v2-develop), `-T, --tag <tagname>` |
 | `installed-plugins` |                       | List plugins found in project dependencies         |                                                                          |                                                                                                 |
 | `remove`            | `delete`, `del`, `rm` | Remove a plugin from the project                   | `<plugin>` (Plugin name e.g., "abc", "plugin-abc", "elizaos/plugin-abc") |                                                                                                 |
@@ -26,9 +26,6 @@ The `plugins` command helps developers manage ElizaOS plugins within a project, 
 ```bash
 # List all available plugins
 elizaos plugins list
-
-# List available adapter plugins
-elizaos plugins list -t adapter
 ```
 
 ## Plugin Development Workflow

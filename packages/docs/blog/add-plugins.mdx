@@ -92,7 +92,7 @@ npm install -g @elizaos/cli@beta
 
 ```bash
 # List all plugins available in the registry
-elizaos plugins list [--type <type>]
+elizaos plugins list
 
 # List plugins currently installed in your project
 elizaos plugins installed-plugins
@@ -104,8 +104,7 @@ elizaos plugins add <plugin-name> [--no-env-prompt] [--branch <branchName>] [--t
 elizaos plugins remove <plugin-name>
 ```
 
-- `elizaos plugins list` (aliases: `ls`, `l`): Lists available plugins from the registry. Options:
-  - `-t, --type <type>`: Filter by plugin type (e.g., `adapter`, `client`, `plugin`).
+- `elizaos plugins list` (aliases: `ls`, `l`): Lists available plugins from the registry.
 - `elizaos plugins installed-plugins`: Lists plugins found in your project's dependencies.
 - `elizaos plugins add <plugin>` (alias: `install`): Adds a plugin to your project. Options:
   - `--no-env-prompt`: Skip prompting for environment variables.

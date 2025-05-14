@@ -117,7 +117,6 @@ export const pluginsCommand = plugins
   .command('list')
   .aliases(['l', 'ls'])
   .description('List available plugins to install into the project')
-  .option('-t, --type <type>', 'filter by type (adapter, client, plugin)')
   .action(async (opts) => {
     try {
       // Temporarily return hardcoded plugins as an array
