@@ -87,6 +87,28 @@ export async function executeInstallation(
 
   logger.info(`Attempting to install package: ${packageName} using ${packageManager}`);
 
+  // If packageName is a direct GitHub specifier, handle it first.
+  if (packageName.startsWith('github:')) {
+    logger.debug(
+      `Installing directly from GitHub specifier: ${packageName} using ${packageManager}`
+    );
+    try {
+      await execa(packageManager, [...installCommand, packageName], {
+        cwd: directory,
+        stdio: 'inherit',
+      });
+      // Extract repo name from github:owner/repo#ref for installedIdentifier
+      const repoNameMatch = packageName.match(/github:[^/]+\/([^#]+)/);
+      const installedIdentifier = repoNameMatch ? repoNameMatch[1] : packageName;
+      logger.info(`Successfully installed ${installedIdentifier} from ${packageName}.`);
+      return { success: true, installedIdentifier };
+    } catch (error) {
+      logger.warn(`Failed to install from GitHub specifier ${packageName}: ${error.message}`);
+      // Do not proceed to other methods if a direct GitHub specifier fails.
+      return { success: false, installedIdentifier: null };
+    }
+  }
+
   // Determine the package name to use for installation
   let npmStylePackageName = packageName;
   let pluginName = packageName;
@@ -136,7 +158,7 @@ export async function executeInstallation(
     }
   }
 
-  // 2. Try GitHub URL installation (if enabled)
+  // 2. Try GitHub URL installation (if enabled AND not already handled by direct github: specifier)
   if (options.tryGithub !== false) {
     // Define GitHub organizations to try, in priority order
     const githubOrgs = ['elizaos', 'elizaos-plugins'];
@@ -153,8 +175,11 @@ export async function executeInstallation(
           stdio: 'inherit',
         });
         logger.info(`Successfully installed ${pluginName} from GitHub ${org}.`);
-        // For verification, we'll use the standard npm package name structure
-        return { success: true, installedIdentifier: npmStylePackageName };
+        // For verification, we'll use the standard npm package name structure if possible,
+        // otherwise the pluginName (repo name) itself.
+        // npmStylePackageName should be derived correctly earlier for official plugins.
+        // If it was a generic name that led here, npmStylePackageName might just be pluginName.
+        return { success: true, installedIdentifier: npmStylePackageName || pluginName };
       } catch (error) {
         logger.warn(`Failed to install from GitHub ${org} organization: ${gitUrl}`);
         // Continue to next organization or method
@@ -176,8 +201,11 @@ export async function executeInstallation(
         stdio: 'inherit',
       });
       logger.info(`Successfully installed ${pluginName} from monorepo.`);
-      // For verification, we'll use the standard npm package name structure
-      return { success: true, installedIdentifier: npmStylePackageName };
+      // For verification, we'll use the standard npm package name structure if possible,
+      // otherwise the pluginName (repo name) itself.
+      // npmStylePackageName should be derived correctly earlier for official plugins.
+      // If it was a generic name that led here, npmStylePackageName might just be pluginName.
+      return { success: true, installedIdentifier: npmStylePackageName || pluginName };
     } catch (error) {
       logger.warn(`Failed to install from monorepo: ${monorepoUrl}`);
       // Continue to last resort
