@@ -99,14 +99,19 @@ async function attemptInstallation(
   }
 }
 
-/**
- * Asynchronously installs a plugin to a specified directory.
+/****
+ * Installs a plugin into the specified directory, supporting npm, GitHub, and monorepo sources.
  *
- * @param {string} packageName - The repository URL of the plugin to install.
- * @param {string} cwd - The current working directory where the plugin will be installed.
- * @param {string} versionSpecifier - The specific version of the plugin to install.
- * @param {string} monorepoBranch - The specific branch to use for monorepo installation.
- * @returns {Promise<boolean>} - A Promise that resolves to true if the plugin is successfully installed, or false otherwise.
+ * Attempts installation in the provided directory and, if unsuccessful, retries in the CLI's global directory. Automatically adjusts installation strategy based on the format of {@link packageName} and the presence of a version specifier.
+ *
+ * @param packageName - The plugin package name or GitHub specifier (e.g., 'github:user/repo#ref').
+ * @param cwd - The directory in which to attempt installation first.
+ * @param versionSpecifier - The version or tag to install, unless included in {@link packageName} as a GitHub specifier.
+ * @param monorepoBranch - The branch to use for monorepo-based installations, if applicable.
+ * @returns Resolves to true if the plugin is successfully installed and verified; otherwise, false.
+ *
+ * @remark
+ * If {@link packageName} is a GitHub specifier (starts with 'github:'), {@link versionSpecifier} is ignored and the ref must be included in the package name.
  */
 export async function installPlugin(
   packageName: string,
