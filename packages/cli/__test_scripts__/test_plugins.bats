@@ -124,7 +124,7 @@ teardown() {
   [ "$status" -eq 0 ]
   cd proj-shorthand-github-url-app
   # Using the same plugin for consistency in checks
-  run $ELIZAOS_CMD plugins add github:fleek-platform/eliza-plugin-mcp --no-env-prompt
+  run $ELIZAOS_CMD plugins add github:elizaos-plugins/plugin-openrouter#1.x --no-env-prompt
   echo "STDOUT: $output"
   echo "STATUS: $status"
   [ "$status" -eq 0 ]

@@ -172,7 +172,7 @@ plugins
     'v2-develop'
   )
   .option('-T, --tag <tagname>', 'Specify a tag to install (e.g., beta)')
-  .action(async (plugin, opts) => {
+  .action(async (pluginArg, opts) => {
     const cwd = process.cwd();
     const pkgData = readPackageJson(cwd);
 
@@ -183,7 +183,22 @@ plugins
       process.exit(1);
     }
 
+    let plugin = pluginArg;
+
     try {
+      // --- Convert full GitHub HTTPS URL to shorthand ---
+      const httpsGitHubUrlRegex =
+        // eslint-disable-next-line no-useless-escape
+        /^https?:\/\/github\.com\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_.-]+?)(?:\.git)?(?:(?:#|\/tree\/|\/commit\/)([a-zA-Z0-9_.-]+))?\/?$/;
+      const httpsMatch = plugin.match(httpsGitHubUrlRegex);
+
+      if (httpsMatch) {
+        const [, owner, repo, ref] = httpsMatch;
+        plugin = `github:${owner}/${repo}${ref ? `#${ref}` : ''}`;
+        logger.info(`Detected GitHub URL. Converted to: ${plugin}`);
+      }
+      // --- End GitHub URL conversion ---
+
       const installedPluginName = findPluginPackageName(plugin, pkgData.allDependencies);
       if (installedPluginName) {
         logger.info(`Plugin "${installedPluginName}" is already added to this project.`);
