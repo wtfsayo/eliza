@@ -48,3 +48,7 @@ jobs:
 
       - name: Run integration tests
         run: bun run test
+
+      - name: Run plugin-sql integration tests
+        working-directory: ./packages/plugin-sql
+        run: bun run test:integration
