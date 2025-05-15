@@ -1,7 +1,8 @@
-import react from '@vitejs/plugin-react-swc';
 import path from 'node:path';
+import react from '@vitejs/plugin-react-swc';
 import { type Plugin, type UserConfig, defineConfig, loadEnv } from 'vite';
 import viteCompression from 'vite-plugin-compression';
+import clientElizaLogger from './src/lib/logger';
 // @ts-ignore:next-line
 // @ts-ignore:next-line
 import type { ViteUserConfig } from 'vitest/config'; // Import Vitest config type for test property
@@ -17,18 +18,22 @@ export default defineConfig(({ mode }): CustomUserConfig => {
   const envDir = path.resolve(__dirname, '../..');
   const env = loadEnv(mode, envDir, '');
 
-  // Custom plugin to filter out unnecessary warnings
-  const filterWarnings: Plugin = {
-    name: 'filter-warnings',
+  // Custom plugin to filter out externalization warnings
+  const filterExternalizationWarnings: Plugin = {
+    name: 'filter-externalization-warnings',
     apply: 'build', // Only apply during build
     configResolved(config) {
-      const originalWarnFn = config.logger.warn;
-      config.logger.warn = (msg, options) => {
-        if (typeof msg !== 'string') return originalWarnFn(msg, options);
-        if (msg.includes('has been externalized for browser compatibility')) {
-          return;
+      const originalLogFn = config.logger.info;
+      config.logger.info = (msg, options) => {
+        if (
+          typeof msg === 'string' &&
+          msg.includes('has been externalized for browser compatibility')
+        ) {
+          return; // Suppress the warning
         }
-        originalWarnFn(msg, options);
+        originalLogFn(msg, options);
+        // Also log to our custom logger
+        clientElizaLogger.info(msg, options);
       };
     },
   };
@@ -41,53 +46,38 @@ export default defineConfig(({ mode }): CustomUserConfig => {
         ext: '.br',
         threshold: 1024,
       }) as Plugin,
-      filterWarnings,
+      filterExternalizationWarnings,
     ],
     clearScreen: false,
     envDir,
     define: {
       'import.meta.env.VITE_SERVER_PORT': JSON.stringify(env.SERVER_PORT || '3000'),
-      // Add empty shims for Node.js globals
-      global: 'globalThis',
-      process: '{}',
-      Buffer: '{}',
-    },
-    optimizeDeps: {
-      exclude: ['@elizaos/core'],
-      esbuildOptions: {
-        define: {
-          global: 'globalThis',
-        },
-      },
     },
     build: {
-      target: 'esnext',
       outDir: 'dist',
-      emptyOutDir: true,
       minify: false,
       cssMinify: true,
       sourcemap: true,
+      cssCodeSplit: true,
       rollupOptions: {
-        external: ['@elizaos/core', 'cloudflare:sockets'],
-        output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom'],
-            // Also chunk node_modules into vendor
-            ...(id: string) => (id.includes('node_modules') ? { vendor: [id] } : undefined),
-          },
-        },
+        external: ['cloudflare:sockets'],
         onwarn(warning, warn) {
-          // Suppress circular dependencies and externalized warnings
+          const message = typeof warning.message === 'string' ? warning.message : '';
+
+          // Suppress specific warnings
           if (
-            warning.code === 'CIRCULAR_DEPENDENCY' ||
-            (typeof warning.message === 'string' &&
-              (warning.message.includes('has been externalized for browser compatibility') ||
-                warning.message.includes("The 'this' keyword is equivalent to 'undefined'") ||
-                /node:|fs|path|crypto|stream|tty|worker_threads|assert/.test(warning.message)))
+            (warning.code === 'UNRESOLVED_IMPORT' &&
+              /node:|fs|path|crypto|stream|tty|worker_threads|assert/.test(message)) ||
+            message.includes('has been externalized for browser compatibility') ||
+            message.includes("The 'this' keyword is equivalent to 'undefined'") ||
+            warning.code === 'CIRCULAR_DEPENDENCY'
           ) {
-            return;
+            return; // Suppress these warnings
           }
+
+          // For other warnings, use the default handler and log to custom logger
           warn(warning);
+          clientElizaLogger.warn(message || 'Unknown warning');
         },
       },
     },
