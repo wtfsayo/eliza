@@ -2,7 +2,7 @@ import path from 'node:path';
 import react from '@vitejs/plugin-react-swc';
 import { type Plugin, type UserConfig, defineConfig, loadEnv } from 'vite';
 import viteCompression from 'vite-plugin-compression';
-import { Buffer } from 'buffer';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 import clientElizaLogger from './src/lib/logger';
 // @ts-ignore:next-line
 // @ts-ignore:next-line
@@ -48,16 +48,19 @@ export default defineConfig(({ mode }): CustomUserConfig => {
         threshold: 1024,
       }) as Plugin,
       filterExternalizationWarnings,
+      nodePolyfills({
+        // Explicitly include Buffer to ensure it's available in all environments
+        globals: {
+          Buffer: true,
+        },
+      }) as Plugin,
     ],
     clearScreen: false,
     envDir,
     define: {
       'import.meta.env.VITE_SERVER_PORT': JSON.stringify(env.SERVER_PORT || '3000'),
-      ...(mode === 'test' || mode === 'development'
-        ? {
-            'global.Buffer': 'Buffer',
-          }
-        : {}),
+      // Always define Buffer for all environments
+      'global.Buffer': 'Buffer',
     },
     build: {
       outDir: 'dist',
@@ -96,8 +99,8 @@ export default defineConfig(({ mode }): CustomUserConfig => {
     logLevel: 'error', // Only show errors, not warnings
     // Add Vitest configuration
     test: {
-      globals: true, // Or false, depending on your preference
-      environment: 'jsdom', // Or 'happy-dom', 'node'
+      globals: true,
+      environment: 'jsdom',
       include: ['src/**/*.{test,spec}.{js,ts,jsx,tsx}'],
       exclude: [
         'src/tests/**/*.{test,spec}.{js,ts,jsx,tsx}', // Exclude Playwright tests
@@ -107,8 +110,8 @@ export default defineConfig(({ mode }): CustomUserConfig => {
         '**/*.d.ts',
         '{playwright,vite,vitest}.config.{js,ts,jsx,tsx}',
       ],
-      // You might have other Vitest specific configurations here
-      // setupFiles: './src/setupTests.ts', // if you have a setup file
+      // Setup to provide Buffer globally
+      setupFiles: './src/testSetup.ts',
     },
   };
 });
