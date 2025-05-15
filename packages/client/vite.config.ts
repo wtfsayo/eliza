@@ -2,6 +2,7 @@ import path from 'node:path';
 import react from '@vitejs/plugin-react-swc';
 import { type Plugin, type UserConfig, defineConfig, loadEnv } from 'vite';
 import viteCompression from 'vite-plugin-compression';
+import { Buffer } from 'buffer';
 import clientElizaLogger from './src/lib/logger';
 // @ts-ignore:next-line
 // @ts-ignore:next-line
@@ -52,6 +53,11 @@ export default defineConfig(({ mode }): CustomUserConfig => {
     envDir,
     define: {
       'import.meta.env.VITE_SERVER_PORT': JSON.stringify(env.SERVER_PORT || '3000'),
+      ...(mode === 'test' || mode === 'development'
+        ? {
+            'global.Buffer': 'Buffer',
+          }
+        : {}),
     },
     build: {
       outDir: 'dist',
@@ -84,6 +90,7 @@ export default defineConfig(({ mode }): CustomUserConfig => {
     resolve: {
       alias: {
         '@': '/src',
+        buffer: 'buffer/',
       },
     },
     logLevel: 'error', // Only show errors, not warnings
