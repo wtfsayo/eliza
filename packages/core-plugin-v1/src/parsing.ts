@@ -36,6 +36,20 @@ export const booleanFooter = coreBooleanFooter;
  * @returns {boolean|null} - Returns `true` for affirmative inputs, `false` for negative inputs, and `null` for unrecognized inputs or null/undefined.
  */
 export const parseBooleanFromText = (text: string) => {
+  if (!text) return null;
+
+  const affirmative = ["YES", "Y", "TRUE", "T", "1", "ON", "ENABLE"];
+  const negative = ["NO", "N", "FALSE", "F", "0", "OFF", "DISABLE"];
+
+  const normalizedText = text.trim().toUpperCase();
+
+  if (affirmative.includes(normalizedText)) {
+    return true;
+  } else if (negative.includes(normalizedText)) {
+    return false;
+  }
+
+  return null;
 }
 
 export const stringArrayFooter = coreStringArrayFooter
