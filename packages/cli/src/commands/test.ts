@@ -1,12 +1,11 @@
 import { loadProject } from '@/src/project';
 import { AgentServer } from '@/src/server/index';
 import { jsonToCharacter, loadCharacterTryPath } from '@/src/server/loader';
-import { TestRunner, buildProject, promptForEnvVars } from '@/src/utils';
+import { TestRunner, buildProject, promptForEnvVars, detectProjectType } from '@/src/utils';
 import { type IAgentRuntime, type ProjectAgent } from '@elizaos/core';
 import { Command, Option } from 'commander';
 import * as dotenv from 'dotenv';
 import * as fs from 'node:fs';
-import { existsSync } from 'node:fs';
 import * as net from 'node:net';
 import * as os from 'node:os';
 import path from 'node:path';
@@ -27,17 +26,6 @@ async function checkPortAvailable(port: number): Promise<boolean> {
   });
 }
 
-/**
- * Check if the current directory is likely a plugin directory
- */
-function checkIfLikelyPluginDir(dir: string): boolean {
-  // Simple check based on common file patterns
-  return (
-    dir.includes('plugin') ||
-    existsSync(path.join(dir, 'src/plugins.ts')) ||
-    (existsSync(path.join(dir, 'src/index.ts')) && !existsSync(path.join(dir, 'src/agent.ts')))
-  );
-}
 
 /**
  * Function that runs the tests.
@@ -53,9 +41,10 @@ const runAgentTests = async (options: {
   if (options && !options.skipBuild) {
     try {
       const cwd = process.cwd();
-      const isPlugin = options.plugin ? true : checkIfLikelyPluginDir(cwd);
-      console.info(`Building ${isPlugin ? 'plugin' : 'project'}...`);
-      await buildProject(cwd, isPlugin);
+      const { isPlugin } = await detectProjectType(cwd);
+      const finalIsPlugin = options.plugin ? true : isPlugin;
+      console.info(`Building ${finalIsPlugin ? 'plugin' : 'project'}...`);
+      await buildProject(cwd, finalIsPlugin);
       console.info(`Build completed successfully`);
     } catch (buildError) {
       console.error(`Build error: ${buildError}`);
